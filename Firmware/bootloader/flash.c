@@ -39,6 +39,12 @@
 #include "flash.h"
 #include "util.h"
 
+#if 0
+# define trace(_x)	cout(_x);
+#else
+# define trace(_x)
+#endif
+
 /// Signature bytes at the very end of the application space.
 ///
 /// These must be supplied by the application as part of the uploaded image,
@@ -49,6 +55,8 @@ __at(FLASH_INFO_PAGE - 2) uint8_t __code flash_signature[2];
 char
 flash_app_valid(void)
 {
+	trace(flash_signature[0]);
+	trace(flash_signature[1]);
 	return (flash_signature[0] == FLASH_SIG0) && (flash_signature[1] == FLASH_SIG1);
 }
 
