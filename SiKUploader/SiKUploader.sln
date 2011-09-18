@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiKUploader", "uploader\SiKUploader.csproj", "{9DD5CF39-E6F2-49E6-8B90-E51C72A5A09A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9DD5CF39-E6F2-49E6-8B90-E51C72A5A09A}.Debug|x86.ActiveCfg = Debug|x86
+		{9DD5CF39-E6F2-49E6-8B90-E51C72A5A09A}.Debug|x86.Build.0 = Debug|x86
+		{9DD5CF39-E6F2-49E6-8B90-E51C72A5A09A}.Release|x86.ActiveCfg = Release|x86
+		{9DD5CF39-E6F2-49E6-8B90-E51C72A5A09A}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = uploader\SiKUploader.csproj
+		Policies = $0
+		$0.VersionControlPolicy = $1
+		$1.inheritsSet = Mono
+	EndGlobalSection
+EndGlobal
