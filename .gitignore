@@ -4,3 +4,6 @@ Firmware/radio/obj
 Firmware/.cproject
 Firmware/.project
 SiKUploader/uploader/bin
+SiKUploader/uploader/SiKUploader.pidb
+SiKUploader/SiKUploader.userprefs
+
