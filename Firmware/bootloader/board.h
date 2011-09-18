@@ -60,20 +60,32 @@
 
 #define BOARD_ID	0x4d	// unique board ID
 
-__at (SFR_P2+0)	LED;		// Bootloader LED
+// GPIO definitions
+SBIT(LED_RED,	   SFR_P2, 0);
+SBIT(LED_GREEN,	   SFR_P2, 5);
+SBIT(BUTTON_ENTER, SFR_P0, 6);
+SBIT(BUTTON_UP,	   SFR_P1, 5);
+SBIT(BUTTON_DOWN,  SFR_P1, 6);
+
 #define LED_ON		0
 #define LED_OFF		1
-
-__at (SFR_P0+6)	BUTTON;		// start-in-BL button
 #define BUTTON_ACTIVE	0
 
+// bootloader definitions
+#define LED	LED_RED
+#define BUTTON	BUTTON_ENTER
+
+// board-specific hardware config
 #define HW_INIT						\
 do {							\
 	P0SKIP	|=  0x40;		/* button */	\
-	P2SKIP	|=  0x01;		/* LED */	\
+	P1SKIP  |=  0x60;		/* buttons */	\
+	P2SKIP	|=  0x21;		/* LEDs */	\
 	SFRPAGE	 =  CONFIG_PAGE;			\
-	P2DRV	|=  0x01;		/* LED */	\
+	P2DRV	|=  0x21;		/* LED */	\
 	SFRPAGE	 =  LEGACY_PAGE;			\
+	LED_RED  = 1;					\
+	LED_GREEN = 1;					\
 } while(0)
 
 #endif // _BOARD_H
