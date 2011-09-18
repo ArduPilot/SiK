@@ -76,12 +76,20 @@ bootloader(void)
 	//
 	LED = LED_ON;
 
+	trace('R');
+	trace(RSTSRC);
+	if (BUTTON == BUTTON_ACTIVE) {
+		trace('1');
+	} else {
+		trace('0');
+	}
+
 	// Boot the application if:
 	//
 	// - the reset was a power-on/power-fail, watchdog timer, missing clock or HW pin reset
 	// - the signature is valid
-	// - the boot-to-bootloader strap/button is not present
-	///
+	// - the boot-to-bootloader strap/button is not in the active state
+	//
 	if ((RSTSRC & ((1<<0) | (1<<1) | (1<<2) | (1<<3))) &&
 	    flash_app_valid() &&
 	    (BUTTON != BUTTON_ACTIVE)) {
@@ -113,55 +121,43 @@ bootloader(void)
 
 		case PROTO_GET_SYNC:		// sync
 			trace('s');
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
 			break;
 
 		case PROTO_GET_DEVICE:
 			trace('d');
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
 			cout(BOARD_ID);
 			break;
 
 		case PROTO_CHIP_ERASE:		// erase the program area
 			trace('e');
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
 			flash_erase_app();
 			break;
 
 		case PROTO_LOAD_ADDRESS:	// set address
 			trace('a');
 			address = get_uint16();
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC) 
+				goto cmd_bad;
 			break;
 
 		case PROTO_PROG_FLASH:		// program byte
 			trace('w');
 			c = cin();
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
 			flash_write_byte(address++, c);
 			break;
 
 		case PROTO_READ_FLASH:		// readback byte
 			trace('r');
-			if (cin() != PROTO_EOC) {
-				trace('n');
-				continue;
-			}
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
 			c = flash_read_byte(address++);
 			cout(c);
 			break;
@@ -169,7 +165,12 @@ bootloader(void)
 		default:
 			break;
 		}
+	cmd_ok:
 		sync_response();
+		continue;
+	cmd_bad:
+		trace('n');
+		continue;
 	}
 }
 
