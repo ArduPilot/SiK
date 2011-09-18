@@ -1,3 +1,6 @@
+.metadata
 Firmware/bootloader/obj
 Firmware/radio/obj
+Firmware/.cproject
+Firmware/.project
 SiKUploader/uploader/bin
