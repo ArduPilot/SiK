@@ -37,6 +37,7 @@ public partial class MainWindow: Gtk.Window
 		
 		// wire up the Upload button
 		button_Upload.Clicked += new EventHandler (do_upload);
+		button_Upload.Sensitive = false;		
 		
 		// configure the file chooser
 		FileFilter filter = new FileFilter ();
@@ -47,7 +48,9 @@ public partial class MainWindow: Gtk.Window
 		filter.Name = "All Files (*.*)";
 		filter.AddPattern ("*.*");
 		chooser_Hex.AddFilter (filter);
-		chooser_Hex.SetFilename (config_section.lastPath);
+		chooser_Hex.FileSet += new EventHandler (file_selected);
+		if (File.Exists (config_section.lastPath))
+			chooser_Hex.SetFilename (config_section.lastPath);
 		
 		// get serial port names and populate the combo box
 		foreach (string port in SerialPort.GetPortNames ()) {
@@ -68,11 +71,10 @@ public partial class MainWindow: Gtk.Window
 		status_Bar.Push (1, "Init...");
 		
 		// Emit some basic help
-		log ("settings in " + config.FilePath + "\n");
 		log ("Select a serial port and a .hex file to be uploaded, then hit Upload.\n");
 	}
 	
-	protected bool default_port_compare (TreeModel model, TreePath path, TreeIter iter)
+	private bool default_port_compare (TreeModel model, TreePath path, TreeIter iter)
 	{
 		string port = model.GetValue (iter, 0) as string;
 		
@@ -86,13 +88,20 @@ public partial class MainWindow: Gtk.Window
 		return false;
 	}
 	
-	protected
-	void OnDeleteEvent (object sender, DeleteEventArgs a)
+	protected void OnDeleteEvent (object sender, DeleteEventArgs a)
 	{
 		config.Save (ConfigurationSaveMode.Modified);
 		
 		Application.Quit ();
 		a.RetVal = true;
+	}
+	
+	private void file_selected (object sender, EventArgs args)
+	{
+		string filename = chooser_Hex.Filename;
+		
+		if (File.Exists (filename))
+			button_Upload.Sensitive = true;
 	}
 	
 	private void flush ()
@@ -146,7 +155,7 @@ public partial class MainWindow: Gtk.Window
 		log ("\nSuccess\n");
 	}
 
-	public void log (string msg, int level = 0)
+	private void log (string msg, int level = 0)
 	{
 		
 		// log a message into the buffer
@@ -161,7 +170,7 @@ public partial class MainWindow: Gtk.Window
 		}
 	}
 	
-	public void progress (double completed)
+	private void progress (double completed)
 	{
 		progress_Bar.Fraction = completed;
 		flush ();
