@@ -4,13 +4,6 @@ using System.IO;
 
 namespace uploader
 {
-	public class BadFormat : Exception
-	{
-		public BadFormat () : base("invalid IntelHex file")
-		{
-		}
-	}
-	
 	public class IHex : SortedList<UInt16, byte[]>
 	{
 		Log		log;
@@ -42,7 +35,7 @@ namespace uploader
 				
 				// every line must start with a :
 				if (!line.StartsWith (":"))
-					throw new BadFormat ();
+					throw new Exception ("invalid IntelHex file");
 				
 				// parse the record type and data length, assume ihex8
 				// ignore the checksum
@@ -67,7 +60,7 @@ namespace uploader
 				}
 			}
 			if (Count < 1)
-				throw new BadFormat ();
+				throw new Exception ("no data in IntelHex file");
 		}		
 	}
 }

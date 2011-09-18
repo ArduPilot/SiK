@@ -4,34 +4,6 @@ using System.Collections.Generic;
 
 namespace uploader
 {
-	public class NoSync : Exception
-	{
-		public NoSync () : base("could not synchronise with the bootloader")
-		{
-		}
-	}
-	
-	public class LostSync : Exception
-	{
-		public LostSync () : base("lost synchronisation with the bootloader")
-		{
-		}
-	}
-	
-	public class VerifyFail : Exception
-	{
-		public VerifyFail () : base("flash verification failed")
-		{
-		}
-	}
-	
-	public class BadDevice : Exception
-	{
-		public BadDevice () : base("bootloader device ID mismatch")
-		{
-		}
-	}
-	
 	public class Uploader : SerialPort
 	{
 		Progress	progress;
@@ -104,6 +76,8 @@ namespace uploader
 					break;
 				log (string.Format ("sync({0}) failed\n", i), 1);
 			}
+			if (!cmdSync ())
+				throw new Exception ("could not synchronise with the bootloader");
 			checkDevice ((byte)Code.DEVICE_ID);
 			log ("connected to bootloader\n");
 		}
@@ -172,9 +146,7 @@ namespace uploader
 			
 			try {
 				getSync ();
-			} catch (LostSync) {
-				return false;
-			} catch (TimeoutException) {
+			} catch {
 				return false;
 			}
 			
@@ -237,7 +209,7 @@ namespace uploader
 			send (Code.EOC);
 			
 			if (recv () != data)
-				throw new VerifyFail ();
+				throw new Exception ("flash verification failed");
 			
 			getSync ();
 		}
@@ -248,7 +220,7 @@ namespace uploader
 			send (Code.EOC);
 			
 			if (recv () != device_id)
-				throw new BadDevice ();
+				throw new Exception ("bootloader device ID mismatch");
 			
 			getSync ();
 		}
@@ -269,16 +241,16 @@ namespace uploader
 				c = (Code)recv ();
 				if (c != Code.INSYNC) {
 					log (string.Format ("got {0:X} when expecting {1:X}\n", (int)c, (int)Code.INSYNC), 2);
-					throw new LostSync ();
+					throw new Exception ("bad sync byte from bootloader");
 				}
 				c = (Code)recv ();
 				if (c != Code.OK) {
 					log (string.Format ("got {0:X} when expecting {1:X}\n", (int)c, (int)Code.EOC), 2);
-					throw new LostSync ();
+					throw new Exception ("bad status byte from bootloader");
 				}
 			} catch (TimeoutException) {
 				log ("timeout waiting for sync");
-				throw new LostSync ();
+				throw new Exception ("timeout waiting for sync from bootloader");
 			}
 			log ("in sync\n", 2);
 		}
