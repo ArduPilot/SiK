@@ -1,1 +1,3 @@
 Firmware/bootloader/obj
+Firmware/radio/obj
+SiKUploader/bin
