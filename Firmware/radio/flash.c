@@ -31,8 +31,10 @@
 /// Flash-related data structures, including the application signature for the bootloader.
 ///
 
+#include <stdint.h>
+#include <flash_layout.h>
+
 #include "radio.h"
-#include "flash.h"
 
 /// The application signature block.
 ///

@@ -51,7 +51,7 @@ L__stack:
 
 	.area	HOME	(CODE)
 
-__offset = 0x800		; XXX would be nice to get this from somewhere
+__offset = 0x400		; XXX would be nice to get this from somewhere
 
 	ljmp	L__start	; reset vector
 	ljmp	. + __offset	; /INT0

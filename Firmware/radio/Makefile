@@ -40,7 +40,7 @@ OBJS		:=	$(patsubst $(SRCROOT)/%.c,$(OBJROOT)/%.rel,$(SRCS))
 CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
 CFLAGS		+=	--model-small --opt-code-size --fverbose-asm --Werror
 
-LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x800 --code-size 0x00f000 --stack-size 128
+LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 128
 
 PRODUCT		 =	$(OBJROOT)/radio.hex
 
