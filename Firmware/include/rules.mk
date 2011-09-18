@@ -29,7 +29,7 @@
 #
 
 SDCC		 =	/usr/local
-EC2TOOLS	 =	../../C2/ec2-new/src/ec2tools
+EC2TOOLS	 =	/Users/msmith/bin
 
 CC		 =	$(SDCC)/bin/sdcc -mmcs51
 AS		 =	$(SDCC)/bin/sdas8051 -jloscp
