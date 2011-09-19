@@ -93,10 +93,12 @@ do {							\
 } while(0)
 
 // EzRadio / rtPhy definitions
+// Note that the RFM50 deviates in both the oscillator cap value and the wiring
+// of the RF switch
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// Per HRF demo code
-#define ENABLE_RF_SWITCH		// Per HRF demo code, verified presence of RF switch on the RFM50 module
-SBIT(IRQ, SFR_P0, 7);			// Per HRF demo code & schematic
+#define ENABLE_RFM50_SWITCH	1	// Per HRF demo code, verified presence of RF switch on the RFM50 module
+SBIT(IRQ,  SFR_P0, 7);			// Per HRF demo code & schematic
 SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
-SBIT(SDN, SFR_P2, 6);			// XXX not actually the case on the RFM50... HRF set it this way though
+SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the RFM50... HRF set it this way though
 
 #endif // _BOARD_H

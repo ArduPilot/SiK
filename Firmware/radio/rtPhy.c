@@ -425,15 +425,21 @@ PHY_STATUS rtPhyInitRadio (void)
 
 #ifdef ENABLE_RF_SWITCH
    //set GPIO0 to GND
-   phyWrite(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);
+   phyWrite(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)
    //set GPIO1 & GPIO2 to control the TRX switch
-   phyWrite(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);
-   phyWrite(EZRADIOPRO_GPIO2_CONFIGURATION, 0x15);
+   phyWrite(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// TX state (output)
+   phyWrite(EZRADIOPRO_GPIO2_CONFIGURATION, 0x15);	// RX state (output)
+#elif ENABLE_RFM50_SWITCH
+   //set GPIO0 & GPIO1 to control the TRX switch
+   phyWrite(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX state (output)
+   phyWrite(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// TX state (output)
+   //set GPIO2 to GND
+   phyWrite(EZRADIOPRO_GPIO2_CONFIGURATION, 0x14);	// RX data (output)
 #else
    //set GPIOx to GND
-   phyWrite(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);
-   phyWrite(EZRADIOPRO_GPIO1_CONFIGURATION, 0x14);
-   phyWrite(EZRADIOPRO_GPIO2_CONFIGURATION, 0x14);
+   phyWrite(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)
+   phyWrite(EZRADIOPRO_GPIO1_CONFIGURATION, 0x14);	// RX data (output)
+   phyWrite(EZRADIOPRO_GPIO2_CONFIGURATION, 0x14);	// RX data (output)
 #endif
 
    //set  cap. bank
