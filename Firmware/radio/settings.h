@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -26,19 +26,31 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef RADIO_H_
-#define RADIO_H_
+/// @file	settings.h
+///
+/// Definitions for program settings storage.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdbool.h>
+/// Parameter IDs.
+///
+/// Note that the implementation does not support more than 64 parameters
+/// total.
+///
+enum ParamID {
+	PARAM_FORMAT		 = 0,
+	PARAM_NODE_ID,
 
-#include "board.h"
-#include "uart.h"
-#include "rtPhy.h"
-#include "settings.h"
+	PARAM_MAX
+};
 
-extern void panic(const char *reason, ...);
+#define PARAM_FORMAT_CURRENT	0x10UL
 
-#endif /* RADIO_H_ */
+extern uint8_t	param_get8 (enum ParamID param);
+extern uint16_t	param_get16(enum ParamID param);
+extern uint32_t	param_get32(enum ParamID param);
+
+extern void param_set8 (enum ParamID param, uint8_t value);
+extern void param_set16(enum ParamID param, uint16_t value);
+extern void param_set32(enum ParamID param, uint32_t value);
+
+extern bool param_load();
+extern void param_save();
