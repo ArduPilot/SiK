@@ -29,13 +29,11 @@
 #ifndef RADIO_H_
 #define RADIO_H_
 
-#ifdef __CDT_PARSER__
-# define __data
-# define __xdata
-# define __pdata
-# define __code
-# define __at(_x)
-#endif
+#include "cdt.h"
+#include "compiler_defs.h"
+#include "Si1000_defs.h"
 
+#include <stdint.h>
+#include <stdio.h>
 
 #endif /* RADIO_H_ */
