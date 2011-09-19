@@ -26,9 +26,9 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/// @file	settings.c
+/// @file	parameters.c
 ///
-/// Storage for program settings.
+/// Storage for program parameters.
 ///
 /// Parameters are held in a contiguous array of 32-bit values.
 /// It is up to the caller to decide how large a parameter is and to

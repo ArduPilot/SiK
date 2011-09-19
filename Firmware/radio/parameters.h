@@ -26,9 +26,9 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/// @file	settings.h
+/// @file	parameters.h
 ///
-/// Definitions for program settings storage.
+/// Definitions for program parameter storage.
 
 /// Parameter IDs.
 ///
@@ -36,10 +36,16 @@
 /// total.
 ///
 enum ParamID {
-	PARAM_FORMAT		 = 0,
-	PARAM_NODE_ID,
+	PARAM_FORMAT = 0,
+	PARAM_NODE_ID,			// this node's ID
+	PARAM_PEER_ID,			// peer node's ID (if paired)
+	PARAM_TRX_FREQUENCY,
+	PARAM_TRX_DEVIATION,
+	PARAM_TRX_DATA_RATE,
+	PARAM_RX_BAND_WIDTH,
+	PARAM_SERIAL_SPEED,
 
-	PARAM_MAX
+	PARAM_MAX			// must be last
 };
 
 #define PARAM_FORMAT_CURRENT	0x10UL

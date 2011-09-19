@@ -37,7 +37,7 @@
 #include "board.h"
 #include "uart.h"
 #include "rtPhy.h"
-#include "settings.h"
+#include "parameters.h"
 
 extern void panic(const char *reason, ...);
 
