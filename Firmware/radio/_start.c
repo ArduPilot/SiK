@@ -33,16 +33,45 @@
 /// This file *must* be linked first for interrupt vector generation and main() to work.
 ///
 
-#include <compiler_defs.h>
-#include <Si1000_defs.h>
-
 #include "radio.h"
+#include "board.h"
+#include "uart.h"
 
 // Interrupt vector prototypes
+extern  void uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
+
+// Local prototypes
+static void hardware_init(void);
 
 void
 main(void)
 {
+	hardware_init();
+	puts("SiK radio");
+
 	for (;;)
 		;
+}
+
+/// Additional hardware intialisation beyond the basic operating conditions
+/// set up by the bootloader.
+///
+static void
+hardware_init(void)
+{
+	// clocking - bootloader uses internal oscillator, prescaled by 1, missing clock
+	//            detector is already enabled.
+	// 		This is already max speed, and should be good enough precision for UART.
+
+	// timer1 - bootloader has already configured for 115200, leave it alone for now
+
+	// brownout detector - bootloader has enabled
+
+	// crossbar - buttons and LEDs already configured by bootloader
+
+	// uart - leave the baud rate alone
+	uartInitUart(BAUD_RATE_NO_CHANGE);
+
+	// global interrupt enable
+	EA = 1;
 }
