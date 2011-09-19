@@ -49,8 +49,8 @@ main(void)
 	hardware_init();
 	puts("SiK radio");
 
-	for (;;)
-		;
+	for (;;) {
+	}
 }
 
 /// Additional hardware intialisation beyond the basic operating conditions

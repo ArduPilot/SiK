@@ -326,6 +326,8 @@ __bit initUart(UartBaudRates baudRate)
 //
 static Bool setUartBaudRate(UartBaudRates baudRate)
 {
+    // XXX TODO this table not applicable for this application
+
     static const S8 __code baudRateTable2x[NUM_BAUD_RATES] =
     {
     //  1200  2400  9600  19200  38400  57600  115200
@@ -343,6 +345,8 @@ static Bool setUartBaudRate(UartBaudRates baudRate)
          -96,  -48,  -12,    -5,    -3,    -2,     -1
 #elif XTAL_FREQ == XTAL_24_000MHZ
         -104,  -52,  -13,     0,     0,     0,      0
+#elif XTAL_FREQ == XTAL_24_500MHZ
+           0,    0,    0,     0,     0,     0,      0
 #else // Add more if needed.
 #   error Pick a known XTAL frequency from list provided in this file.
 #endif
@@ -364,6 +368,8 @@ static Bool setUartBaudRate(UartBaudRates baudRate)
          -48,  -24,   -6,    -3,     0,    -1,      0
 #elif XTAL_FREQ == XTAL_24_000MHZ
          -52,  -26,    0,     0,     0,     0,      0
+#elif XTAL_FREQ == XTAL_24_500MHZ
+           0,    0,    0,     0,     0,     0,      0
 #else
 #   error Pick a known XTAL frequency from list provided in this file.
 #endif
