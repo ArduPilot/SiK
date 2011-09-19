@@ -39,6 +39,12 @@
 #include "rtPhy.h"
 #include "parameters.h"
 
+#if 1
+# define debug(fmt, args...)	printf(fmt "\n", ##args)
+#else
+# define debug(fmt, args...)
+#endif
+
 extern void panic(const char *reason, ...);
 
 #endif /* RADIO_H_ */
