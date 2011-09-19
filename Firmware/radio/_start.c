@@ -56,12 +56,19 @@ main(void)
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInit failed: %u", s);
 
-	// XXX should get these from scratchpad / defaults
-	rtPhySet(TRX_FREQUENCY, 434000000UL);
-	rtPhySet(TRX_CHANNEL_SPACING, 100000UL);
-	rtPhySet(TRX_DEVIATION, 20000UL);
-	rtPhySet(TRX_DATA_RATE, 40000UL);
-	rtPhySet(RX_BAND_WIDTH, 80000UL);
+	// try to load parameters; set them to defaults if that fails
+	// XXX default parameter selection should be based on strapping
+	// options
+	if (!param_load())
+		param_default_434();
+
+	// XXX this should almost certainly be replaced with the ppPhy code
+	// plus some minor parameter tweaking.
+	rtPhySet(TRX_FREQUENCY,		param_get32(PARAM_TRX_FREQUENCY));
+	rtPhySet(TRX_CHANNEL_SPACING,	param_get32(PARAM_TRX_CHANNEL_SPACING));
+	rtPhySet(TRX_DEVIATION,		param_get32(PARAM_TRX_DEVIATION));
+	rtPhySet(TRX_DATA_RATE,		param_get32(PARAM_TRX_DATA_RATE));
+	rtPhySet(RX_BAND_WIDTH,		param_get32(PARAM_RX_BAND_WIDTH));
 
 	s = rtPhyInitRadio();
 	if (s != PHY_STATUS_SUCCESS)
