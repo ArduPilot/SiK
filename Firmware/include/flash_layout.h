@@ -29,10 +29,12 @@
 /// @file	flash_layout.h
 ///
 /// Layout definitions for the SiK bootloader and conforming applications.
-///
+
 
 #ifndef _FLASH_LAYOUT_H
 #define _FLASH_LAYOUT_H
+
+#include <stdint.h>
 
 // Flash memory map
 // It would be nice to derive all these numbers from some
@@ -43,10 +45,16 @@
 #define FLASH_APP_START		0x0400		// 1 page reserved for bootloader
 #define FLASH_INFO_PAGE		0xf800		// 1 page reserved for bootloader
 
-/// Anticipated flash signature bytes
-///
+// Anticipated flash signature bytes
+//
 #define FLASH_SIG0	0x3d
 #define FLASH_SIG1	0xc2
 
+// Flash scratchpad layout.
+//
+// The flash scratchpad is used for storing configuration data.  Each parameter is assigned
+// 4 bytes in this space.
+//
+// XXX assignment TBD.
 
 #endif /* _FLASH_LAYOUT_H */

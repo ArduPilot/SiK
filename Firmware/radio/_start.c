@@ -55,6 +55,18 @@ main(void)
 	s = rtPhyInit();
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInit failed: %u", s);
+
+	// XXX should get these from scratchpad / defaults
+	rtPhySet(TRX_FREQUENCY, 434000000UL);
+	rtPhySet(TRX_CHANNEL_SPACING, 100000UL);
+	rtPhySet(TRX_DEVIATION, 20000UL);
+	rtPhySet(TRX_DATA_RATE, 40000UL);
+	rtPhySet(RX_BAND_WIDTH, 80000UL);
+
+	s = rtPhyInitRadio();
+	if (s != PHY_STATUS_SUCCESS)
+		panic("rtPhyInitRadio failed: %u", s);
+
 	puts("radio config done");
 
 	panic("bored, bored bored...");

@@ -64,6 +64,9 @@
 ///	- configures button GPIO(s)
 ///	- configures INT0 for the radio interrupt
 ///
+/// TBD:
+///     strapping options for board frequency band selection
+///
 
 /// @file	board.h
 ///		Board definitions for the HopeRF RF50 evaluation board
