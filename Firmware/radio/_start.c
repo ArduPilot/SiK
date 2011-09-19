@@ -33,9 +33,9 @@
 /// This file *must* be linked first for interrupt vector generation and main() to work.
 ///
 
+#include <stdarg.h>
+
 #include "radio.h"
-#include "board.h"
-#include "uart.h"
 
 // Interrupt vector prototypes
 extern  void uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
@@ -46,32 +46,68 @@ static void hardware_init(void);
 void
 main(void)
 {
-	hardware_init();
-	puts("SiK radio");
+	PHY_STATUS	s;
 
-	for (;;) {
-	}
+	hardware_init();
+	puts("SiK radio starting");
+
+	// Init the radio driver
+	s = rtPhyInit();
+	if (s != PHY_STATUS_SUCCESS)
+		panic("rtPhyInit failed: %u", s);
+	puts("radio config done");
+
+	panic("bored, bored bored...");
 }
 
-/// Additional hardware intialisation beyond the basic operating conditions
+/// Panic and stop the system
+///
+/// This is not terribly solid - printf is large and it uses putchar which
+/// depends on interrupts.  Consider hacking printf_tiny into a panic handler.
+///
+void
+panic(const char *reason, ...)
+{
+	va_list	arg;
+
+	puts("**PANIC**");
+	va_start(arg, reason);
+	vprintf(reason, arg);
+	va_end(arg);
+	puts("");
+	for(;;)
+		;
+}
+
+/// Additional basic hardware intialisation beyond the basic operating conditions
 /// set up by the bootloader.
 ///
 static void
 hardware_init(void)
 {
-	// clocking - bootloader uses internal oscillator, prescaled by 1, missing clock
-	//            detector is already enabled.
-	// 		This is already max speed, and should be good enough precision for UART.
 
-	// timer1 - bootloader has already configured for 115200, leave it alone for now
+	// SPI
+	XBR1	|= 0x40;	// enable SPI in 3-wire mode
+	P1MDOUT	|= 0x15;	// SCK1, MOSI1, MISO1 push-pull
+	SFRPAGE	 = CONFIG_PAGE;
+	P1DRV	|= 0x15;	// SPI signals use high-current mode
+	SFRPAGE	 = LEGACY_PAGE;
+	SPI1CFG	 = 0x40;	// master mode
+	SPI1CN	 = 0x00;	// 3 wire master mode
+	SPI1CKR	 = 0x00;	// initialize SPI prescaler
+	SPI1CN	|= 0x01;	// enable SPI
+	NSS1 = 1;		// set NSS high
 
-	// brownout detector - bootloader has enabled
-
-	// crossbar - buttons and LEDs already configured by bootloader
+	// Clear the radio interrupt state
+	IE0	 = 0;
 
 	// uart - leave the baud rate alone
 	uartInitUart(BAUD_RATE_NO_CHANGE);
 
 	// global interrupt enable
 	EA = 1;
+
+	// Turn on the 'radio running' LED and turn off the bootloader LED
+	LED_RADIO = LED_ON;
+	LED_BOOTLOADER = LED_OFF;
 }

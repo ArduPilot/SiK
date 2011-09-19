@@ -29,11 +29,14 @@
 #ifndef RADIO_H_
 #define RADIO_H_
 
-#include "cdt.h"
-#include "compiler_defs.h"
-#include "Si1000_defs.h"
+#include "board.h"
+#include "uart.h"
+#include "rtPhy.h"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdarg.h>
+
+extern void panic(const char *reason, ...);
 
 #endif /* RADIO_H_ */

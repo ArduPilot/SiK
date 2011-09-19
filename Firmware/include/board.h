@@ -34,22 +34,35 @@
 ///
 /// BOARD_ID
 ///	A unique byte identifying this board.
-/// LED
-///	A __bit controlling an LED.
+///
+/// LED_BOOTLOADER
+///	A __bit controlling an LED for the bootloader.
+///
+/// LED_RADIO
+///     A __bit controlling an LED for the radio.
+///
+/// LED_ACTIVITY
+///	A __bit controlling an LED that can be blinked to show activity.
+///
 /// LED_ON
 ///	The value to write to LED to turn the LED on.
+///
 /// LED_OFF
 ///	The value to write to LED to turn the LED off.
 ///
-/// BUTTON
+/// BUTTON_BOOTLOAD
 ///	A __bit corresponding to a button or strap that will cause the
 ///	bootloader to stop and wait for a download.
+///
 /// BUTTON_ACTIVE
 ///	The value that BUTTON will have when the bootloader should stop.
 ///
 /// HW_INIT
 ///	A code fragment called at early startup time that configures
-///	the GPIOs for the LED and button.
+///	the SoC for board-specific operation.
+///	- configures LED GPIO(s)
+///	- configures button GPIO(s)
+///	- configures INT0 for the radio interrupt
 ///
 
 /// @file	board.h
@@ -75,9 +88,11 @@ SBIT(BUTTON_DOWN,  SFR_P1, 6);
 #define LED_OFF		1
 #define BUTTON_ACTIVE	0
 
-// bootloader definitions
-#define LED	LED_RED
-#define BUTTON	BUTTON_ENTER
+// UI definitions
+#define LED_BOOTLOADER	LED_RED
+#define LED_RADIO	LED_GREEN
+#define LED_ACTIVITY	LED_RED
+#define BUTTON_BOOTLOAD	BUTTON_ENTER
 
 // board-specific hardware config
 #define HW_INIT						\
@@ -86,10 +101,11 @@ do {							\
 	P1SKIP  |=  0x60;		/* buttons */	\
 	P2SKIP	|=  0x21;		/* LEDs */	\
 	SFRPAGE	 =  CONFIG_PAGE;			\
-	P2DRV	|=  0x21;		/* LED */	\
+	P2DRV	|=  0x21;		/* LEDs */	\
 	SFRPAGE	 =  LEGACY_PAGE;			\
-	LED_RED  = 1;					\
-	LED_GREEN = 1;					\
+	/* INT0 is the radio interrupt, on P0.7 */	\
+	IT01CF   =  (IT01CF & 0xf) | 0x7;		\
+	IT0	 = 0;	/* INT0 leve triggered */	\
 } while(0)
 
 // EzRadio / rtPhy definitions

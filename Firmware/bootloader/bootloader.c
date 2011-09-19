@@ -74,11 +74,11 @@ bootloader(void)
 
 	// Turn on the LED to indicate the bootloader is running
 	//
-	LED = LED_ON;
+	LED_BOOTLOADER = LED_ON;
 
 	trace('R');
 	trace(RSTSRC);
-	if (BUTTON == BUTTON_ACTIVE) {
+	if (BUTTON_BOOTLOAD == BUTTON_ACTIVE) {
 		trace('1');
 	} else {
 		trace('0');
@@ -92,10 +92,7 @@ bootloader(void)
 	//
 	if ((RSTSRC & ((1<<0) | (1<<1) | (1<<2) | (1<<3))) &&
 	    flash_app_valid() &&
-	    (BUTTON != BUTTON_ACTIVE)) {
-
-		// Turn off the LED to indicate that we are jumping to the application
-		LED = LED_OFF;
+	    (BUTTON_BOOTLOAD != BUTTON_ACTIVE)) {
 
 		// And jump
 		((void (__code *)(void))FLASH_APP_START)();
@@ -113,9 +110,9 @@ bootloader(void)
 	for (;;) {
 
 		// Wait for a command byte
-		LED = LED_ON;
+		LED_BOOTLOADER = LED_ON;
 		c = cin();
-		LED = LED_OFF;
+		LED_BOOTLOADER = LED_OFF;
 
 		switch(c) {
 
