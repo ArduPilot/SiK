@@ -51,13 +51,11 @@ typedef enum UartOptions
 
 typedef enum UartBaudRates
 {
-    BAUD_RATE_1200     ,
-    BAUD_RATE_2400     ,
     BAUD_RATE_9600     ,
-    BAUD_RATE_19200    ,
     BAUD_RATE_38400    ,
     BAUD_RATE_57600    ,
     BAUD_RATE_115200   ,
+    BAUD_RATE_230400   ,
 
     NUM_BAUD_RATES     ,
     BAUD_RATE_NO_CHANGE
