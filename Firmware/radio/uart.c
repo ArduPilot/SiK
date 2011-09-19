@@ -76,9 +76,10 @@
 #define XTAL_20_000MHZ  20000000
 #define XTAL_22_118MHZ  22118400
 #define XTAL_24_000MHZ  24000000
+#define XTAL_24_500MHZ  24500000
 
 // Choose your frequency.
-#define XTAL_FREQ       XTAL_24_000MHZ
+#define XTAL_FREQ       XTAL_24_500MHZ
 
 // Choice of memory space will affect ring buffer sizes. Usually, RX >= TX size.
 //      0 - data
