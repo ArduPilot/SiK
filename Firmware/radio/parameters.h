@@ -40,6 +40,7 @@ enum ParamID {
 	PARAM_NODE_ID,			// this node's ID
 	PARAM_PEER_ID,			// peer node's ID (if paired)
 	PARAM_TRX_FREQUENCY,
+	PARAM_TRX_CHANNEL_SPACING,
 	PARAM_TRX_DEVIATION,
 	PARAM_TRX_DATA_RATE,
 	PARAM_RX_BAND_WIDTH,
@@ -48,7 +49,7 @@ enum ParamID {
 	PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x10UL
+#define PARAM_FORMAT_CURRENT	0x11UL
 
 extern uint8_t	param_get8 (enum ParamID param);
 extern uint16_t	param_get16(enum ParamID param);
@@ -58,5 +59,7 @@ extern void param_set8 (enum ParamID param, uint8_t value);
 extern void param_set16(enum ParamID param, uint16_t value);
 extern void param_set32(enum ParamID param, uint32_t value);
 
-extern bool param_load();
-extern void param_save();
+extern bool param_load(void);
+extern void param_save(void);
+
+extern void param_default_434(void);

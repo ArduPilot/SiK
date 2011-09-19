@@ -101,47 +101,69 @@ flash_load_keys(void)
 	FLKEY = 0xf1;
 }
 
+static void
+flash_erase_scratch(void)
+{
+	// erase the scratch page
+	flash_load_keys();		// unlock flash for one operation
+	PSCTL = 0x07;			// enable flash erase of the scratch page
+	*(uint8_t __xdata *)0 = 0xff;	// trigger the erase
+	PSCTL = 0x00;			// disable flash write & scratch access
+}
+
+static uint8_t
+flash_read_scratch(uint16_t address)
+{
+	uint8_t	d;
+
+	PSCTL = 0x04;
+	d = *(uint8_t __code *)address;
+	PSCTL = 0x00;
+	return d;
+}
+
+static void
+flash_write_scratch(uint16_t address, uint8_t c)
+{
+	flash_load_keys();
+	PSCTL = 0x05;
+	*(uint8_t __xdata *)address = c;
+	PSCTL = 0x00;
+}
+
 bool
 param_load()
 {
-	const uint8_t __xdata *p;
 	uint8_t		d;
 	uint8_t		i;
 	uint8_t		sum;
-
-	// pointer into scratch space
-	p = (const uint8_t __xdata *)0;
 
 	// initialise checksum
 	sum = 0;
 
 	// loop reading the parameters array
-	//
 	for (i = 0; i < sizeof(parameters); i ++) {
-		PSCTL |= 0x04;
-		d = *(p++);
-		PSCTL &= 0x04;
+		d = flash_read_scratch(i);
 		parameters[0].bytes[i] = d;
 		sum ^= d;
 	}
 
 	// verify checksum
-	PSCTL |= 0x04;
-	d = *(p++);
-	PSCTL &= 0x04;
+	d = flash_read_scratch(i);
 	if (sum != d)
 		return false;
 
 	// decide whether we read a supported version of the structure
-	if (parameters[PARAM_FORMAT].u32 != PARAM_FORMAT_CURRENT)
+	if (parameters[PARAM_FORMAT].u32 != PARAM_FORMAT_CURRENT) {
+		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT].u32, PARAM_FORMAT_CURRENT);
 		return false;
+	}
 	return true;
 }
 
 void
 param_save()
 {
-	uint8_t __xdata	*p;
 	uint8_t		d;
 	uint8_t		i;
 	uint8_t		sum;
@@ -149,31 +171,39 @@ param_save()
 	// tag parameters with the current format
 	parameters[PARAM_FORMAT].u32 = PARAM_FORMAT_CURRENT;
 
+	// erase the scratch space
+	flash_erase_scratch();
+
 	// initialise checksum
 	sum = 0;
-
-	// pointer into scratch space
-	p = (uint8_t __xdata *)0;
-
-	// erase the scratch page
-	flash_load_keys();	// unlock flash for one operation
-	PSCTL = 0x07;		// enable flash erase of the scratch page
-	*p = 0xff;		// trigger the erase
-	PSCTL = 0x00;		// disable flash write & scratch access
 
 	// save parameters to the scratch page
 	for (i = 0; i < sizeof(parameters); i++) {
 		d = parameters[0].bytes[i];	// byte we are going to write
 		sum ^= d;
-		flash_load_keys();		// unlock flash
-		PSCTL = 0x05;			// enable program to scratch page
-		*p++ = d;			// program the byte
-		PSCTL = 0x00;			// disable program & scratch access
+		flash_write_scratch(i, d);
 	}
 
 	// write checksum
-	flash_load_keys();		// unlock flash
-	PSCTL = 0x05;			// enable program to scratch page
-	*p = sum;			// program the byte
-	PSCTL = 0x00;			// disable program & scratch access
+	flash_write_scratch(i, sum);
+}
+
+static void
+param_default_common(void)
+{
+	param_set32(PARAM_SERIAL_SPEED, 115200);
+
+	param_save();
+}
+
+void
+param_default_434(void)
+{
+	debug("defaulting parameters for 434MHz");
+	param_set32(PARAM_TRX_FREQUENCY,    434000000UL);
+	param_set32(PARAM_TRX_CHANNEL_SPACING, 100000UL);
+	param_set32(PARAM_TRX_DEVIATION,        20000UL);
+	param_set32(PARAM_TRX_DATA_RATE,        40000UL);
+	param_set32(PARAM_RX_BAND_WIDTH,        80000UL);
+	param_default_common();
 }
