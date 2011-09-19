@@ -57,6 +57,9 @@
 /// BUTTON_ACTIVE
 ///	The value that BUTTON will have when the bootloader should stop.
 ///
+/// SYSCLK
+///	Frequency of the system clock in MHz.
+///
 /// HW_INIT
 ///	A code fragment called at early startup time that configures
 ///	the SoC for board-specific operation.
@@ -100,6 +103,7 @@ SBIT(BUTTON_DOWN,  SFR_P1, 6);
 // board-specific hardware config
 #define HW_INIT						\
 do {							\
+	/* GPIO config */				\
 	P0SKIP	|=  0x40;		/* button */	\
 	P1SKIP  |=  0x60;		/* buttons */	\
 	P2SKIP	|=  0x21;		/* LEDs */	\
@@ -110,6 +114,10 @@ do {							\
 	IT01CF   =  (IT01CF & 0xf) | 0x7;		\
 	IT0	 = 0;	/* INT0 leve triggered */	\
 } while(0)
+
+// System clock frequency
+// XXX should be setting up clocks in HW_INIT to be able to guarantee this...
+#define SYSCLK	245000000
 
 // EzRadio / rtPhy definitions
 // Note that the RFM50 deviates in both the oscillator cap value and the wiring
