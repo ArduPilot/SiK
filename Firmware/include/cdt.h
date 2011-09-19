@@ -42,5 +42,4 @@
 # define __using(_x)
 #endif
 
-
 #endif /* _CDT_H_ */
