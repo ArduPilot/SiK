@@ -52,21 +52,25 @@
 ///	the GPIOs for the LED and button.
 ///
 
+/// @file	board.h
+///		Board definitions for the HopeRF RF50 evaluation board
+
 #ifndef _BOARD_H
 #define _BOARD_H
 
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
 
-#define BOARD_ID	0x4d	// unique board ID
+#define BOARD_ID	0x4d	// unique board ID used to connect bootloader and upload tools
 
-// GPIO definitions
+// GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P2, 0);
 SBIT(LED_GREEN,	   SFR_P2, 5);
 SBIT(BUTTON_ENTER, SFR_P0, 6);
 SBIT(BUTTON_UP,	   SFR_P1, 5);
 SBIT(BUTTON_DOWN,  SFR_P1, 6);
 
+// Signal polarity definitions
 #define LED_ON		0
 #define LED_OFF		1
 #define BUTTON_ACTIVE	0
@@ -87,5 +91,11 @@ do {							\
 	LED_RED  = 1;					\
 	LED_GREEN = 1;					\
 } while(0)
+
+// EzRadio / rtPhy definitions
+#define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// Per HRF demo code
+SBIT(IRQ, SFR_P0, 7);			// Per HRF demo code & schematic
+SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
+SBIT(SDN, SFR_P2, 6);			// XXX not actually the case on the RFM50... HRF set it this way
 
 #endif // _BOARD_H
