@@ -8,14 +8,13 @@
     <widget-library name="glade-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
     <widget-library name="../bin/Debug/uploader.exe" internal="true" />
   </import>
-  <widget class="Gtk.Window" id="MainWindow" design-size="486 173">
+  <widget class="Gtk.Window" id="uploader.MainWindow" design-size="486 173">
     <property name="MemberName" />
     <property name="Title" translatable="yes">SiK Firmware Uploader</property>
     <property name="Icon">stock:gtk-refresh Menu</property>
     <property name="WindowPosition">CenterOnParent</property>
     <property name="BorderWidth">5</property>
     <property name="Resizable">False</property>
-    <signal name="DeleteEvent" handler="OnDeleteEvent" />
     <child>
       <widget class="Gtk.VBox" id="vbox1">
         <property name="MemberName" />

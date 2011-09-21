@@ -109,7 +109,7 @@ namespace uploader
 			text_Monitor.Buffer.Clear ();
 		}
 		
-		public void addchars (string s)
+		private void addchars (string s)
 		{
 			
 			// Add the text

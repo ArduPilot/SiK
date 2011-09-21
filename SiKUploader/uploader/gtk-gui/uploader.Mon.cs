@@ -16,7 +16,7 @@ namespace uploader
 			global::Stetic.Gui.Initialize (this);
 			// Widget uploader.Mon
 			this.Name = "uploader.Mon";
-			this.Title = global::Mono.Unix.Catalog.GetString ("Mon");
+			this.Title = global::Mono.Unix.Catalog.GetString ("SiK Serial Monitor");
 			this.WindowPosition = ((global::Gtk.WindowPosition)(4));
 			// Container child uploader.Mon.Gtk.Container+ContainerChild
 			this.vbox1 = new global::Gtk.VBox ();

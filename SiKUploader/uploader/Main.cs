@@ -1,13 +1,22 @@
-using System;
-using System.IO.Ports;
 using Gtk;
-
-public delegate void LogEventHandler (string message,int level = 0);
-
-public delegate void ProgressEventHandler (double completed);
+using System;
+using System.IO;
+using System.IO.Ports;
+using System.Configuration;
+using System.Configuration.Install;
 
 namespace uploader
 {
+	public delegate void LogEventHandler (string message,int level = 0);
+
+	public delegate void ProgressEventHandler (double completed);
+	
+	public delegate void MonitorEventHandler (string portname);
+
+	public delegate void UploadEventHandler (string portname,string filename);
+
+	public delegate void QuitEventHandler ();
+
 	class MainClass
 	{
 		public static void Main (string[] args)
@@ -17,8 +26,7 @@ namespace uploader
 			new AppLogic ();
 			
 			Application.Run ();
-		}
-		
+		}	
 	}
 	
 	class AppLogic
@@ -30,14 +38,36 @@ namespace uploader
 		SerialPort	port;
 		bool		upload_in_progress;
 		int			logLevel = 0;
+		string								config_name = "SiKUploader";
+		System.Configuration.Configuration	config;
+		ConfigSection 						config_section;
 
 		public AppLogic ()
 		{
+			// Get the current configuration file.
+			config = ConfigurationManager.OpenExeConfiguration (ConfigurationUserLevel.None);
+		
+			// Look for our settings and add/create them if missing
+			if (config.Sections [config_name] == null) {
+				config_section = new ConfigSection ();
+				config.Sections.Add (config_name, config_section);
+				config_section.SectionInformation.ForceSave = true;
+				config.Save (ConfigurationSaveMode.Full);
+			}
+			config_section = config.GetSection (config_name) as ConfigSection;
+
 			// Hook up main window events
 			win = new MainWindow ();
 			win.MonitorEvent += show_monitor;
 			win.UploadEvent += do_upload;
 			win.LogEvent += log;
+			win.QuitEvent += at_exit;
+			
+			// restore the last path that we uploaded
+			win.FileName = config_section.lastPath;
+			
+			// restore the last port that we opened
+			win.PortName = config_section.lastPort;
 			
 			// Create the intelhex loader
 			ihex = new IHex ();
@@ -52,6 +82,12 @@ namespace uploader
 			log ("Select a serial port and a .hex file to be uploaded, then hit Upload.\n");
 			
 			win.Show ();
+		}
+		
+		private void at_exit ()
+		{
+			log ("saving configuration");
+			config.Save (ConfigurationSaveMode.Modified);
 		}
 		
 		private void set_port (string portname)
@@ -76,7 +112,10 @@ namespace uploader
 			try {
 				log ("opening " + port.PortName, 1);
 				port.Open ();
-				log ("opened " + port.PortName);
+				log ("opened " + port.PortName, 1);
+				
+				// remember that we successfully opened this port
+				config_section.lastPort = port.PortName;
 			} catch {
 				log ("FAIL: cannot open " + port.PortName);
 				port = null;
@@ -152,6 +191,10 @@ namespace uploader
 			upload_in_progress = true;
 			try {
 				try_upload (filename);
+				
+				// remember that we successfully uploaded this path
+				config_section.lastPath = filename;
+				
 			} catch (Exception e) {
 				log ("upload failed " + e.Message, 1);
 				log (e.StackTrace);
@@ -193,4 +236,38 @@ namespace uploader
 			}
 		}
 	}
+	
+	public sealed class ConfigSection : ConfigurationSection
+	{
+		public ConfigSection ()
+		{
+		}
+
+		[ConfigurationProperty("lastPath", 
+		DefaultValue = ""
+		)]
+		public string lastPath {
+			get {
+				Console.WriteLine ("fetching lastPath : " + (string)this ["lastPath"]);
+				return (string)this ["lastPath"];
+			}
+			set {
+				Console.WriteLine ("setting lastPath : " + value);
+				this ["lastPath"] = value;
+			}
+		}
+	
+		[ConfigurationProperty("lastPort",
+		DefaultValue = ""
+		)]
+		public string lastPort {
+			get {
+				return (string)this ["lastPort"];
+			}
+			set {
+				this ["lastPort"] = value;
+			}		
+		}
+	}
+
 }
