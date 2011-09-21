@@ -29,7 +29,7 @@ namespace uploader
 		Uploader	upl;
 		SerialPort	port;
 		bool		upload_in_progress;
-		int			logLevel = 5;
+		int			logLevel = 0;
 
 		public AppLogic ()
 		{
