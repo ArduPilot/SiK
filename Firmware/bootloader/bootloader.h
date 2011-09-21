@@ -63,5 +63,6 @@
 #define PROTO_READ_MULTI	0x28	// read up to 255 bytes at address + increment
 
 #define PROTO_PROG_MULTI_MAX	64	// maximum PROG_MULTI size - must fit in DSEG
+#define PROTO_READ_MULTI_MAX	255	// size of the size field
 
 #endif // _BOOTLOADER_H

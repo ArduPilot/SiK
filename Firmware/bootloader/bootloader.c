@@ -166,7 +166,7 @@ bootloader(void)
 		case PROTO_PROG_MULTI:
 			trace('m');
 			count = cin();
-			if (count >= sizeof(buf))
+			if (count > sizeof(buf))
 				goto cmd_bad;
 			for (i = 0; i < count; i++)
 				buf[i] = cin();
@@ -185,6 +185,7 @@ bootloader(void)
 				c = flash_read_byte(address++);
 				cout(c);
 			}
+			break;
 		default:
 			goto cmd_bad;
 		}
