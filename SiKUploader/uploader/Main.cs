@@ -162,8 +162,13 @@ namespace uploader
 			
 			// if the monitor is still up, reconnect it, possibly to the
 			// device that was just uploaded to
-			if (mon != null)
+			if (mon != null) {
 				mon.connect (port);
+			} else {
+				// dispose of the port so that other tools can talk to the device
+				port.Close ();
+				port = null;
+			}
 		}
 		
 		private void try_upload (string filename)
