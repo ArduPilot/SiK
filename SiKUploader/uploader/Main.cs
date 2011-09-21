@@ -196,8 +196,8 @@ namespace uploader
 				config_section.lastPath = filename;
 				
 			} catch (Exception e) {
-				log ("upload failed " + e.Message, 1);
-				log (e.StackTrace);
+				log ("upload failed: " + e.Message, 1);
+				log (e.StackTrace, 1);
 				// don't log here, better errors should be logged by lower levels
 			}
 			upload_in_progress = false;
@@ -243,23 +243,17 @@ namespace uploader
 		{
 		}
 
-		[ConfigurationProperty("lastPath", 
-		DefaultValue = ""
-		)]
+		[ConfigurationProperty("lastPath", DefaultValue = "")]
 		public string lastPath {
 			get {
-				Console.WriteLine ("fetching lastPath : " + (string)this ["lastPath"]);
 				return (string)this ["lastPath"];
 			}
 			set {
-				Console.WriteLine ("setting lastPath : " + value);
 				this ["lastPath"] = value;
 			}
 		}
 	
-		[ConfigurationProperty("lastPort",
-		DefaultValue = ""
-		)]
+		[ConfigurationProperty("lastPort", DefaultValue = "")]
 		public string lastPort {
 			get {
 				return (string)this ["lastPort"];

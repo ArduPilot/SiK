@@ -176,6 +176,9 @@ namespace uploader
 	
 		public void set_progress (double completed)
 		{
+			// silence an otherwise stupid Gtk warning in case we overflow slightly
+			if (completed > 1.0)
+				completed = 1.0;
 			progress_Bar.Fraction = completed;
 			flush ();
 		}
