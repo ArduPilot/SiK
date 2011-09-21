@@ -61,6 +61,8 @@ static uint16_t	get_uint16(void);
 //
 static void	hardware_init(void);
 
+uint8_t __data	buf[PROTO_PROG_MULTI_MAX];
+
 // Bootloader entry logic
 //
 void
@@ -68,6 +70,7 @@ bootloader(void)
 {
 	uint8_t		c;
 	uint16_t	address;
+	uint8_t		count, i;
 
 	// Do early hardware init
 	hardware_init();
@@ -103,6 +106,7 @@ bootloader(void)
 	trace('o');
 	trace('t');
 	trace('\n');
+	cout('B');
 
 	// Main bootloader loop
 	//
@@ -158,9 +162,31 @@ bootloader(void)
 			c = flash_read_byte(address++);
 			cout(c);
 			break;
-			
-		default:
+
+		case PROTO_PROG_MULTI:
+			trace('m');
+			count = cin();
+			if (count >= sizeof(buf))
+				goto cmd_bad;
+			for (i = 0; i < count; i++)
+				buf[i] = cin();
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
+			for (i = 0; i < count; i++)
+				flash_write_byte(address++, buf[i]);
 			break;
+
+		case PROTO_READ_MULTI:
+			trace('p');
+			count = cin();
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
+			for (i = 0; i < count; i++) {
+				c = flash_read_byte(address++);
+				cout(c);
+			}
+		default:
+			goto cmd_bad;
 		}
 	cmd_ok:
 		sync_response();

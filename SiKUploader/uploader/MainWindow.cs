@@ -6,16 +6,19 @@ using System.IO.Ports;
 using Gtk;
 using uploader;
 
-public delegate void Log (string message,int level = 0);
+public delegate void MonitorEventHandler (string portname);
 
-public delegate void Progress (double completed);
+public delegate void UploadEventHandler (string portname,string filename);
 
 public partial class MainWindow: Gtk.Window
 {	
-	int									logLevel = 0;
 	string								config_name = "SiKUploader";
 	System.Configuration.Configuration	config;
 	ConfigSection 						config_section;
+
+	public event UploadEventHandler		UploadEvent;
+	public event MonitorEventHandler	MonitorEvent;
+	public event LogEventHandler		LogEvent;
 	
 	public MainWindow (): base (Gtk.WindowType.Toplevel)
 	{
@@ -38,6 +41,10 @@ public partial class MainWindow: Gtk.Window
 		// wire up the Upload button
 		button_Upload.Clicked += new EventHandler (do_upload);
 		button_Upload.Sensitive = false;		
+		
+		// wire up the Console button
+		button_Console.Clicked += new EventHandler (do_console);
+		button_Console.Sensitive = true;
 		
 		// configure the file chooser
 		FileFilter filter = new FileFilter ();
@@ -68,10 +75,7 @@ public partial class MainWindow: Gtk.Window
 		combo_Port.Model.Foreach (default_port_compare);
 		
 		// Set up the status bar
-		status_Bar.Push (1, "Init...");
-		
-		// Emit some basic help
-		log ("Select a serial port and a .hex file to be uploaded, then hit Upload.\n");
+		status_Bar.Push (1, "Init...");		
 	}
 	
 	private bool default_port_compare (TreeModel model, TreePath path, TreeIter iter)
@@ -110,67 +114,63 @@ public partial class MainWindow: Gtk.Window
 			Gtk.Application.RunIteration ();
 	}
 	
-	private void do_upload (object obj, EventArgs args)
+	private void do_console (object obj, EventArgs args)
 	{
-		progress (0);
-		button_Upload.Sensitive = false;
-		
-		try {
-			upload ();
-		} catch (Exception ex) {
-			log (string.Format ("\nFAIL: {0}\n", ex.Message));
-			if (logLevel > 0)
-				log (ex.StackTrace);
-			progress (0);
+		if (MonitorEvent != null) {
+			string p = get_port_name ();
+			
+			MonitorEvent (p);
 		}
-		button_Upload.Sensitive = true;		
 	}
 	
-	private void upload ()
+	private void do_upload (object obj, EventArgs args)
 	{	
-		// read the hex file
-		string filename = chooser_Hex.Filename;
-		if (filename == null) {
-			log ("Please select an IntelHex (*.hex) file to flash.");
-			return;
-		}
-		IHex ihex = new IHex (filename, log);
-		config_section.lastPath = filename;
+		if (UploadEvent != null) {
+			string p = get_port_name ();
+			string f = get_file_name ();
 		
-		// get the serial port
+			UploadEvent (p, f);
+		}
+	}
+	
+	public string get_port_name ()
+	{
 		TreeIter iter;
 		string port = "";
 		if (combo_Port.GetActiveIter (out iter))
 			port = (string)combo_Port.Model.GetValue (iter, 0);
 		if (port.Equals ("")) {
 			log ("Please select the serial port connected to your radio.");
-			return;
+			throw new Exception ("no port selected");
 		}
-		config_section.lastPort = port;
-		
-		// create the uploader and do the deed
-		Uploader uploader = new Uploader (port, progress, log);
-		uploader.upload (ihex);
-		
-		log ("\nSuccess\n");
-	}
-
-	private void log (string msg, int level = 0)
-	{
-		
-		// log a message into the buffer
-		if (level <= logLevel)
-			Console.Write (msg);
-		
-		// level 0 messages go to the status bar
-		if (level == 0) {
-			status_Bar.Pop (1);
-			status_Bar.Push (1, msg);
-			flush ();
-		}
+		return port;
 	}
 	
-	private void progress (double completed)
+	public string get_file_name ()
+	{
+		string s = chooser_Hex.Filename;
+		
+		if (s == null) {
+			log ("Please select an IntelHex (*.hex) file to flash.");
+			throw new Exception ("no file selected to upload");
+		}
+		return s;
+	}
+	
+	private void log (string message, int level = 0)
+	{
+		if (LogEvent != null)
+			LogEvent (message, 0);
+	}
+	
+	public void set_status (string msg)
+	{
+		status_Bar.Pop (1);
+		status_Bar.Push (1, msg);
+		flush ();
+	}
+	
+	public void set_progress (double completed)
 	{
 		progress_Bar.Fraction = completed;
 		flush ();

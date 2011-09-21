@@ -6,29 +6,20 @@ namespace uploader
 {
 	public class IHex : SortedList<UInt16, byte[]>
 	{
-		Log		log;
+		public event LogEventHandler LogEvent;
 		
-		private void no_log (string message, int level = 0)
+		public IHex ()
 		{
 		}
-		
-		public IHex (string fromPath)
-		{
-			log = no_log;
-			parse (fromPath);
-		}
-
-		public IHex (string fromPath, Log logger)
-		{
-			log = logger;
-			parse (fromPath);
-		}
-		
-		private void parse (string fromPath)
+			
+		public void load (string fromPath)
 		{
 			StreamReader sr = new StreamReader (fromPath);
 			
-			log (string.Format ("ihex: reading from {0}\n", fromPath));
+			// discard anything we might previous have loaded
+			Clear ();
+			
+			log (string.Format ("reading from {0}\n", fromPath));
 			
 			while (!sr.EndOfStream) {
 				string line = sr.ReadLine ();
@@ -61,7 +52,14 @@ namespace uploader
 			}
 			if (Count < 1)
 				throw new Exception ("no data in IntelHex file");
-		}		
+		}
+		
+		private void log (string message, int level = 0)
+		{
+			if (LogEvent != null)
+				LogEvent (message, level);
+		}
+
 	}
 }
 

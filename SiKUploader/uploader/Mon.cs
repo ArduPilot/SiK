@@ -25,17 +25,109 @@
 //  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 
+using Gtk;
+using GLib;
+using Pango;
 using System;
+using System.IO.Ports;
 
 namespace uploader
 {
 	public partial class Mon : Gtk.Window
 	{
-		public Mon () : 
+		public event LogEventHandler LogEvent;
+		
+		private SerialPort	port;
+		private bool		is_deleted;
+		private bool		should_autoscroll;
+		
+		/// <summary>
+		/// Maximum number of scrollback lines in the monitor window.
+		/// </summary>
+		private const int	max_lines = 1000;
+
+		public Mon (SerialPort on_port) : 
 				base(Gtk.WindowType.Toplevel)
 		{
 			this.Build ();
+			
+			// pick a font that works
+			textview2.ModifyFont (FontDescription.FromString ("Courier 12"));
+			
+			// add the port data poll timeout
+			GLib.Timeout.Add (100, check_for_data);
+			
+			// get a callback when we are being deleted
+			DeleteEvent += deleted;
+		
+			// default to autoscrolling
+			// it would be nice to turn this off if the user uses the scrollbars to scroll
+			// away from the bottom of the view, or at least have a control to disable it.
+			should_autoscroll = true;
+			
+		}
+		
+		protected void deleted (object sender, DeleteEventArgs args)
+		{
+			// stop the timer the next time it runs
+			is_deleted = true;
+			
+			// close the port if it's open
+			disconnect ();
+		}
+		
+		private bool check_for_data ()
+		{
+			try {
+				if ((port != null) &&
+					port.IsOpen && 
+					(port.BytesToRead > 0))
+					addchars (port.ReadExisting ());
+			} catch {
+				// harmless if this fails
+			}
+			if (is_deleted)
+				return false;
+			return true;
+		}
+		
+		public void connect (SerialPort to_port)
+		{
+			port = to_port;
+				
+			Title = "Serial monitor: " + port.PortName;
+		}
+		
+		public void disconnect ()
+		{
+			port = null;
+			Title = "Serial Monitor: NOT CONNECTED";
+		}
+		
+		public void addchars (string s)
+		{
+			
+			// Add the text
+			textview2.Buffer.InsertAtCursor (s);
+			
+			// If there is too much text, remove some
+			int linecount = textview2.Buffer.LineCount;
+			if (linecount > max_lines) {
+				Gtk.TextIter startpoint = textview2.Buffer.StartIter;
+				Gtk.TextIter endpoint = textview2.Buffer.GetIterAtLine (linecount - max_lines);
+				textview2.Buffer.Delete (ref startpoint, ref endpoint);
+			}
+			
+			// And if we are autoscrolling, do the right thing and keep the cursor visible
+			if (should_autoscroll)
+				textview2.ScrollMarkOnscreen (textview2.Buffer.InsertMark);
+		}
+
+		private void log (string message, int level = 0)
+		{
+			if (LogEvent != null)
+				LogEvent (message, level);
 		}
 	}
+	
 }
-

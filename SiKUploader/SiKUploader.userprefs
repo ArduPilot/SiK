@@ -1,12 +1,12 @@
 ﻿<Properties GitUserInfo="UsingGIT">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="uploader/MainWindow.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="uploader/Uploader.cs">
     <Files>
-      <File FileName="uploader/MainWindow.cs" Line="4" Column="17" />
-      <File FileName="uploader/Main.cs" Line="17" Column="1" />
-      <File FileName="uploader/Uploader.cs" Line="7" Column="1" />
-      <File FileName="uploader/IHex.cs" Line="63" Column="47" />
-      <File FileName="uploader/AssemblyInfo.cs" Line="8" Column="36" />
+      <File FileName="uploader/Main.cs" Line="63" Column="19" />
+      <File FileName="uploader/Uploader.cs" Line="136" Column="4" />
+      <File FileName="uploader/IHex.cs" Line="22" Column="25" />
+      <File FileName="uploader/Mon.cs" Line="1" Column="25" />
+      <File FileName="uploader/MainWindow.cs" Line="133" Column="4" />
     </Files>
     <Pads>
       <Pad Id="MonoDevelop.Debugger.WatchPad">

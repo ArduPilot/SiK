@@ -8,7 +8,7 @@
     <widget-library name="glade-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
     <widget-library name="../bin/Debug/uploader.exe" internal="true" />
   </import>
-  <widget class="Gtk.Window" id="MainWindow" design-size="480 181">
+  <widget class="Gtk.Window" id="MainWindow" design-size="486 173">
     <property name="MemberName" />
     <property name="Title" translatable="yes">SiK Firmware Uploader</property>
     <property name="Icon">stock:gtk-refresh Menu</property>
@@ -79,11 +79,30 @@
             <property name="RowSpacing">6</property>
             <property name="ColumnSpacing">6</property>
             <child>
-              <placeholder />
+              <widget class="Gtk.Button" id="button_Console">
+                <property name="MemberName" />
+                <property name="Type">TextOnly</property>
+                <property name="Label" translatable="yes">Console</property>
+                <property name="UseUnderline">True</property>
+              </widget>
+              <packing>
+                <property name="LeftAttach">2</property>
+                <property name="RightAttach">3</property>
+                <property name="AutoSize">True</property>
+                <property name="XOptions">Fill</property>
+                <property name="YOptions">Fill</property>
+                <property name="XExpand">False</property>
+                <property name="XFill">True</property>
+                <property name="XShrink">False</property>
+                <property name="YExpand">False</property>
+                <property name="YFill">True</property>
+                <property name="YShrink">False</property>
+              </packing>
             </child>
             <child>
               <widget class="Gtk.Button" id="button_Upload">
                 <property name="MemberName" />
+                <property name="CanDefault">True</property>
                 <property name="CanFocus">True</property>
                 <property name="Events">ButtonReleaseMask</property>
                 <property name="Type">TextOnly</property>
@@ -95,11 +114,11 @@
                 <property name="BottomAttach">2</property>
                 <property name="LeftAttach">2</property>
                 <property name="RightAttach">3</property>
-                <property name="AutoSize">False</property>
-                <property name="XOptions">0</property>
+                <property name="AutoSize">True</property>
+                <property name="XOptions">Fill</property>
                 <property name="YOptions">Fill</property>
                 <property name="XExpand">False</property>
-                <property name="XFill">False</property>
+                <property name="XFill">True</property>
                 <property name="XShrink">False</property>
                 <property name="YExpand">False</property>
                 <property name="YFill">True</property>
@@ -112,11 +131,14 @@
                 <property name="WidthChars">40</property>
               </widget>
               <packing>
+                <property name="TopAttach">1</property>
+                <property name="BottomAttach">2</property>
                 <property name="LeftAttach">1</property>
                 <property name="RightAttach">2</property>
-                <property name="AutoSize">False</property>
+                <property name="AutoSize">True</property>
+                <property name="XOptions">Fill</property>
                 <property name="YOptions">Fill</property>
-                <property name="XExpand">True</property>
+                <property name="XExpand">False</property>
                 <property name="XFill">True</property>
                 <property name="XShrink">False</property>
                 <property name="YExpand">False</property>
@@ -131,8 +153,6 @@
                 <property name="Items" translatable="yes" />
               </widget>
               <packing>
-                <property name="TopAttach">1</property>
-                <property name="BottomAttach">2</property>
                 <property name="LeftAttach">1</property>
                 <property name="RightAttach">2</property>
                 <property name="AutoSize">False</property>
@@ -152,6 +172,8 @@
                 <property name="LabelProp" translatable="yes">Hex File</property>
               </widget>
               <packing>
+                <property name="TopAttach">1</property>
+                <property name="BottomAttach">2</property>
                 <property name="AutoSize">True</property>
                 <property name="XOptions">Fill</property>
                 <property name="YOptions">Fill</property>
@@ -170,8 +192,6 @@
                 <property name="LabelProp" translatable="yes">Serial Port</property>
               </widget>
               <packing>
-                <property name="TopAttach">1</property>
-                <property name="BottomAttach">2</property>
                 <property name="AutoSize">True</property>
                 <property name="XOptions">Fill</property>
                 <property name="YOptions">Fill</property>
@@ -216,6 +236,28 @@
             <property name="Expand">False</property>
             <property name="Fill">False</property>
           </packing>
+        </child>
+      </widget>
+    </child>
+  </widget>
+  <widget class="Gtk.Window" id="uploader.Mon" design-size="570 252">
+    <property name="MemberName" />
+    <property name="Title" translatable="yes">Mon</property>
+    <property name="WindowPosition">CenterOnParent</property>
+    <child>
+      <widget class="Gtk.ScrolledWindow" id="scrolledwindow2">
+        <property name="MemberName" />
+        <property name="CanFocus">True</property>
+        <property name="ShadowType">In</property>
+        <child>
+          <widget class="Gtk.TextView" id="textview2">
+            <property name="MemberName" />
+            <property name="CanFocus">True</property>
+            <property name="Editable">False</property>
+            <property name="CursorVisible">False</property>
+            <property name="Text" translatable="yes" />
+            <property name="WrapMode">Char</property>
+          </widget>
         </child>
       </widget>
     </child>

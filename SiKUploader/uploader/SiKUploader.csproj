@@ -55,6 +55,8 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="IHex.cs" />
     <Compile Include="Uploader.cs" />
+    <Compile Include="Mon.cs" />
+    <Compile Include="gtk-gui\uploader.Mon.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

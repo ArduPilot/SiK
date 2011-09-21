@@ -4,10 +4,14 @@ using System.Collections.Generic;
 
 namespace uploader
 {
-	public class Uploader : SerialPort
-	{
-		Progress	progress;
-		Log			log;
+	public class Uploader
+	{		
+		public event LogEventHandler LogEvent;
+		public event ProgressEventHandler ProgressEvent;
+		
+		private	int bytes_to_process;
+		private int bytes_processed;
+		private SerialPort port;
 		
 		private enum Code : byte
 		{
@@ -22,49 +26,45 @@ namespace uploader
 			LOAD_ADDRESS	= 0x24,
 			PROG_FLASH		= 0x25,
 			READ_FLASH		= 0x26,
+			PROG_MULTI		= 0x27,
+			READ_MULTI		= 0x28,
+			
+			PROG_MULTI_MAX	= 64,	// maximum number of bytes in a PROG_MULTI command
 			
 			DEVICE_ID		= 0x4d,	// XXX should come with the firmware image...
 		};
 		
-		public Uploader (string port_name, Progress progress_delegate, Log log_delegate)
+		public Uploader ()
 		{
-			progress = progress_delegate;
-			log = log_delegate;
-			init (port_name);
-		}
-
-		public Uploader (string port_name, Progress progress_delegate)
-		{
-			progress = progress_delegate;
-			log = no_log;
-			init (port_name);
 		}
 		
+	
 		/// <summary>
-		/// Initializes a new instance of the <see cref="uploader.Uploader"/> class.
+		/// Upload the specified image_data.
 		/// </summary>
-		/// <param name='port_name'>
-		/// Serial port name.
+		/// <param name='image_data'>
+		/// Image_data to be uploaded.
 		/// </param>
-		/// <param name='progress_delegate'>
-		/// Progress indicator.
-		/// </param>
-		/// <exception cref='NoSync'>
-		/// Is thrown if we cannot establish sync with the bootloader.
-		/// </exception>
-		private void init (string port_name)
+		public void upload (SerialPort on_port, IHex image_data)
 		{
-
-			// configure the port
-			PortName = port_name;
-			BaudRate = 115200;
-			DataBits = 8;
-			StopBits = StopBits.One;
-			Parity = Parity.None;
-			ReadTimeout = 2000;			// must be longer than full flash erase time (~1s)
+			progress (0);
 			
-			Open ();
-			log (string.Format ("opened {0}\n", port_name));
+			port = on_port;
+			
+			try {
+				connect_and_sync ();
+				upload_and_verify (image_data);
+			} catch (Exception e) {
+				if (port.IsOpen)
+					port.Close ();
+				throw e;
+			}
+		}
+			
+		private void connect_and_sync ()
+		{
+			// configure the port
+			port.ReadTimeout = 2000;			// must be longer than full flash erase time (~1s)
 			
 			// synchronise with the bootloader
 			//
@@ -76,33 +76,29 @@ namespace uploader
 					break;
 				log (string.Format ("sync({0}) failed\n", i), 1);
 			}
-			if (!cmdSync ())
-				throw new Exception ("could not synchronise with the bootloader");
+			if (!cmdSync ()) {
+				log ("FAIL: could not synchronise with the bootloader");
+				throw new Exception ("SYNC FAIL");
+			}
 			checkDevice ((byte)Code.DEVICE_ID);
+			
 			log ("connected to bootloader\n");
 		}
 		
-		/// <summary>
-		/// Upload the specified image_data.
-		/// </summary>
-		/// <param name='image_data'>
-		/// Image_data to be uploaded.
-		/// </param>
-		public void upload (IHex image_data)
+		private void upload_and_verify (IHex image_data)
 		{
-			progress (0);
 			
 			// erase the program area first
 			log ("erasing program flash\n");
 			cmdErase ();
 			
 			// progress fractions
-			int bytes_to_process = 0;
+			bytes_to_process = 0;
 			foreach (byte[] bytes in image_data.Values) {
 				bytes_to_process += bytes.Length;
 			}
 			bytes_to_process *= 2;		// once to program, once to verify
-			int bytes_processed = 0;
+			bytes_processed = 0;
 			
 			// program the flash blocks
 			log ("programming\n");
@@ -110,11 +106,8 @@ namespace uploader
 				// move the program pointer to the base of this block
 				cmdSetAddress (kvp.Key);
 				log (string.Format ("prog 0x{0:X}/{1}\n", kvp.Key, kvp.Value.Length), 1);
-				
-				foreach (byte b in kvp.Value) {
-					cmdProgram (b);
-					progress ((double)(++bytes_processed) / bytes_to_process);
-				}
+
+				upload_block_multi (kvp.Value);
 			}
 			
 			// and read them back to verify that they were programmed
@@ -124,11 +117,40 @@ namespace uploader
 				cmdSetAddress (kvp.Key);
 				log (string.Format ("prog 0x{0:X}/{1}\n", kvp.Key, kvp.Value.Length), 1);
 				
-				foreach (byte b in kvp.Value) {
-					cmdVerify (b);
-					progress ((double)(++bytes_processed) / bytes_to_process);
-				}
+				cmdVerifyMulti (kvp.Value);
+				bytes_processed += kvp.Value.GetLength (0);
+				progress ((double)bytes_processed / bytes_to_process);
 			}
+			log ("Success\n");
+		}
+
+		private void upload_block (byte[] data)
+		{						
+			foreach (byte b in data) {
+				cmdProgram (b);
+				progress ((double)(++bytes_processed) / bytes_to_process);
+			}
+		}
+		
+		private void upload_block_multi (byte[] data)
+		{
+			int offset = 0;
+			int to_send;
+			int length = data.GetLength (0);
+			
+			// Chunk the block in units of no more than what the bootloader
+			// will program.
+			while (offset < length) {
+				to_send = length - offset;
+				if (to_send > (int)Code.PROG_MULTI_MAX)
+					to_send = (int)Code.PROG_MULTI_MAX;
+
+				cmdProgramMulti (data, offset, to_send);
+				offset += to_send;
+
+				bytes_processed += to_send;
+				progress ((double)bytes_processed / bytes_to_process);				
+			}			
 		}
 		
 		/// <summary>
@@ -139,7 +161,7 @@ namespace uploader
 		/// </returns>
 		private bool cmdSync ()
 		{
-			DiscardInBuffer ();
+			port.DiscardInBuffer ();
 			
 			send (Code.GET_SYNC);
 			send (Code.EOC);
@@ -194,6 +216,17 @@ namespace uploader
 			getSync ();
 		}
 		
+		private void cmdProgramMulti (byte[] data, int offset, int length)
+		{
+			send (Code.PROG_MULTI);
+			send ((byte)length);
+			for (int i = 0; i < length; i++)
+				send (data [offset + i]);
+			send (Code.EOC);
+			
+			getSync ();
+		}
+		
 		/// <summary>
 		/// Verifies the byte at the current program address.
 		/// </summary>
@@ -212,6 +245,20 @@ namespace uploader
 				throw new Exception ("flash verification failed");
 			
 			getSync ();
+		}
+		
+		private void cmdVerifyMulti (byte[] data)
+		{
+			send (Code.READ_MULTI);
+			send ((byte)data.GetLength (0));
+			send (Code.EOC);
+			
+			foreach (byte b in data) {
+				if (recv () != b) {
+					log ("flash verification failed\n");
+					throw new Exception ("VERIFY FAIL");
+				}
+			}
 		}
 		
 		private void checkDevice (byte device_id)
@@ -241,18 +288,18 @@ namespace uploader
 				c = (Code)recv ();
 				if (c != Code.INSYNC) {
 					log (string.Format ("got {0:X} when expecting {1:X}\n", (int)c, (int)Code.INSYNC), 2);
-					throw new Exception ("bad sync byte from bootloader");
+					throw new Exception ("BAD SYNC");
 				}
 				c = (Code)recv ();
 				if (c != Code.OK) {
 					log (string.Format ("got {0:X} when expecting {1:X}\n", (int)c, (int)Code.EOC), 2);
-					throw new Exception ("bad status byte from bootloader");
+					throw new Exception ("BAD STATUS");
 				}
 			} catch (TimeoutException) {
-				log ("timeout waiting for sync");
-				throw new Exception ("timeout waiting for sync from bootloader");
+				log ("FAIL: lost synchronisation with the bootloader\n");
+				throw new Exception ("SYNC LOST");
 			}
-			log ("in sync\n", 2);
+			log ("in sync\n", 5);
 		}
 		
 		/// <summary>
@@ -265,13 +312,13 @@ namespace uploader
 		{
 			byte[] b = new byte[] { (byte)code };
 			
-			log ("send ", 2);
+			log ("send ", 5);
 			foreach (byte x in b) {
-				log (string.Format (" {0:X}", x), 2);
+				log (string.Format (" {0:X}", x), 5);
 			}
-			log ("\n", 2);
+			log ("\n", 5);
 			
-			Write (b, 0, 1);
+			port.Write (b, 0, 1);
 		}
 		
 		/// <summary>
@@ -284,13 +331,13 @@ namespace uploader
 		{
 			byte[] b = new byte[] { data };
 			
-			log ("send ", 2);
+			log ("send ", 5);
 			foreach (byte x in b) {
-				log (string.Format (" {0:X}", x), 2);
+				log (string.Format (" {0:X}", x), 5);
 			}
-			log ("\n", 2);
+			log ("\n", 5);
 
-			Write (b, 0, 1);
+			port.Write (b, 0, 1);
 		}
 		
 		/// <summary>
@@ -303,13 +350,13 @@ namespace uploader
 		{
 			byte[] b = new byte[2] { (byte)(data & 0xff), (byte)(data >> 8) };
 			
-			log ("send ", 2);
+			log ("send ", 5);
 			foreach (byte x in b) {
-				log (string.Format (" {0:X}", x), 2);
+				log (string.Format (" {0:X}", x), 5);
 			}
-			log ("\n", 2);
+			log ("\n", 5);
 
-			Write (b, 0, 2);
+			port.Write (b, 0, 2);
 		}
 		
 		/// <summary>
@@ -319,15 +366,23 @@ namespace uploader
 		{
 			byte b;
 			
-			b = (byte)ReadByte ();
+			b = (byte)port.ReadByte ();
 			
-			log (string.Format ("recv {0:X}\n", b), 2);
+			log (string.Format ("recv {0:X}\n", b), 5);
 			
 			return b;
 		}
 		
-		private void no_log (string message, int level = 0)
+		private void log (string message, int level = 0)
 		{
+			if (LogEvent != null)
+				LogEvent (message, level);
+		}
+		
+		private void progress (double completed)
+		{
+			if (ProgressEvent != null)
+				ProgressEvent (completed);
 		}
 	}
 }
