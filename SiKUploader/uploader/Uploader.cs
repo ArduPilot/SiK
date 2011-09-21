@@ -30,6 +30,7 @@ namespace uploader
 			READ_MULTI		= 0x28,
 			
 			PROG_MULTI_MAX	= 64,	// maximum number of bytes in a PROG_MULTI command
+			READ_MULTI_MAX	= 255,	// largest read that can be requested
 			
 			DEVICE_ID		= 0x4d,	// XXX should come with the firmware image...
 		};
@@ -102,7 +103,7 @@ namespace uploader
 			
 			// program the flash blocks
 			log ("programming\n");
-			foreach (KeyValuePair<UInt16, byte[]> kvp in image_data) {
+			foreach (KeyValuePair<UInt32, byte[]> kvp in image_data) {
 				// move the program pointer to the base of this block
 				cmdSetAddress (kvp.Key);
 				log (string.Format ("prog 0x{0:X}/{1}\n", kvp.Key, kvp.Value.Length), 1);
@@ -112,12 +113,12 @@ namespace uploader
 			
 			// and read them back to verify that they were programmed
 			log ("verifying\n");
-			foreach (KeyValuePair<UInt16, byte[]> kvp in image_data) {
+			foreach (KeyValuePair<UInt32, byte[]> kvp in image_data) {
 				// move the program pointer to the base of this block
 				cmdSetAddress (kvp.Key);
-				log (string.Format ("prog 0x{0:X}/{1}\n", kvp.Key, kvp.Value.Length), 1);
+				log (string.Format ("verf 0x{0:X}/{1}\n", kvp.Key, kvp.Value.Length), 1);
 				
-				cmdVerifyMulti (kvp.Value);
+				verify_block_multi (kvp.Value);
 				bytes_processed += kvp.Value.GetLength (0);
 				progress ((double)bytes_processed / bytes_to_process);
 			}
@@ -144,13 +145,37 @@ namespace uploader
 				to_send = length - offset;
 				if (to_send > (int)Code.PROG_MULTI_MAX)
 					to_send = (int)Code.PROG_MULTI_MAX;
-
+				
+				log (string.Format ("multi {0}/{1}\n", offset, to_send), 1);
 				cmdProgramMulti (data, offset, to_send);
 				offset += to_send;
 
 				bytes_processed += to_send;
 				progress ((double)bytes_processed / bytes_to_process);				
 			}			
+		}
+		
+		private void verify_block_multi (byte[] data)
+		{
+			int offset = 0;
+			int to_verf;
+			int length = data.GetLength (0);
+			
+			// Chunk the block in units of no more than what the bootloader
+			// will read.
+			while (offset < length) {
+				to_verf = length - offset;
+				if (to_verf > (int)Code.READ_MULTI_MAX)
+					to_verf = (int)Code.READ_MULTI_MAX;
+				
+				log (string.Format ("multi {0}/{1}\n", offset, to_verf), 1);
+				cmdVerifyMulti (data, offset, to_verf);
+				offset += to_verf;
+
+				bytes_processed += to_verf;
+				progress ((double)bytes_processed / bytes_to_process);				
+			}			
+			
 		}
 		
 		/// <summary>
@@ -192,10 +217,10 @@ namespace uploader
 		/// <param name='address'>
 		/// Address to be set.
 		/// </param>
-		private void cmdSetAddress (UInt16 address)
+		private void cmdSetAddress (UInt32 address)
 		{
 			send (Code.LOAD_ADDRESS);
-			send (address);
+			send ((UInt16)address);
 			send (Code.EOC);
 			
 			getSync ();
@@ -247,18 +272,20 @@ namespace uploader
 			getSync ();
 		}
 		
-		private void cmdVerifyMulti (byte[] data)
+		private void cmdVerifyMulti (byte[] data, int offset, int length)
 		{
 			send (Code.READ_MULTI);
-			send ((byte)data.GetLength (0));
+			send ((byte)length);
 			send (Code.EOC);
 			
-			foreach (byte b in data) {
-				if (recv () != b) {
+			for (int i = 0; i < length; i++) {
+				if (recv () != data [offset + i]) {
 					log ("flash verification failed\n");
 					throw new Exception ("VERIFY FAIL");
 				}
 			}
+
+			getSync ();
 		}
 		
 		private void checkDevice (byte device_id)
