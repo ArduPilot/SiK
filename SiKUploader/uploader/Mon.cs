@@ -36,6 +36,7 @@ namespace uploader
 	public partial class Mon : Gtk.Window
 	{
 		public event LogEventHandler LogEvent;
+		public event QuitEventHandler QuitEvent;
 		
 		private SerialPort	port;
 		private bool		is_deleted;
@@ -73,6 +74,9 @@ namespace uploader
 			
 			// close the port if it's open
 			disconnect ();
+			
+			if (QuitEvent != null)
+				QuitEvent ();
 		}
 		
 		private bool check_for_data ()

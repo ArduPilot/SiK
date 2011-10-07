@@ -21,11 +21,11 @@ namespace uploader
 	{
 		public static void Main (string[] args)
 		{
-			Application.Init ();
+			Application.Init ();	// XXX requires Gtk#
 			
 			new AppLogic ();
 			
-			Application.Run ();
+			Application.Run ();		// XXX requires Gtk#
 		}	
 	}
 	
@@ -147,6 +147,7 @@ namespace uploader
 				
 				// create a new monitor
 				mon = new Mon (port);
+				mon.QuitEvent += end_monitor;
 				mon.DeleteEvent += end_monitor;
 				mon.LogEvent += log;
 				
@@ -169,7 +170,7 @@ namespace uploader
 		/// <param name='args'>
 		/// Arguments.
 		/// </param>
-		private void end_monitor (object obj, DeleteEventArgs args)
+		private void end_monitor ()
 		{
 			// forget about the monitor
 			mon = null;
