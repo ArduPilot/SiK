@@ -38,6 +38,10 @@
 #include "radio.h"
 
 // Interrupt vector prototypes
+//
+// Note that these *must* be placed in this file for SDCC to generate the
+// interrupt vector table correctly.
+//
 extern  void uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
 
 // Local prototypes
