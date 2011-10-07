@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "board.h"
 #include "uart.h"
@@ -44,6 +45,9 @@
 #else
 # define debug(fmt, args...)
 #endif
+
+#define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
+#define interrupt_restore(_save)	do { EA = _save; } while(0)
 
 extern void panic(const char *reason, ...);
 
