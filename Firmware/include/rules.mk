@@ -28,21 +28,35 @@
 # Common rules and targets for the HopeRF radio apps
 #
 
-EC2TOOLS	 =	/Users/msmith/bin
-SDCC		 =	/usr/local/
+# Board configuration
+CFLAGS			+=	-D$(BOARD)
 
-CC			 =	$(SDCC)/bin/sdcc -mmcs51
-AS			 =	$(SDCC)/bin/sdas8051 -jloscp
-LD			 =	$(SDCC)/bin/sdcc
+# Compiler
+SDCC			 =	/usr/local/
+CC				 =	$(SDCC)/bin/sdcc -mmcs51
+AS				 =	$(SDCC)/bin/sdas8051 -jloscp
+LD				 =	$(SDCC)/bin/sdcc
+INCLUDES		 =	$(SRCROOT)/../include
+CFLAGS			+=	$(addprefix -I,$(INCLUDES))
+DEPFLAGS		 =	-MM $(CFLAGS)
 
-EC2FLASH	 =	$(EC2TOOLS)/ec2writeflash
+GLOBAL_DEPS		+=	$(MAKEFILE_LIST)
 
-DEPFLAGS	 =	-MM $(CFLAGS)
-
-INCLUDES	 =	$(SRCROOT)/../include
-CFLAGS		+=	$(addprefix -I,$(INCLUDES))
-
+# Flash tool
+EC2TOOLS		 =	/Users/msmith/bin
+EC2FLASH	 	 =	$(EC2TOOLS)/ec2writeflash
 EC2FLASH_ARGS	 =	--port=USB --mode=c2 --hex
+
+OBJROOT		 =	$(SRCROOT)/obj
+$(shell mkdir -p $(OBJROOT))
+
+# Assembly source/objects must come first to ensure startup files
+# can be in front.  Sort by name to guarantee ordering.
+ASRCS			+=	$(sort $(wildcard $(SRCROOT)/*.asm))
+OBJS			+=	$(patsubst $(SRCROOT)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
+
+CSRCS			+=	$(wildcard $(SRCROOT)/*.c)
+OBJS			+=	$(patsubst $(SRCROOT)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
 
 ifeq ($(VERBOSE),)
 v		=	@
@@ -74,4 +88,5 @@ upload:	$(PRODUCT)
 clean:
 	$(v)rm -rf $(OBJROOT) $(SRCROOT)/*~
 
+$(OBJS):	$(GLOBAL_DEPS)
 -include $(wildcard $(OBJROOT)/*.dep)

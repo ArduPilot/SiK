@@ -1,3 +1,6 @@
+BOARD	?= BOARD_RF50
+export BOARD
+
 all:
 	cd bootloader && make all
 	cd radio && make all

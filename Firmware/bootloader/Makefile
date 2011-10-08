@@ -28,18 +28,14 @@
 # Makefile for the Si1000 UART bootloader.
 #
 
-SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-OBJROOT		 =	$(SRCROOT)/obj
-$(shell mkdir -p $(OBJROOT))
+BOARD		?=	BOARD_RF50
+PRODUCT		 =	$(OBJROOT)/bl.hex
 
-SRCS		:=	$(wildcard $(SRCROOT)/*.c)
-OBJS		:=	$(OBJROOT)/crtstart.rel $(patsubst $(SRCROOT)/%.c,$(OBJROOT)/%.rel,$(SRCS))
-
-CFLAGS		 =	--model-small --no-xinit-opt --opt-code-size --fverbose-asm --Werror
+CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
+#CFLAGS		+=	--fverbose-asm
 
 LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x00fc00 --stack-size 128 --nostdlib
 
-PRODUCT		 =	$(OBJROOT)/bl.hex
-
+SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 include ../include/rules.mk
 

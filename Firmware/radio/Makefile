@@ -30,12 +30,8 @@
 VERSION_MAJOR	=	0
 VERSION_MINOR	=	1
 
-SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-OBJROOT		 =	$(SRCROOT)/obj
-$(shell mkdir -p $(OBJROOT))
-
-SRCS		:=	$(wildcard $(SRCROOT)/*.c)
-OBJS		:=	$(patsubst $(SRCROOT)/%.c,$(OBJROOT)/%.rel,$(SRCS))
+BOARD		?=	BOARD_RF50
+PRODUCT		 =	$(OBJROOT)/radio.hex
 
 CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
 CFLAGS		+=	--model-small --opt-code-size --Werror
@@ -47,6 +43,5 @@ CFLAGS		+=	--model-small --opt-code-size --Werror
 
 LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 128
 
-PRODUCT		 =	$(OBJROOT)/radio.hex
-
+SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 include ../include/rules.mk
