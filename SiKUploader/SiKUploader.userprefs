@@ -4,9 +4,9 @@
     <Files>
       <File FileName="uploader/Uploader.cs" Line="32" Column="23" />
       <File FileName="uploader/IHex.cs" Line="70" Column="4" />
-      <File FileName="uploader/Mon.cs" Line="80" Column="17" />
+      <File FileName="uploader/Mon.cs" Line="1" Column="1" />
       <File FileName="uploader/MainWindow.cs" Line="179" Column="75" />
-      <File FileName="uploader/Main.cs" Line="28" Column="25" />
+      <File FileName="uploader/Main.cs" Line="173" Column="30" />
     </Files>
     <Pads>
       <Pad Id="MonoDevelop.Debugger.WatchPad">

@@ -147,7 +147,7 @@ namespace uploader
 				
 				// create a new monitor
 				mon = new Mon (port);
-				mon.QuitEvent += end_monitor;
+				//mon.QuitEvent += end_monitor; ??
 				mon.DeleteEvent += end_monitor;
 				mon.LogEvent += log;
 				
@@ -170,7 +170,7 @@ namespace uploader
 		/// <param name='args'>
 		/// Arguments.
 		/// </param>
-		private void end_monitor ()
+		private void end_monitor (object sender, DeleteEventArgs args)
 		{
 			// forget about the monitor
 			mon = null;
