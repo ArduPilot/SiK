@@ -28,12 +28,13 @@
 # Common rules and targets for the HopeRF radio apps
 #
 
-SDCC		 =	/usr/local
 EC2TOOLS	 =	/Users/msmith/bin
+SDCC		 =	/usr/local/
 
-CC		 =	$(SDCC)/bin/sdcc -mmcs51
-AS		 =	$(SDCC)/bin/sdas8051 -jloscp
-LD		 =	$(SDCC)/bin/sdcc
+CC			 =	$(SDCC)/bin/sdcc -mmcs51
+AS			 =	$(SDCC)/bin/sdas8051 -jloscp
+LD			 =	$(SDCC)/bin/sdcc
+
 EC2FLASH	 =	$(EC2TOOLS)/ec2writeflash
 
 DEPFLAGS	 =	-MM $(CFLAGS)

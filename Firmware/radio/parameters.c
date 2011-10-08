@@ -202,8 +202,8 @@ param_default_434(void)
 	debug("defaulting parameters for 434MHz");
 	param_set32(PARAM_TRX_FREQUENCY,    434000000UL);
 	param_set32(PARAM_TRX_CHANNEL_SPACING, 100000UL);
-	param_set32(PARAM_TRX_DEVIATION,        20000UL);
-	param_set32(PARAM_TRX_DATA_RATE,        40000UL);
-	param_set32(PARAM_RX_BAND_WIDTH,        80000UL);
+	param_set32(PARAM_TRX_DEVIATION,        35000UL);
+	param_set32(PARAM_TRX_DATA_RATE,        38400UL);
+	param_set32(PARAM_RX_BAND_WIDTH,       105000UL);
 	param_default_common();
 }

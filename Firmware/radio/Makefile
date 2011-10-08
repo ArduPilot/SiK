@@ -41,6 +41,10 @@ CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR
 CFLAGS		+=	--model-small --opt-code-size --Werror
 #CFLAGS		+=	--fverbose-asm 
 
+# enable SDCC register tracking optimisations
+#export SDCC_REGTRACK			=	YES
+#export SDCC_REGTRACK_VERBOSE	=	YES
+
 LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 128
 
 PRODUCT		 =	$(OBJROOT)/radio.hex

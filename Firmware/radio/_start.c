@@ -42,10 +42,14 @@
 // Note that these *must* be placed in this file for SDCC to generate the
 // interrupt vector table correctly.
 //
-extern  void uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
+extern void	uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
+extern void	Receiver_ISR(void) __interrupt(INTERRUPT_INT0);
 
 // Local prototypes
 static void hardware_init(void);
+
+static uint8_t		rlen;
+static __xdata uint8_t	rbuf[64];
 
 void
 main(void)
@@ -77,10 +81,18 @@ main(void)
 	s = rtPhyInitRadio();
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInitRadio failed: %u", s);
+	s = rtPhyRxOn();
+	if (s != PHY_STATUS_SUCCESS)
+		panic("rtPhyRxOn failed: %u", s);
 
 	puts("radio config done");
 
-	panic("bored, bored bored...");
+	for (;;) {
+
+		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+			rtPhyTx(rlen, rbuf);
+		}
+	}
 }
 
 /// Panic and stop the system
@@ -117,9 +129,9 @@ hardware_init(void)
 	SFRPAGE	 = LEGACY_PAGE;
 	SPI1CFG	 = 0x40;	// master mode
 	SPI1CN	 = 0x00;	// 3 wire master mode
-	SPI1CKR	 = 0x00;	// initialize SPI prescaler
+	SPI1CKR	 = 0x01;	// initialize SPI prescaler to divide-by-4, might be able to use /2 if we're lucky
 	SPI1CN	|= 0x01;	// enable SPI
-	NSS1 = 1;		// set NSS high
+	NSS1	 = 1;		// set NSS high
 
 	// Clear the radio interrupt state
 	IE0	 = 0;

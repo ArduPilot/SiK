@@ -59,7 +59,6 @@ extern void		pbuf_init(void);
 extern void		pbuf_queue_add_head(PBufQueueIndex qi, PBufIndex pi);
 extern void		pbuf_queue_add_tail(PBufQueueIndex qi, PBufIndex pi);
 extern PBufIndex	pbuf_queue_remove_head(PBufQueueIndex qi);
-extern PBufIndex	pbuf_queue_remove_seq(PBufQueueIndex qi, uint8_t seq);
 extern bool		pbuf_queue_empty(PBufQueueIndex qi);
 
 /* copy data from an arbitrary buffer to a pbuf */
@@ -81,14 +80,12 @@ extern __xdata uint8_t	*pbuf_data_ptr(PBufIndex idx, PBufDataCount ofs);
 #define pbuf_getbuf()		pbuf_queue_remove_head(PBUF_QUEUE_FREE);
 #define pbuf_putbuf(_idx)	pbuf_queue_add_head(PBUF_QUEUE_FREE, _idx);
 
-#define	pbuf_size(_idx)				pbuf_pool[_idx].data_size
-#define	pbuf_next(_idx)				pbuf_pool[_idx].next
-#define	pbuf_sequence_number(_idx)		pbuf_pool[_idx].sequence_number
+#define	pbuf_size(_idx)		pbuf_pool[_idx].data_size
+#define	pbuf_next(_idx)		pbuf_pool[_idx].next
 
 struct pbuf
 {
 	PBufIndex	next;			// next packet buffer in queue
-	uint8_t		sequence_number;	// packet sequence number in the tx/rx stream
 	PBufDataCount	data_size;		// number of bytes in the packet
 };
 extern __xdata struct pbuf		pbuf_pool[];

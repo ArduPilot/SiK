@@ -147,33 +147,6 @@ pbuf_queue_remove_head(PBufQueueIndex queue_index)
 	return hi;
 }
 
-PBufIndex
-pbuf_queue_remove_seq(PBufQueueIndex queue_index, uint8_t seq)
-{
-	bool		istate;
-	PBufIndex	bi, pi;
-
-	interrupt_disable(istate);
-
-	/* walk the queue looking for a matching sequence number */
-	pi = PBUF_NULL;
-	bi = pbuf_queues[queue_index].head;
-	while (bi != PBUF_NULL) {
-		/* on sequence match */
-		if (pbuf_sequence_number(bi) == seq) {
-			/* remove it from the list */
-			pbuf_queue_remove(queue_index, pi, bi);
-			break;
-		}
-		pi = bi;
-		bi = pbuf_next(bi);
-	}
-
-	interrupt_restore(istate);
-
-	return bi;
-}
-
 bool
 pbuf_queue_empty(PBufQueueIndex queue_index)
 {

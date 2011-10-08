@@ -49,7 +49,7 @@ enum ParamID {
 	PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x11UL
+#define PARAM_FORMAT_CURRENT	0x12UL
 
 extern uint8_t	param_get8 (enum ParamID param);
 extern uint16_t	param_get16(enum ParamID param);
