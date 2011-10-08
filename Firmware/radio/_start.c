@@ -44,6 +44,8 @@
 //
 extern void	uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
 extern void	Receiver_ISR(void) __interrupt(INTERRUPT_INT0);
+extern void	T0_ISR(void) __interrupt(INTERRUPT_TIMER0);
+
 
 // Local prototypes
 static void hardware_init(void);
@@ -90,7 +92,11 @@ main(void)
 	for (;;) {
 
 		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+			LED_ACTIVITY = LED_ON;
 			rtPhyTx(rlen, rbuf);
+			LED_ACTIVITY = LED_OFF;
+			rtPhyRxOn();
+			printf("pkt %d 0x%02x\n", rlen, rbuf[0]);
 		}
 	}
 }
@@ -129,7 +135,7 @@ hardware_init(void)
 	SFRPAGE	 = LEGACY_PAGE;
 	SPI1CFG	 = 0x40;	// master mode
 	SPI1CN	 = 0x00;	// 3 wire master mode
-	SPI1CKR	 = 0x01;	// initialize SPI prescaler to divide-by-4, might be able to use /2 if we're lucky
+	SPI1CKR	 = 0x00;	// initialize SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
 	SPI1CN	|= 0x01;	// enable SPI
 	NSS1	 = 1;		// set NSS high
 
