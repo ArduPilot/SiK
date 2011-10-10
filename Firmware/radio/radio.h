@@ -29,6 +29,14 @@
 #ifndef RADIO_H_
 #define RADIO_H_
 
+/*
+ * Notes on hardware allocation:
+ *
+ * Timer0 is used by rtPhy for its timeouts.
+ * Timer1 is used by the UART driver.
+ */
+
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -40,15 +48,20 @@
 #include "rtPhy.h"
 #include "parameters.h"
 
-#if 1
-# define debug(fmt, args...)	printf(fmt "\n", ##args)
+#if DEBUG
+# define debug(fmt, args...)	printf_tiny(fmt "\n", ##args)
 #else
 # define debug(fmt, args...)
 #endif
 
+#define panic(fmt, args...)	do { printf_tiny(fmt, ##args); _panic(); } while(0)
+#define printf(fmt, args...)	printf_tiny(fmt, ##args)
+
 #define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
 #define interrupt_restore(_save)	do { EA = _save; } while(0)
 
-extern void panic(const char *reason, ...);
+#define stringify(_x)			#_x
+
+extern void _panic(void);
 
 #endif /* RADIO_H_ */

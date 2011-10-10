@@ -28,10 +28,11 @@
 #include "pkt_buf.h"
 
 /* packet buffer pool */
+/* XXX could be pdata? */
 __xdata struct pbuf		pbuf_pool[PBUF_POOL_SIZE];
 
 /* packet data pool */
-static __xdata uint8_t		pbuf_data[PBUF_POOL_SIZE][PBUF_MAX_SIZE];
+__xdata uint8_t		pbuf_data[PBUF_POOL_SIZE][PBUF_MAX_SIZE];
 
 /* packet buffer queues */
 struct pbuf_queue
@@ -39,8 +40,8 @@ struct pbuf_queue
 	PBufIndex	head;
 	PBufIndex	tail;
 };
-
-static __xdata struct pbuf_queue	pbuf_queues[PBUF_MAX_QUEUES];
+/* XXX could be pdata? */
+__xdata struct pbuf_queue	pbuf_queues[PBUF_MAX_QUEUES];
 
 
 void

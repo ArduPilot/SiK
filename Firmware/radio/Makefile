@@ -41,7 +41,7 @@ CFLAGS		+=	--model-small --opt-code-size --Werror
 #export SDCC_REGTRACK			=	YES
 #export SDCC_REGTRACK_VERBOSE	=	YES
 
-LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 128
+LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 64
 
 SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 include ../include/rules.mk

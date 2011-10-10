@@ -30,7 +30,7 @@
 ///
 /// Storage for program parameters.
 ///
-/// Parameters are held in a contiguous array of 32-bit values.
+/// Parameters are held in a contiguous array of 16-bit values.
 /// It is up to the caller to decide how large a parameter is and to
 /// access it accordingly.
 ///
@@ -50,8 +50,7 @@
 union param {
 	uint8_t		u8;
 	uint16_t	u16;
-	uint32_t	u32;
-	uint8_t		bytes[4];
+	uint8_t		bytes[2];
 };
 __xdata static union param	parameters[PARAM_MAX];
 
@@ -67,12 +66,6 @@ param_get16(enum ParamID param)
 	return parameters[param].u16;
 }
 
-uint32_t
-param_get32(enum ParamID param)
-{
-	return parameters[param].u32;
-}
-
 void
 param_set8(enum ParamID param, uint8_t value)
 {
@@ -83,12 +76,6 @@ void
 param_set16(enum ParamID param, uint16_t value)
 {
 	parameters[param].u16 = value;
-}
-
-void
-param_set32(enum ParamID param, uint32_t value)
-{
-	parameters[param].u32 = value;
 }
 
 /// Load the write-enable keys into the hardware in order to enable
@@ -154,8 +141,8 @@ param_load()
 		return false;
 
 	// decide whether we read a supported version of the structure
-	if (parameters[PARAM_FORMAT].u32 != PARAM_FORMAT_CURRENT) {
-		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT].u32, PARAM_FORMAT_CURRENT);
+	if (parameters[PARAM_FORMAT].u16 != PARAM_FORMAT_CURRENT) {
+		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT].u16, PARAM_FORMAT_CURRENT);
 		return false;
 	}
 	return true;
@@ -169,7 +156,7 @@ param_save()
 	uint8_t		sum;
 
 	// tag parameters with the current format
-	parameters[PARAM_FORMAT].u32 = PARAM_FORMAT_CURRENT;
+	parameters[PARAM_FORMAT].u16 = PARAM_FORMAT_CURRENT;
 
 	// erase the scratch space
 	flash_erase_scratch();
@@ -191,7 +178,7 @@ param_save()
 static void
 param_default_common(void)
 {
-	param_set32(PARAM_SERIAL_SPEED, 115200);
+	param_set8(PARAM_SERIAL_SPEED, BAUD_RATE_115200);
 
 	param_save();
 }
@@ -200,10 +187,10 @@ void
 param_default_434(void)
 {
 	debug("defaulting parameters for 434MHz");
-	param_set32(PARAM_TRX_FREQUENCY,    434000000UL);
-	param_set32(PARAM_TRX_CHANNEL_SPACING, 100000UL);
-	param_set32(PARAM_TRX_DEVIATION,        35000UL);
-	param_set32(PARAM_TRX_DATA_RATE,        38400UL);
-	param_set32(PARAM_RX_BAND_WIDTH,       105000UL);
+	param_set16(PARAM_TRX_FREQUENCY,    	434);
+	param_set16(PARAM_TRX_CHANNEL_SPACING,	100);
+	param_set16(PARAM_TRX_DEVIATION,	35);
+	param_set16(PARAM_TRX_DATA_RATE,	384);
+	param_set16(PARAM_RX_BAND_WIDTH,	105);
 	param_default_common();
 }

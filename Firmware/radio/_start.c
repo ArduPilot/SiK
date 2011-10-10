@@ -45,13 +45,10 @@
 extern void	uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
 extern void	Receiver_ISR(void) __interrupt(INTERRUPT_INT0);
 extern void	T0_ISR(void) __interrupt(INTERRUPT_TIMER0);
-
+static void	Timer3_ISR(void) __interrupt(INTERRUPT_TIMER3);
 
 // Local prototypes
 static void hardware_init(void);
-
-static uint8_t		rlen;
-static __xdata uint8_t	rbuf[64];
 
 void
 main(void)
@@ -74,11 +71,11 @@ main(void)
 
 	// XXX this should almost certainly be replaced with the ppPhy code
 	// plus some minor parameter tweaking.
-	rtPhySet(TRX_FREQUENCY,		param_get32(PARAM_TRX_FREQUENCY));
-	rtPhySet(TRX_CHANNEL_SPACING,	param_get32(PARAM_TRX_CHANNEL_SPACING));
-	rtPhySet(TRX_DEVIATION,		param_get32(PARAM_TRX_DEVIATION));
-	rtPhySet(TRX_DATA_RATE,		param_get32(PARAM_TRX_DATA_RATE));
-	rtPhySet(RX_BAND_WIDTH,		param_get32(PARAM_RX_BAND_WIDTH));
+	rtPhySet(TRX_FREQUENCY,		param_get16(PARAM_TRX_FREQUENCY)	* 1000000UL);
+	rtPhySet(TRX_CHANNEL_SPACING,	param_get16(PARAM_TRX_CHANNEL_SPACING)	* 1000UL);
+	rtPhySet(TRX_DEVIATION,		param_get16(PARAM_TRX_DEVIATION)	* 1000UL);
+	rtPhySet(TRX_DATA_RATE,		param_get16(PARAM_TRX_DATA_RATE)	* 100UL);
+	rtPhySet(RX_BAND_WIDTH,		param_get16(PARAM_RX_BAND_WIDTH)	* 1000UL);
 
 	s = rtPhyInitRadio();
 	if (s != PHY_STATUS_SUCCESS)
@@ -90,6 +87,8 @@ main(void)
 	puts("radio config done");
 
 	for (;;) {
+		uint8_t		rlen;
+		__xdata uint8_t	rbuf[64];
 
 		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
 			LED_ACTIVITY = LED_ON;
@@ -107,15 +106,10 @@ main(void)
 /// depends on interrupts.  Consider hacking printf_tiny into a panic handler.
 ///
 void
-panic(const char *reason, ...)
+_panic()
 {
-	va_list	arg;
 
-	puts("**PANIC**");
-	va_start(arg, reason);
-	vprintf(reason, arg);
-	va_end(arg);
-	puts("");
+	puts("\n**PANIC**");
 	for(;;)
 		;
 }
@@ -142,6 +136,13 @@ hardware_init(void)
 	// Clear the radio interrupt state
 	IE0	 = 0;
 
+	// 100Hz timer tick using timer3
+	// Derive timer values from SYSCLK
+	TMR3RLL	 = 0x40; /* (65536 - ((SYSCLK / 12) / 100)) & 0xff */
+	TMR3RLH	 = 0xb0; /* ((65536 - ((SYSCLK / 12) / 100)) >> 8) & 0xff; */
+	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
+	EIE1	|= 0x80;
+
 	// uart - leave the baud rate alone
 	uartInitUart(BAUD_RATE_NO_CHANGE);
 
@@ -151,4 +152,18 @@ hardware_init(void)
 	// Turn on the 'radio running' LED and turn off the bootloader LED
 	LED_RADIO = LED_ON;
 	LED_BOOTLOADER = LED_OFF;
+}
+
+/// Timer tick interrupt handler
+///
+extern void	at_timer(void);
+
+static void
+Timer3_ISR(void) __interrupt(INTERRUPT_TIMER3)
+{
+	/* re-arm the interrupt */
+	TMR3CN = 0x04;
+
+	/* call the AT parser tick */
+	at_timer();
 }
