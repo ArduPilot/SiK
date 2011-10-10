@@ -42,10 +42,10 @@
 // Note that these *must* be placed in this file for SDCC to generate the
 // interrupt vector table correctly.
 //
-extern void	uartIsr(void) __interrupt(INTERRUPT_UART0) __using(1);
-extern void	Receiver_ISR(void) __interrupt(INTERRUPT_INT0);
-extern void	T0_ISR(void) __interrupt(INTERRUPT_TIMER0);
-static void	Timer3_ISR(void) __interrupt(INTERRUPT_TIMER3);
+extern void	uartIsr(void)		__interrupt(INTERRUPT_UART0) __using(1);
+extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
+extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
+static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
 
 // Local prototypes
 static void hardware_init(void);
@@ -97,18 +97,20 @@ main(void)
 			rtPhyRxOn();
 			printf("pkt %d 0x%02x\n", rlen, rbuf[0]);
 		}
+
+		if (iskey()) {
+			uint8_t	c = getchar();
+			at_input(c);
+		}
+
 	}
 }
 
 /// Panic and stop the system
 ///
-/// This is not terribly solid - printf is large and it uses putchar which
-/// depends on interrupts.  Consider hacking printf_tiny into a panic handler.
-///
 void
 _panic()
 {
-
 	puts("\n**PANIC**");
 	for(;;)
 		;
@@ -156,10 +158,8 @@ hardware_init(void)
 
 /// Timer tick interrupt handler
 ///
-extern void	at_timer(void);
-
 static void
-Timer3_ISR(void) __interrupt(INTERRUPT_TIMER3)
+T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 {
 	/* re-arm the interrupt */
 	TMR3CN = 0x04;

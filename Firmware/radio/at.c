@@ -139,7 +139,7 @@ at_i(void)
 		puts("SiK");
 		break;
 	case '1':
-		puts(stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR));
+		printf("%d.%d\n", APP_VERSION_HIGH, APP_VERSION_LOW);
 		break;
 	default:
 		at_error();
@@ -260,13 +260,14 @@ at_plus_detector(uint8_t c)
 	 */
 	switch (at_plus_state) {
 
+	case ATP_WAIT_FOR_PLUS1:
+	case ATP_WAIT_FOR_PLUS2:
+		at_plus_state++;
+		break;
+
 	case ATP_WAIT_FOR_PLUS3:
 		at_plus_state = ATP_WAIT_FOR_ENABLE;
 		at_plus_counter = ATP_COUNT_1S;
-		/* FALLTHROUGH */
-	case ATP_WAIT_FOR_PLUS2:
-	case ATP_WAIT_FOR_PLUS1:
-		at_plus_state++;
 		break;
 
 	default:

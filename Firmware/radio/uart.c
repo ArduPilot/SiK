@@ -243,9 +243,11 @@ char getchar(void)
     return inChar;
 }
 
-bool ischar(void)
+bool iskey(void)
 {
-    return !s_rxRingEmpty;
+    if (s_rxRingEmpty)
+	return false;
+    return true;
 }
 
 // _____________________________________________________________________________

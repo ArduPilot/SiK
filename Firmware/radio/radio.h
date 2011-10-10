@@ -61,8 +61,6 @@
 #define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
 #define interrupt_restore(_save)	do { EA = _save; } while(0)
 
-#define stringify(_x)			#_x
-
 extern void _panic(void);
 
 #endif /* RADIO_H_ */
