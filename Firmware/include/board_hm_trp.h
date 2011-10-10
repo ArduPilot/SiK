@@ -45,17 +45,17 @@
 ///	A __bit controlling an LED that can be blinked to show activity.
 ///
 /// LED_ON
-///	The value to write to LED to turn the LED on.
+///	The value to write to LED to turn LEDs on.
 ///
 /// LED_OFF
-///	The value to write to LED to turn the LED off.
+///	The value to write to LED to turn LEDs off.
 ///
 /// BUTTON_BOOTLOAD
 ///	A __bit corresponding to a button or strap that will cause the
 ///	bootloader to stop and wait for a download.
 ///
 /// BUTTON_ACTIVE
-///	The value that BUTTON will have when the bootloader should stop.
+///	The value that BUTTON_bootload will have when the bootloader should stop.
 ///
 /// SYSCLK
 ///	Frequency of the system clock in MHz.
@@ -85,7 +85,8 @@
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P1, 6);
 SBIT(LED_GREEN,	   SFR_P1, 5);
-SBIT(JUMPER_CONFIG, SFR_P0, 2);
+SBIT(PIN_CONFIG,   SFR_P0, 2);
+SBIT(PIN_ENABLE,   SFR_P0, 3);
 
 // Signal polarity definitions
 #define LED_ON		0
@@ -96,13 +97,13 @@ SBIT(JUMPER_CONFIG, SFR_P0, 2);
 #define LED_BOOTLOADER	LED_RED
 #define LED_RADIO	LED_GREEN
 #define LED_ACTIVITY	LED_RED
-#define BUTTON_BOOTLOAD	JUMPER_CONFIG
+#define BUTTON_BOOTLOAD	PIN_CONFIG
 
 // board-specific hardware config
 #define HW_INIT						\
 do {							\
 	/* GPIO config */				\
-	P0SKIP	|=  0x04;		/* jumper */	\
+	P0SKIP	|=  0x0c;		/* pins */	\
 	P1SKIP  |=  0x60;		/* LEDs */	\
 	SFRPAGE	 =  CONFIG_PAGE;			\
 	P1DRV	|=  0x60;		/* LEDs */	\
