@@ -47,6 +47,7 @@
 #include "uart.h"
 #include "rtPhy.h"
 #include "parameters.h"
+#include "at.h"
 
 #if DEBUG
 # define debug(fmt, args...)	printf_tiny(fmt "\n", ##args)
@@ -54,8 +55,8 @@
 # define debug(fmt, args...)
 #endif
 
-#define panic(fmt, args...)	do { printf_tiny(fmt, ##args); _panic(); } while(0)
-#define printf(fmt, args...)	printf_tiny(fmt, ##args)
+#define panic(fmt, args...)	do { printf_small(fmt, ##args); _panic(); } while(0)
+#define printf(fmt, args...)	printf_small(fmt, ##args)
 
 #define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
 #define interrupt_restore(_save)	do { EA = _save; } while(0)
