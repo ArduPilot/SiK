@@ -104,6 +104,7 @@ typedef enum UartBaudRates
 __bit uartInitUart(UartBaudRates baudRate);
 __bit uartSetUartOption(UartOptions option, int value);
 __bit uartGetUartOption(UartOptions option, int *pValue);
+bool ischar(void);
 // _____________________________________________________________________________
 // _____________________________________________________________________________
 //
