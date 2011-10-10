@@ -258,9 +258,10 @@ hardware_init(void)
 	P0DRV	 =  0x10;		// UART TX
 	SFRPAGE	 =  LEGACY_PAGE;
 	XBR0	 =  0x01;		// UART enable
-	XBR2	 =  0x40;		// Crossbar enable
 
 	// Hardware-specific init for LED and button
 	HW_INIT;
+
+	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
 

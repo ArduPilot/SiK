@@ -34,7 +34,7 @@ PRODUCT		 =	$(OBJROOT)/bl.hex
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 #CFLAGS		+=	--fverbose-asm
 
-LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x00fc00 --stack-size 128 --nostdlib
+LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x00fc00 --stack-size 64 --nostdlib
 
 SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 include ../include/rules.mk
