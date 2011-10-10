@@ -44,6 +44,7 @@ static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
 static void	at_s(void);
+static void	at_ampersand(void);
 
 /* AT command buffer */
 #define AT_CMD_MAXLEN	16
@@ -105,6 +106,9 @@ at_command(void)
 	case '\0':		// no command -> OK
 		at_ok();
 		break;
+	case '&':
+		at_ampersand();
+		break;
 	case 'I':
 		at_i();
 		break;
@@ -114,6 +118,13 @@ at_command(void)
 	case 'S':
 		at_s();
 		break;
+
+	case 'Z':
+		/* generate a software reset */
+		RSTSRC |= (1<<4);
+		for (;;)
+			;
+
 	default:
 		at_error();
 	}
@@ -131,15 +142,22 @@ at_error(void)
 	puts("ERROR");
 }
 
+/*
+ * Handle ATIx
+ */
 static void
 at_i(void)
 {
 	switch (at_cmd[3]) {
+	case '\0':
 	case '0':
-		puts("SiK");
+		puts(g_banner_string);
 		break;
 	case '1':
-		printf("%d.%d\n", APP_VERSION_HIGH, APP_VERSION_LOW);
+		puts(g_version_string);
+		break;
+	case '2':
+		printf("%d\n", BOARD_ID);
 		break;
 	default:
 		at_error();
@@ -147,76 +165,98 @@ at_i(void)
 	}
 }
 
-struct ATSParameter {
-	uint8_t		scode;
-	enum ParamID	id;
-};
-#define ATS_READONLY	0x80
-#define ATS_NO_PARAM	PARAM_MAX
-
-/* XXX update per enum ParamID */
-const uint8_t __code at_s_parameters[] = {
-	PARAM_FORMAT | ATS_READONLY,
-	PARAM_NODE_ID,
-	PARAM_PEER_ID,
-	PARAM_TRX_FREQUENCY,
-	PARAM_TRX_CHANNEL_SPACING,
-	PARAM_TRX_DEVIATION,
-	PARAM_TRX_DATA_RATE,
-	PARAM_RX_BAND_WIDTH,
-	PARAM_SERIAL_SPEED,
-};
-#define ATS_MAX_PARAM	(sizeof(at_s_parameters) / sizeof(at_s_parameters[0]))
-
+/*
+ * Handle ATSx=y, ATSx?
+ */
 static void
 at_s(void) __reentrant
 {
 	uint8_t		idx;
-	uint8_t		reg;
+	uint8_t		sreg;
 	uint16_t	val;
 	uint8_t		c;
 
-	reg = 0;
-	idx = 3;	// first character of the sreg number
+	idx = 3;	// first character of the sreg command proper
 
+	/* get the register number first */
+	sreg = 0;
 	for (;;) {
-		c = at_cmd[idx];
-		if (c == '?') {
-			if ((reg >= ATS_MAX_PARAM) ||
-				(ATS_NO_PARAM == (c = at_s_parameters[reg]))) {
-				at_error();
-			} else {
-				val = param_get16(c);
-				//printf("%u\n", val);
+		c = at_cmd[idx++];
+		if (!isdigit(c))
+			break;
+		sreg = (sreg * 10) + (c - '0');
+	}
+	/* validate the selected sreg */
+	if (sreg >= PARAM_MAX) {
+		at_error();
+		return;
+	}
+
+	switch (at_cmd[idx]) {
+	case '?':
+		val = param_get16(sreg);
+		printf("%d\n", val);
+		return;
+
+	case '=':
+		if (sreg > 0) {
+			val = 0;
+			for (;;) {
+				c = at_cmd[++idx];
+				if (c == '\0') {
+					if (param_set16(sreg, val)) {
+						at_ok();
+					} else {
+						at_error();
+					}
+					return;
+				}
+				if (!isdigit(c)) {
+					break;
+				}
+				val = (val * 10) + (c - '0');
 			}
-			return;
 		}
-		if (c == '=') {
-			c++;
-			break;
-		}
-		if (!isdigit(c)) {
-			at_error();
-			break;
-		}
-		reg = (reg * 10) + (c - '0');
+		break;
 	}
-
-	val = 0;
-	for (;;) {
-		c = at_cmd[idx];
-		if (c == '\0') {
-			/* XXX set sreg to val */
-			return;
-		}
-		if (!isdigit(c)) {
-			at_error();
-			break;
-		}
-		val = (val * 10) + (c - '0');
-	}
+	at_error();
 }
 
+/*
+ * Handle AT&x
+ *
+ * Note that AT&Update will cause a drop to the bootloader.
+ */
+static void
+at_ampersand(void)
+{
+	switch (at_cmd[3]) {
+	case 'F':
+		param_default();
+		at_ok();
+		break;
+	case 'W':
+		param_save();
+		at_ok();
+		break;
+
+	case 'U':
+		if (!strcmp(at_cmd + 4, "PDATE")) {
+			/* force a flash error */
+			volatile char x = *(__code volatile char *)0xfc00;
+			for (;;)
+				;
+		}
+		at_error();
+		break;
+
+	case 'T':
+		/* XXX test mode(s) */
+	default:
+		at_error();
+		break;
+	}
+}
 
 /*
  * +++ detector state machine
@@ -301,6 +341,7 @@ at_timer(void)
 				break;
 			case ATP_WAIT_FOR_ENABLE:
 				at_mode_active = true;
+				puts("\nOK");
 				at_plus_state = ATP_WAIT_FOR_IDLE;
 				break;
 			default:

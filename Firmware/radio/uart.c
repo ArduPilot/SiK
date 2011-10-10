@@ -284,7 +284,6 @@ __bit initUart(UartBaudRates baudRate)
     s_txWrIdx     = 0;
     s_txRdIdx     = 0;
 
-    // Printf() translates for us so no need for it here.
     s_translateEol = 0;
 
     // Start driver.
