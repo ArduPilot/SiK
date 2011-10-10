@@ -80,6 +80,7 @@
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
 
+#define BOARD_NAME	"HM-TRP"
 #define BOARD_ID	0x4e	// unique board ID used to connect bootloader and upload tools
 
 // GPIO definitions (not exported)
