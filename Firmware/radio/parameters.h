@@ -32,14 +32,14 @@
 
 /// Parameter IDs.
 ///
-/// Note that the implementation does not support more than 64 parameters
-/// total.
-///
-/// This enumeration must match the table in at.c, should also be updated
+/// This enumeration should be updated
 /// if/when we switch to using the hop register and fixed channel spacing, etc.
 ///
+/// Parameter IDs here match AT S-register numbers, so change them with extreme
+/// care.  Parameter zero cannot be written by AT commands.
+///
 enum ParamID {
-	PARAM_FORMAT = 0,
+	PARAM_FORMAT = 0,		// Must always be parameter 0
 	PARAM_NODE_ID,			// this node's ID
 	PARAM_PEER_ID,			// peer node's ID (if paired)
 	PARAM_TRX_FREQUENCY,		// MHz
@@ -57,10 +57,11 @@ enum ParamID {
 extern uint8_t	param_get8 (enum ParamID param);
 extern uint16_t	param_get16(enum ParamID param);
 
-extern void param_set8 (enum ParamID param, uint8_t value);
-extern void param_set16(enum ParamID param, uint16_t value);
+extern bool param_set8 (enum ParamID param, uint8_t value);
+extern bool param_set16(enum ParamID param, uint16_t value);
 
 extern bool param_load(void);
 extern void param_save(void);
 
-extern void param_default_434(void);
+extern void param_default(void);
+extern bool param_check(enum ParamID id, uint16_t val);

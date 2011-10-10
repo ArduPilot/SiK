@@ -66,16 +66,19 @@ param_get16(enum ParamID param)
 	return parameters[param].u16;
 }
 
-void
+bool
 param_set8(enum ParamID param, uint8_t value)
 {
-	parameters[param].u8 = value;
+	return param_set16(param, value);
 }
 
-void
+bool
 param_set16(enum ParamID param, uint16_t value)
 {
+	if (!param_check(param, value))
+		return false;
 	parameters[param].u16 = value;
+	return true;
 }
 
 /// Load the write-enable keys into the hardware in order to enable
@@ -184,7 +187,7 @@ param_default_common(void)
 }
 
 void
-param_default_434(void)
+param_default(void)
 {
 	debug("defaulting parameters for 434MHz");
 	param_set16(PARAM_TRX_FREQUENCY,    	434);
@@ -193,4 +196,17 @@ param_default_434(void)
 	param_set16(PARAM_TRX_DATA_RATE,	384);
 	param_set16(PARAM_RX_BAND_WIDTH,	105);
 	param_default_common();
+}
+
+bool
+param_check(enum ParamID id, uint16_t val)
+{
+	switch (id) {
+	case PARAM_SERIAL_SPEED:
+		if (val > NUM_BAUD_RATES)
+			return false;
+		break;
+	}
+	/* no sanity check for this value */
+	return true;
 }
