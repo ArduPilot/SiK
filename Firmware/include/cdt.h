@@ -40,6 +40,7 @@
 # define __at(_x)
 # define __interrupt(_x)
 # define __using(_x)
+# define __reentrant
 #endif
 
 #endif /* _CDT_H_ */
