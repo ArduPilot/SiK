@@ -99,7 +99,7 @@ flash_erase_scratch(void)
 }
 
 static uint8_t
-flash_read_scratch(uint16_t address)
+flash_read_scratch(uint16_t address)  __reentrant
 {
 	uint8_t	d;
 
@@ -119,7 +119,7 @@ flash_write_scratch(uint16_t address, uint8_t c)
 }
 
 bool
-param_load()
+param_load() __reentrant
 {
 	uint8_t		d;
 	uint8_t		i;
@@ -149,7 +149,7 @@ param_load()
 }
 
 void
-param_save()
+param_save() __reentrant
 {
 	uint8_t		d;
 	uint8_t		i;

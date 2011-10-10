@@ -169,12 +169,12 @@ const uint8_t __code at_s_parameters[] = {
 #define ATS_MAX_PARAM	(sizeof(at_s_parameters) / sizeof(at_s_parameters[0]))
 
 static void
-at_s(void)
+at_s(void) __reentrant
 {
-	__pdata uint8_t		idx;
-	__pdata uint8_t		reg;
-	__pdata uint16_t	val;
-	__pdata uint8_t		c;
+	uint8_t		idx;
+	uint8_t		reg;
+	uint16_t	val;
+	uint8_t		c;
 
 	reg = 0;
 	idx = 3;	// first character of the sreg number
