@@ -61,6 +61,11 @@
 #define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
 #define interrupt_restore(_save)	do { EA = _save; } while(0)
 
+#define __stringify(_x)		#_x
+#define stringify(_x)		__stringify(_x)
+
+extern __code const char g_version_string[];
+extern __code const char g_banner_string[];
 extern void _panic(void);
 
 #endif /* RADIO_H_ */

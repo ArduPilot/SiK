@@ -47,7 +47,11 @@ extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
 static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
 
+__code const char g_banner_string[] = "SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
+__code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW);
+
 // Local prototypes
+static void run(void);
 static void hardware_init(void);
 
 void
@@ -56,7 +60,6 @@ main(void)
 	PHY_STATUS	s;
 
 	hardware_init();
-	puts("SiK radio starting");
 
 	// Init the radio driver
 	s = rtPhyInit();
@@ -67,7 +70,7 @@ main(void)
 	// XXX default parameter selection should be based on strapping
 	// options
 	if (!param_load())
-		param_default_434();
+		param_default();
 
 	// XXX this should almost certainly be replaced with the ppPhy code
 	// plus some minor parameter tweaking.
@@ -84,7 +87,7 @@ main(void)
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyRxOn failed: %u", s);
 
-	puts("radio config done");
+	puts(g_banner_string);
 
 	for (;;) {
 		uint8_t		rlen;
@@ -102,7 +105,6 @@ main(void)
 			uint8_t	c = getchar();
 			at_input(c);
 		}
-
 	}
 }
 
@@ -116,7 +118,7 @@ _panic()
 		;
 }
 
-/// Additional basic hardware intialisation beyond the basic operating conditions
+/// Additional basic hardware initialisation beyond the basic operating conditions
 /// set up by the bootloader.
 ///
 static void
@@ -131,7 +133,7 @@ hardware_init(void)
 	SFRPAGE	 = LEGACY_PAGE;
 	SPI1CFG	 = 0x40;	// master mode
 	SPI1CN	 = 0x00;	// 3 wire master mode
-	SPI1CKR	 = 0x00;	// initialize SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
+	SPI1CKR	 = 0x00;	// Initialise SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
 	SPI1CN	|= 0x01;	// enable SPI
 	NSS1	 = 1;		// set NSS high
 
@@ -147,6 +149,7 @@ hardware_init(void)
 
 	// uart - leave the baud rate alone
 	uartInitUart(BAUD_RATE_NO_CHANGE);
+	uartSetUartOption(UART_TRANSLATE_EOL, 1);
 
 	// global interrupt enable
 	EA = 1;
