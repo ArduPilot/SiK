@@ -89,11 +89,11 @@ bootloader(void)
 
 	// Boot the application if:
 	//
-	// - the reset was a power-on/power-fail, watchdog timer, missing clock or HW pin reset
+	// - the reset was not due to a flash error
 	// - the signature is valid
 	// - the boot-to-bootloader strap/button is not in the active state
 	//
-	if ((RSTSRC & ((1<<0) | (1<<1) | (1<<2) | (1<<3))) &&
+	if (!(RSTSRC & (1<<6)) &&
 	    flash_app_valid() &&
 	    (BUTTON_BOOTLOAD != BUTTON_ACTIVE)) {
 
