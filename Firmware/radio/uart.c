@@ -313,7 +313,7 @@ static Bool setUartBaudRate(UartBaudRates baudRate)
 
     // Si1000 enhanced baudrate generator config for
     // 24.5MHz internal oscillator
-#if SYSCLK == 245000000
+#if SYSCLK == 24500000
     static const __code U8 baud_rates[NUM_BAUD_RATES][2] = {
 	// T1R, CKCON
 	{0x96, 0x00},	// BAUD_RATE_9600

@@ -29,25 +29,25 @@
 #ifndef PTK_BUF_H_
 #define PTK_BUF_H_
 
-/*
- * Packet buffers.
- */
+/// @file	pkt_buf.h
+///		Packet buffers.
 
 #include "radio.h"
 
-#define	PBUF_NULL	0xff		// "no packet buffer" pointer
-#define PBUF_MAX_SIZE	64		// maximum buffer payload size
-#define PBUF_POOL_SIZE	16		// size of the packet buffer pool
-#define PBUF_MAX_QUEUES	4		// number of pbuf queues
-#define PBUF_QUEUE_FREE	0		// free packet buffers
-#define PBUF_QUEUE_TX	1		// packet buffers waiting to transmit
-#define PBUF_QUEUE_RX	2		// packet buffers received
+#define	PBUF_NULL	0xff		///< "no packet buffer" pointer
+#define PBUF_MAX_SIZE	64		///< maximum buffer payload size
+#define PBUF_POOL_SIZE	16		///< size of the packet buffer pool
+#define PBUF_MAX_QUEUES	4		///< number of pbuf queues
+#define PBUF_QUEUE_FREE	0		///< free packet buffers
+#define PBUF_QUEUE_TX	1		///< packet buffers waiting to transmit
+#define PBUF_QUEUE_RX	2		///< packet buffers received
 
-typedef	uint8_t		PBufIndex;	// packet buffer 'pointer', index into global buffer array(s)
-typedef uint8_t		PBufQueueIndex;	// packet buffer queue 'pointer'
-typedef uint8_t		PBufDataCount;	// count of bytes in a packet buffer
+typedef	uint8_t		PBufIndex;	///< packet buffer 'pointer', index into global buffer array(s)
+typedef uint8_t		PBufQueueIndex;	///< packet buffer queue 'pointer'
+typedef uint8_t		PBufDataCount;	///< count of bytes in a packet buffer
 
-/* initialise the pbuf system */
+/// initialise the pbuf system
+///
 extern void		pbuf_init(void);
 
 /*

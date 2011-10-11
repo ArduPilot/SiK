@@ -36,6 +36,7 @@
 # define __data
 # define __xdata
 # define __pdata
+# define __idata
 # define __code
 # define __at(_x)
 # define __interrupt(_x)

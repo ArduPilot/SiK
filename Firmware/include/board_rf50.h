@@ -72,7 +72,7 @@
 ///
 
 /// @file	board.h
-///		Board definitions for the HopeRF RF50 evaluation board
+///		Board definitions for the HopeRF RF50 demo board
 
 #ifndef _BOARD_H
 #define _BOARD_H
@@ -114,7 +114,7 @@ do {							\
 } while(0)
 
 // EzRadio / rtPhy definitions
-// Note that the RFM50 deviates in both the oscillator cap value and the wiring
+// Note that the RFM50 deviates from the appnote/sample code in both the oscillator cap value and the wiring
 // of the RF switch
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// Per HRF demo code
 #define ENABLE_RFM50_SWITCH	1	// Per HRF demo code, verified presence of RF switch on the RFM50 module

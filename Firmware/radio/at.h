@@ -26,10 +26,25 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+/// @file	at.h
+///		Prototypes for the AT command parser
+///
+
 #ifndef AT_H_
 #define AT_H_
 
+extern bool	at_mode_active;		///< if true, the AT interpreter is in command mode
+
+/// Timer tick handler for the AT command interpreter
+///
 extern void	at_timer(void);
+
+/// Character input handler for the AT command interpreter
+///
+/// @param	c		Character that has been received.
+/// @return			If true, the character has been consumed
+///				by the parser and should not be forwarded.
+///
 extern bool	at_input(uint8_t c);
 
 #endif

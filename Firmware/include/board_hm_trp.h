@@ -67,11 +67,8 @@
 ///	- configures button GPIO(s)
 ///	- configures INT0 for the radio interrupt
 ///
-/// TBD:
-///     strapping options for board frequency band selection
-///
 
-/// @file	board.h
+/// @file	board_hm_trp.h
 ///		Board definitions for the HopeRF HM-TRP transceiver board.
 
 #ifndef _BOARD_H
@@ -108,14 +105,14 @@ do {							\
 	SFRPAGE	 =  LEGACY_PAGE;			\
 	/* INT0 is the radio interrupt, on P0.7 */	\
 	IT01CF   =  (IT01CF & 0xf) | 0x7;		\
-	IT0	 = 0;	/* INT0 leve triggered */	\
+	IT0	 = 0;	/* INT0 level triggered */	\
 } while(0)
 
 // EzRadio / rtPhy definitions
-// Note that the HM-TRP deviates from the spec in the wiring of the RF switch
+// Note that the HM-TRP deviates from SiLabs' appnotes in the wiring of the RF switch
 //
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// XXX cribbed from RF50, probably wrong
-#define ENABLE_RFM50_SWITCH	1	// Per HRF demo code, verified presence of RF switch on the RFM50 module
+#define ENABLE_RFM50_SWITCH	1	// verified presence of RF switch on the module
 SBIT(IRQ,  SFR_P0, 7);			// Per board inspection
 SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
 SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50

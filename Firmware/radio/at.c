@@ -26,17 +26,13 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/*
- * A simple AT command parser.
- *
- * Bytes arriving on the serial port should be passed to 
- * at_input.  If it returns true, the character has been consumed
- * by the parser and should not be sent onwards.
- */
+/// @file	at.c
+///		A simple AT command parser.
+///
 
 #include "radio.h"
 
-bool	at_mode_active;
+bool		at_mode_active;
 static void	at_plus_detector(uint8_t c);
 static void	at_command(void);
 
@@ -48,7 +44,7 @@ static void	at_ampersand(void);
 
 /* AT command buffer */
 #define AT_CMD_MAXLEN	16
-__xdata char	at_cmd[AT_CMD_MAXLEN + 1];
+__pdata char	at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
 bool

@@ -28,7 +28,7 @@
 
 /// @file	board_info.h
 ///		Board information passed from the bootloader to the
-///		application
+///		application.
 ///
 
 /// Possible board RF configurations

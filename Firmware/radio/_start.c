@@ -110,9 +110,13 @@ main(void)
 /// Panic and stop the system
 ///
 void
-_panic()
+panic(char *fmt, ...)
 {
+	va_list ap;
+
 	puts("\n**PANIC**");
+	va_start(ap, fmt);
+	vprintf(fmt, ap);
 	for(;;)
 		;
 }
@@ -122,7 +126,6 @@ _panic()
 static void
 hardware_init(void)
 {
-#if 0
 	uint16_t	i;
 
 	// Disable the watchdog timer
@@ -144,9 +147,8 @@ hardware_init(void)
 	P0DRV	 =  0x10;		// UART TX
 	SFRPAGE	 =  LEGACY_PAGE;
 	XBR0	 =  0x01;		// UART enable
-#endif
 
-	// SPI
+	// SPI1
 	XBR1	|= 0x40;	// enable SPI in 3-wire mode
 	P1MDOUT	|= 0x15;	// SCK1, MOSI1, MISO1 push-pull
 	SFRPAGE	 = CONFIG_PAGE;
@@ -162,13 +164,14 @@ hardware_init(void)
 	IE0	 = 0;
 
 	// 100Hz timer tick using timer3
-	// Derive timer values from SYSCLK
-	TMR3RLL	 = 0x40; /* (65536 - ((SYSCLK / 12) / 100)) & 0xff */
-	TMR3RLH	 = 0xb0; /* ((65536 - ((SYSCLK / 12) / 100)) >> 8) & 0xff; */
+	// Derive timer values from SYSCLK, just for laughs.
+	TMR3RLL	 =  (65536UL - ((SYSCLK / 12) / 100)) & 0xff;
+	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 100)) >> 8) & 0xff;
 	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
 	EIE1	|= 0x80;
 
 	// uart - leave the baud rate alone
+	// XXX should be using saved speed
 	uartInitUart(BAUD_RATE_NO_CHANGE);
 	uartSetUartOption(UART_TRANSLATE_EOL, 1);
 
