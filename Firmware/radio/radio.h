@@ -46,8 +46,12 @@
 #include "board.h"
 #include "uart.h"
 #include "rtPhy.h"
+#include "board_info.h"
 #include "parameters.h"
 #include "at.h"
+
+// System clock frequency
+#define SYSCLK	245000000
 
 #if DEBUG
 # define debug(fmt, args...)	printf_tiny(fmt "\n", ##args)
@@ -66,6 +70,10 @@
 
 extern __code const char g_version_string[];
 extern __code const char g_banner_string[];
+
+extern __pdata enum BoardFrequency	g_board_frequency;
+extern __pdata uint8_t			g_board_bl_version;
+
 extern void _panic(void);
 
 #endif /* RADIO_H_ */

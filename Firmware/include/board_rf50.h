@@ -80,9 +80,6 @@
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
 
-#define BOARD_NAME	"RF50-DEMO"
-#define BOARD_ID	0x4d	// unique board ID used to connect bootloader and upload tools
-
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P2, 0);
 SBIT(LED_GREEN,	   SFR_P2, 5);
@@ -115,10 +112,6 @@ do {							\
 	IT01CF   =  (IT01CF & 0xf) | 0x7;		\
 	IT0	 = 0;	/* INT0 leve triggered */	\
 } while(0)
-
-// System clock frequency
-// XXX should be setting up clocks in HW_INIT to be able to guarantee this...
-#define SYSCLK	245000000
 
 // EzRadio / rtPhy definitions
 // Note that the RFM50 deviates in both the oscillator cap value and the wiring

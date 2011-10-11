@@ -28,11 +28,13 @@
 # Makefile for the Si1000 UART bootloader.
 #
 
-BOARD		?=	BOARD_RF50
+VERSION		 =	1
+
 PRODUCT		 =	$(OBJROOT)/bl.hex
 
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 #CFLAGS		+=	--fverbose-asm
+CFLAGS		+=	-DBL_VERSION=$(VERSION)
 
 LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x00fc00 --stack-size 64 --nostdlib
 

@@ -148,21 +148,30 @@ at_error(void)
 static void
 at_i(void)
 {
+	uint16_t	val;
+
 	switch (at_cmd[3]) {
 	case '\0':
 	case '0':
 		puts(g_banner_string);
-		break;
+		return;
 	case '1':
 		puts(g_version_string);
-		break;
+		return;
 	case '2':
-		printf("%d\n", BOARD_ID);
+		val = BOARD_ID;
+		break;
+	case '3':
+		val = g_board_frequency;
+		break;
+	case '4':
+		val = g_board_bl_version;
 		break;
 	default:
 		at_error();
-		break;
+		return;
 	}
+	printf("%d\n", val);
 }
 
 /*

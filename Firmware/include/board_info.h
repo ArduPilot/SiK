@@ -26,37 +26,25 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/// @file	parameters.h
+/// @file	board_info.h
+///		Board information passed from the bootloader to the
+///		application
 ///
-/// Definitions for program parameter storage.
 
-/// Parameter IDs.
+/// Possible board RF configurations
 ///
-/// This enumeration should be updated
-/// if/when we switch to using the hop register and fixed channel spacing, etc.
-///
-/// Parameter IDs here match AT S-register numbers, so change them with extreme
-/// care.  Parameter zero cannot be written by AT commands.
-///
-enum ParamID {
-	PARAM_FORMAT = 0,		// Must always be parameter 0
-	PARAM_NODE_ID,			// this node's ID
-	PARAM_PEER_ID,			// peer node's ID (if paired)
-	PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-
-	PARAM_MAX			// must be last
+enum BoardFrequency {
+	FREQ_NONE	= 0,
+	FREQ_433,
+	FREQ_470,
+	FREQ_868,
+	FREQ_915,
 };
 
-#define PARAM_FORMAT_CURRENT	0x13UL
-
-extern uint8_t	param_get8 (enum ParamID param);
-extern uint16_t	param_get16(enum ParamID param);
-
-extern bool param_set8 (enum ParamID param, uint8_t value);
-extern bool param_set16(enum ParamID param, uint16_t value);
-
-extern bool param_load(void);
-extern void param_save(void);
-
-extern void param_default(void);
-extern bool param_check(enum ParamID id, uint16_t val);
+/// SFRs used to temporarily save board information during handoff
+/// between the bootloader and the application.
+///
+#define BOARD_FREQUENCY_REG	ADC0GTH		// board frequency
+#define BOARD_BL_VERSION_REG	ADC0GTL		// bootloader version
+#define BOARD_UNUSED1_REG	ADC0LTH		// spare
+#define BOARD_UNUSED2_REG	ADC0LTL		// spare

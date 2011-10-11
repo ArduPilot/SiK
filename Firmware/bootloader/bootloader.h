@@ -35,14 +35,7 @@
 #define _BOOTLOADER_H
 
 #include <stdint.h>
-
-#ifdef __CDT_PARSER__
-# define __data
-# define __xdata
-# define __pdata
-# define __code
-# define __at(_x)
-#endif
+#include "cdt.h"
 
 // Basic flash protocol, originally inspired by the STK500 protocol
 //
@@ -54,13 +47,15 @@
 
 #define PROTO_EOC		0x20	// end of command
 #define PROTO_GET_SYNC		0x21	// NOP for re-establishing sync
-#define PROTO_GET_DEVICE	0x22	// get device ID byte
+#define PROTO_GET_DEVICE	0x22	// get device ID bytes
 #define PROTO_CHIP_ERASE	0x23	// erase program area
 #define PROTO_LOAD_ADDRESS	0x24	// set next programming address
 #define PROTO_PROG_FLASH	0x25	// write byte at address + increment
 #define PROTO_READ_FLASH	0x26	// read byte at address + increment
 #define PROTO_PROG_MULTI	0x27	// write up to PROTO_PROG_MULTI_MAX bytes at address + increment
 #define PROTO_READ_MULTI	0x28	// read up to 255 bytes at address + increment
+
+#define PROTO_REBOOT		0x30	// reboot the board & start the app
 
 #define PROTO_PROG_MULTI_MAX	64	// maximum PROG_MULTI size - must fit in DSEG
 #define PROTO_READ_MULTI_MAX	255	// size of the size field

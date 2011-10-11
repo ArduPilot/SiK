@@ -29,7 +29,8 @@
 #
 
 # Board configuration
-CFLAGS			+=	-D$(BOARD)
+CFLAGS			+=	-DBOARD_$(BOARD)
+CFLAGS			+=	-DBOARD_FREQUENCY=$(BOARD_FREQUENCY)
 
 # Compiler
 SDCC			 =	/usr/local/

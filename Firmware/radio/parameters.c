@@ -181,21 +181,16 @@ param_save() __reentrant
 static void
 param_default_common(void)
 {
-	param_set8(PARAM_SERIAL_SPEED, BAUD_RATE_115200);
 
-	param_save();
 }
 
 void
 param_default(void)
 {
-	debug("defaulting parameters for 434MHz");
-	param_set16(PARAM_TRX_FREQUENCY,    	434);
-	param_set16(PARAM_TRX_CHANNEL_SPACING,	100);
-	param_set16(PARAM_TRX_DEVIATION,	35);
-	param_set16(PARAM_TRX_DATA_RATE,	384);
-	param_set16(PARAM_RX_BAND_WIDTH,	105);
-	param_default_common();
+	param_set16(PARAM_NODE_ID, 0);
+	param_set16(PARAM_PEER_ID, 0);
+	param_set8(PARAM_SERIAL_SPEED, BAUD_RATE_115200);
+	param_save();
 }
 
 bool

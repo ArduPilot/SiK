@@ -50,21 +50,27 @@ static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
 __code const char g_banner_string[] = "SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
 __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW);
 
+// board info from the bootloader
+__pdata enum BoardFrequency	g_board_frequency;
+__pdata uint8_t			g_board_bl_version;
+
 // Local prototypes
-static void run(void);
 static void hardware_init(void);
+static void radio_init(void);
 
 void
 main(void)
 {
 	PHY_STATUS	s;
 
-	hardware_init();
+	// Stash board info from the bootloader before we let anything touch
+	// the SFRs.
+	//
+	g_board_frequency = BOARD_FREQUENCY_REG;
+	g_board_bl_version = BOARD_BL_VERSION_REG;
 
-	// Init the radio driver
-	s = rtPhyInit();
-	if (s != PHY_STATUS_SUCCESS)
-		panic("rtPhyInit failed: %u", s);
+	// Do hardware initialisation
+	hardware_init();
 
 	// try to load parameters; set them to defaults if that fails
 	// XXX default parameter selection should be based on strapping
@@ -72,22 +78,15 @@ main(void)
 	if (!param_load())
 		param_default();
 
-	// XXX this should almost certainly be replaced with the ppPhy code
-	// plus some minor parameter tweaking.
-	rtPhySet(TRX_FREQUENCY,		param_get16(PARAM_TRX_FREQUENCY)	* 1000000UL);
-	rtPhySet(TRX_CHANNEL_SPACING,	param_get16(PARAM_TRX_CHANNEL_SPACING)	* 1000UL);
-	rtPhySet(TRX_DEVIATION,		param_get16(PARAM_TRX_DEVIATION)	* 1000UL);
-	rtPhySet(TRX_DATA_RATE,		param_get16(PARAM_TRX_DATA_RATE)	* 100UL);
-	rtPhySet(RX_BAND_WIDTH,		param_get16(PARAM_RX_BAND_WIDTH)	* 1000UL);
+	// do radio initialisation
+	radio_init();
 
-	s = rtPhyInitRadio();
-	if (s != PHY_STATUS_SUCCESS)
-		panic("rtPhyInitRadio failed: %u", s);
+	puts(g_banner_string);
+
+	// turn on the receiver
 	s = rtPhyRxOn();
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyRxOn failed: %u", s);
-
-	puts(g_banner_string);
 
 	for (;;) {
 		uint8_t		rlen;
@@ -118,12 +117,34 @@ _panic()
 		;
 }
 
-/// Additional basic hardware initialisation beyond the basic operating conditions
-/// set up by the bootloader.
+/// Do basic hardware initialisation.
 ///
 static void
 hardware_init(void)
 {
+#if 0
+	uint16_t	i;
+
+	// Disable the watchdog timer
+	PCA0MD	&= ~0x40;
+
+	// Select the internal oscillator, prescale by 1
+	FLSCL	 =  0x40;
+	OSCICN	 =  0x8F;
+	CLKSEL	 =  0x00;
+
+	// Configure the VDD brown out detector
+	VDM0CN	 =  0x80;
+	for (i = 0; i < 350; i++);	// Wait 100us for initialization
+	RSTSRC	 =  0x06;		// enable brown out and missing clock reset sources
+
+	// Configure crossbar for UART
+	P0MDOUT	 =  0x10;		// UART Tx push-pull
+	SFRPAGE	 =  CONFIG_PAGE;
+	P0DRV	 =  0x10;		// UART TX
+	SFRPAGE	 =  LEGACY_PAGE;
+	XBR0	 =  0x01;		// UART enable
+#endif
 
 	// SPI
 	XBR1	|= 0x40;	// enable SPI in 3-wire mode
@@ -157,9 +178,58 @@ hardware_init(void)
 	// Turn on the 'radio running' LED and turn off the bootloader LED
 	LED_RADIO = LED_ON;
 	LED_BOOTLOADER = LED_OFF;
+
+//	XBR2	 =  0x40;		// Crossbar (GPIO) enable
+}
+
+static void
+radio_init(void) __reentrant
+{
+	PHY_STATUS	s;
+	uint32_t	freq;
+
+	// Do generic PHY initialisation
+	//
+	s = rtPhyInit();
+	if (s != PHY_STATUS_SUCCESS)
+		panic("rtPhyInit failed: %u", s);
+
+	switch (g_board_frequency) {
+	case FREQ_433:
+		freq = 433000000UL;
+		break;
+	case FREQ_470:
+		freq = 470000000UL;
+		break;
+	case FREQ_868:
+		freq = 868000000UL;
+		break;
+	case FREQ_915:
+		freq = 915000000UL;
+		break;
+	default:
+		panic("bad board frequency %d", g_board_frequency);
+		freq = 0;	// keep the compiler happy
+		break;
+	}
+
+	// Set PHY parameters for the initial operational state
+	//
+	rtPhySet(TRX_FREQUENCY,		freq);
+	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
+	rtPhySet(TRX_DEVIATION,		 35000UL);	// XXX
+	rtPhySet(TRX_DATA_RATE,		 40000UL);	// XXX
+	rtPhySet(RX_BAND_WIDTH,		 10000UL);	// XXX
+
+	// And intilise the radio with them.
+	s = rtPhyInitRadio();
+	if (s != PHY_STATUS_SUCCESS)
+		panic("rtPhyInitRadio failed: %u", s);
 }
 
 /// Timer tick interrupt handler
+///
+/// XXX Could switch this and everything it calls to use another register bank?
 ///
 static void
 T3_ISR(void) __interrupt(INTERRUPT_TIMER3)

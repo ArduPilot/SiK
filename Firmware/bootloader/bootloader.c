@@ -40,8 +40,21 @@
 
 #include "board.h"
 #include "bootloader.h"
+#include "board_info.h"
 #include "flash.h"
 #include "util.h"
+
+#if   BOARD_FREQUENCY == 433
+# define FREQUENCY	FREQ_433
+#elif BOARD_FREQUENCY == 470
+# define FREQUENCY	FREQ_470
+#elif BOARD_FREQUENCY == 868
+# define FREQUENCY	FREQ_868
+#elif BOARD_FREQUENCY == 915
+# define FREQUENCY	FREQ_915
+#else
+# error Must define BOARD_FREQUENCY
+#endif
 
 #if 0
 # define trace(_x)	cout(_x);
@@ -97,6 +110,11 @@ bootloader(void)
 	    flash_app_valid() &&
 	    (BUTTON_BOOTLOAD != BUTTON_ACTIVE)) {
 
+		// Stash board info in SFRs for the application to find later
+		//
+		BOARD_FREQUENCY_REG = FREQUENCY;
+		BOARD_BL_VERSION_REG = BL_VERSION;
+
 		// And jump
 		((void (__code *)(void))FLASH_APP_START)();
 	}
@@ -131,6 +149,7 @@ bootloader(void)
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
 			cout(BOARD_ID);
+			cout(FREQUENCY);
 			break;
 
 		case PROTO_CHIP_ERASE:		// erase the program area
@@ -186,6 +205,14 @@ bootloader(void)
 				cout(c);
 			}
 			break;
+
+		case PROTO_REBOOT:
+			trace('b');
+			/* generate a software reset, which will boot to the application */
+			RSTSRC |= (1<<4);
+			for (;;)
+				;
+
 		default:
 			goto cmd_bad;
 		}
@@ -264,4 +291,3 @@ hardware_init(void)
 
 	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
-
