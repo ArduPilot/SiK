@@ -166,8 +166,6 @@ _serial_write(uint8_t c)
 	}
 
 	interrupt_restore(istate);
-
-	return true;
 }
 
 bool
@@ -208,16 +206,11 @@ serial_write_space(void)
 static void
 serial_restart(void)
 {
-	uint8_t		c;
 	/* XXX may be idle due to flow control - check signals before starting */
 
-	/*
-	 * the next character to transmit
-	 * may not be what we just buffered
-	 */
-	BUF_REMOVE(tx, c);
+	/* generate a transmit-done interrupt to force the handler to send another byte */
 	tx_idle = false;
-	SBUF0 = c;
+	TI0 = 1;
 }
 
 uint8_t
