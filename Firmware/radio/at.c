@@ -42,9 +42,6 @@ __pdata uint8_t	at_cmd_len;
 bool		at_mode_active;	/* if true, incoming bytes are for AT command */
 bool		at_cmd_ready;	/* if true, at_cmd / at_cmd_len contain valid data */
 
-/* input handlers */
-static void	at_plus_detector(uint8_t c) __using(1);
-
 /* command handlers */
 static void	at_ok(void);
 static void	at_error(void);
@@ -52,19 +49,9 @@ static void	at_i(void);
 static void	at_s(void);
 static void	at_ampersand(void);
 
-bool
-at_input_irq(uint8_t c) __using(1)
+void
+at_input(uint8_t c) __using(1)
 {
-	/* ignore bytes received during command processing */
-	if (at_cmd_ready)
-		return false;
-
-	/* if AT mode is not active, feed the byte to the +++ detector */
-	if (!at_mode_active) {
-		at_plus_detector(c);
-		return false;
-	}
-
 	/* AT mode is active and waiting for a command */
 	switch (c) {
 	/* CR - submits command for processing */
@@ -104,7 +91,6 @@ at_input_irq(uint8_t c) __using(1)
 		at_cmd_len = 0;
 		break;
 	}
-	return true;
 }
 
 /*
@@ -130,7 +116,7 @@ __data uint8_t	at_plus_state;
 __data uint8_t	at_plus_counter;
 #define ATP_COUNT_1S		100	/* 100 ticks of the 100Hz timer */
 
-static void
+void
 at_plus_detector(uint8_t c) __using(1)
 {
 	/*

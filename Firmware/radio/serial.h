@@ -41,9 +41,11 @@
 extern void	serial_device_set_speed(uint8_t speed);
 
 extern void	serial_init(uint8_t speed);
-extern void	serial_write(uint8_t c);
-extern uint8_t	serial_read(void);
-extern uint8_t	serial_read_available(void);
+extern bool	serial_write(uint8_t c);
+extern bool	serial_write_buf(__xdata uint8_t *buf, uint8_t count);
 extern uint8_t	serial_write_space(void);
+extern uint8_t	serial_read(void);
+extern bool	serial_read_buf(__xdata uint8_t *buf, uint8_t count);
+extern uint8_t	serial_read_available(void);
 
 #endif /* SERIAL_H_ */

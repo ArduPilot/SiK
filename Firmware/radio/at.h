@@ -33,25 +33,40 @@
 #ifndef AT_H_
 #define AT_H_
 
-extern bool	at_mode_active;		///< if true, the AT interpreter is in command mode
+extern bool	at_mode_active;	/**< if true, the AT interpreter is in command mode */
+extern bool	at_cmd_ready;	/**< if true, at_cmd / at_cmd_len contain valid data */
 
 /// Timer tick handler for the AT command interpreter
 ///
 extern void	at_timer(void);
 
-/// Character input handler for the AT command interpreter
-///
-/// @param	c		Character that has been received.
-/// @return			If true, the character has been consumed
-///				by the parser and should not be forwarded.
-///
-extern bool	at_input_irq(uint8_t c) __using(1);
+/**
+ * +++ detector.  Handles the state machine for detecting the AT escape
+ * sequence.
+ *
+ * Call this at interrupt time for every incoming character when at_mode_active
+ * is false.
+ *
+ * @param	c		Received character.
+ */
+extern void	at_plus_detector(uint8_t c) __using(1);
 
-/// Check for and execute AT commands
-///
-/// This function checks for the reception of a complete AT command, and
-/// processes it if found.
-///
+/**
+ * AT command character input method.
+ *
+ * Call this at interrupt time for every incoming character when at_mode_active
+ * is true, and don't buffer those characters.
+ *
+ * @param	c		Received character.
+ */
+extern void	at_input(uint8_t c) __using(1);
+
+/**
+ *  Check for and execute AT commands
+ *
+ *  Call this from non-interrupt context when it's safe for an AT command
+ *  to be executed.  It's cheap if at_mode_active is false.
+ */
 extern void	at_command(void);
 
 #endif

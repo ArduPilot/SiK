@@ -61,9 +61,10 @@ volatile bool			tx_idle;
 #define BUF_FREE(_which)	(_which##_remove - _which##_insert - 1)
 
 /* FIFO insert/remove operations */
-#define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert++] = _c; } while(0)
-#define BUF_REMOVE(_which, _c)	do { _c = _which##_buf[_which##_remove++]; } while(0)
+#define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert++] = (_c); } while(0)
+#define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove++]; } while(0)
 
+static void			_serial_write(uint8_t c);
 static void			serial_restart(void);
 
 void
@@ -77,15 +78,23 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 		RI0 = 0;
 		c = SBUF0;
 
-		/* pass it to the AT parser - returns true if the byte was consumed */
-		if (!at_input_irq(c)) {
+		/* if AT mode is active, the AT processor owns the byte */
+		if (at_mode_active) {
 
-			/* if the byte wasn't eaten by the AT parser, try to buffer it */
+			/* If an AT command is ready/being processed, we would ignore this byte */
+			if (!at_cmd_ready)
+				at_input(c);
+		} else {
+
+			/* run the byte past the +++ detector */
+			at_plus_detector(c);
+
+			/* and queue it for general reception */
 			if (BUF_NOT_FULL(rx))
 				BUF_INSERT(rx, c);
-		}
 
-		/* XXX use BUF_FREE here to determine flow control state */
+			/* XXX use BUF_FREE here to determine flow control state */
+		}
 	}
 
 	/* check for anything to transmit */
@@ -128,8 +137,18 @@ serial_init(uint8_t speed)
 	ES0 = 1;
 }
 
-void
+bool
 serial_write(uint8_t c)
+{
+	if (serial_write_space() < 1)
+		return false;
+
+	_serial_write(c);
+	return true;
+}
+
+static void
+_serial_write(uint8_t c)
 {
 	bool	istate;
 
@@ -147,6 +166,43 @@ serial_write(uint8_t c)
 	}
 
 	interrupt_restore(istate);
+
+	return true;
+}
+
+bool
+serial_write_buf(__xdata uint8_t *buf, uint8_t count)
+{
+	bool	istate;
+
+	if (serial_write_space() < count)
+		return false;
+
+	interrupt_disable(istate);
+
+	while (count--)
+		BUF_INSERT(tx, *buf++);
+
+	interrupt_restore(istate);
+
+	return true;
+}
+
+uint8_t
+serial_write_space(void)
+{
+	/*
+	 * If we are in AT mode, discourage anyone from sending bytes.
+	 * We don't necessarily want to stall serial_write callers, or
+	 * to block AT commands while their response bytes trickle out,
+	 * so we maintain ordering for outbound serial bytes and assume
+	 * that the receiver will drain the stream while waiting for the
+	 * OK response on AT mode entry.
+	 */
+	if (at_mode_active)
+		return 0;
+
+	return BUF_FREE(tx);
 }
 
 static void
@@ -183,22 +239,34 @@ serial_read(void)
 	return c;
 }
 
+bool
+serial_read_buf(__xdata uint8_t *buf, uint8_t count)
+{
+	bool		istate;
+
+	if (serial_read_available() < count)
+		return false;
+
+	interrupt_disable(istate);
+
+	while (count--)
+		BUF_REMOVE(rx, *buf++);
+
+	interrupt_restore(istate);
+
+	return true;
+}
+
 uint8_t
 serial_read_available(void)
 {
 	return BUF_USED(rx);
 }
 
-uint8_t
-serial_write_space(void)
-{
-	return BUF_FREE(tx);
-}
-
 void
 putchar(char c)
 {
 	if (c == '\n')
-		serial_write('\r');
-	serial_write(c);
+		_serial_write('\r');
+	_serial_write(c);
 }
