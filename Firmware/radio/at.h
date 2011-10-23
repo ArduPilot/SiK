@@ -45,6 +45,13 @@ extern void	at_timer(void);
 /// @return			If true, the character has been consumed
 ///				by the parser and should not be forwarded.
 ///
-extern bool	at_input(uint8_t c);
+extern bool	at_input_irq(uint8_t c) __using(1);
+
+/// Check for and execute AT commands
+///
+/// This function checks for the reception of a complete AT command, and
+/// processes it if found.
+///
+extern void	at_command(void);
 
 #endif

@@ -50,14 +50,26 @@
 #include <string.h>
 
 #include "board.h"
-#include "uart.h"
+#include "serial.h"
 #include "rtPhy.h"
 #include "board_info.h"
 #include "parameters.h"
 #include "at.h"
 
-/// System clock frequency
+/* System clock frequency */
 #define SYSCLK	24500000UL
+
+/* supported serial speeds */
+enum SerialSpeed
+{
+    B9600,
+    B38400,
+    B57600,
+    B115200,
+    B230400,
+    BMAX,
+    BNOCHANGE
+};
 
 #if DEBUG
 # define debug(fmt, args...)	printf_small(fmt "\n", ##args)

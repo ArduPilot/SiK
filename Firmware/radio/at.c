@@ -32,42 +32,47 @@
 
 #include "radio.h"
 
-bool		at_mode_active;
-static void	at_plus_detector(uint8_t c);
-static void	at_command(void);
-
-static void	at_ok(void);
-static void	at_error(void);
-static void	at_i(void);
-static void	at_s(void);
-static void	at_ampersand(void);
 
 /* AT command buffer */
 #define AT_CMD_MAXLEN	16
 __pdata char	at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
+/* mode flags */
+bool		at_mode_active;	/* if true, incoming bytes are for AT command */
+bool		at_cmd_ready;	/* if true, at_cmd / at_cmd_len contain valid data */
+
+/* input handlers */
+static void	at_plus_detector(uint8_t c) __using(1);
+
+/* command handlers */
+static void	at_ok(void);
+static void	at_error(void);
+static void	at_i(void);
+static void	at_s(void);
+static void	at_ampersand(void);
+
 bool
-at_input(uint8_t c)
+at_input_irq(uint8_t c) __using(1)
 {
-	/* if not active, offer the character to the +++ detector */
+	/* ignore bytes received during command processing */
+	if (at_cmd_ready)
+		return false;
+
+	/* if AT mode is not active, feed the byte to the +++ detector */
 	if (!at_mode_active) {
 		at_plus_detector(c);
 		return false;
 	}
 
-	/* convert everything to uppercase */
-	if (isalpha(c))
-		c = toupper(c);
-
+	/* AT mode is active and waiting for a command */
 	switch (c) {
-		/* CR - submits command for processing */
+	/* CR - submits command for processing */
 	case '\r':
 		putchar('\r');
 		putchar('\n');
 		at_cmd[at_cmd_len] = 0;
-		at_command();
-		at_cmd_len = 0;
+		at_cmd_ready = true;
 		break;
 
 		/* backspace - delete a character */
@@ -82,47 +87,153 @@ at_input(uint8_t c)
 
 		/* character - add to buffer if valid */
 	default:
-		if (isprint(c) && (at_cmd_len < AT_CMD_MAXLEN))
-			at_cmd[at_cmd_len++] = c;
-		putchar(c);
+		if (at_cmd_len < AT_CMD_MAXLEN) {
+			if (isprint(c)) {
+				at_cmd[at_cmd_len++] = c;
+				putchar(c);
+			}
+			break;
+		}
+		/*
+		 * If the AT command buffer overflows we abandon
+		 * AT mode and return to passthrough mode; this is
+		 * to minimise the risk of locking up on reception
+		 * of an accidental escape sequence.
+		 */
+		at_mode_active = 0;
+		at_cmd_len = 0;
 		break;
 	}
 	return true;
 }
 
+/*
+ * +++ detector state machine
+ *
+ * states:
+ *
+ * wait_for_idle:	-> wait_for_plus1, count = 0 after 1s
+ *
+ * wait_for_plus:	-> wait_for_idle if char != +
+ *			-> wait_for_plus, count++ if count < 3
+ * wait_for_enable:	-> enabled after 1s
+ *			-> wait_for_idle if any char
+ */
+
+#define	ATP_WAIT_FOR_IDLE	0
+#define ATP_WAIT_FOR_PLUS1	1
+#define ATP_WAIT_FOR_PLUS2	2
+#define ATP_WAIT_FOR_PLUS3	3
+#define ATP_WAIT_FOR_ENABLE	4
+
+__data uint8_t	at_plus_state;
+__data uint8_t	at_plus_counter;
+#define ATP_COUNT_1S		100	/* 100 ticks of the 100Hz timer */
+
 static void
-at_command(void)
+at_plus_detector(uint8_t c) __using(1)
 {
-	/* require the AT prefix */
-	if ((at_cmd_len < 2) || (at_cmd[0] != 'A') || (at_cmd[1] != 'T'))
-		return;
+	/*
+	 * If we get a character that's not '+', unconditionally
+	 * reset the state machine to wait-for-idle; this will
+	 * restart the 1S timer.
+	 */
+	if (c != '+')
+		at_plus_state = ATP_WAIT_FOR_IDLE;
 
-	/* look at the next byte to determine what to do */
-	switch (at_cmd[2]) {
-	case '\0':		// no command -> OK
-		at_ok();
-		break;
-	case '&':
-		at_ampersand();
-		break;
-	case 'I':
-		at_i();
-		break;
-	case 'O':		// O -> go online (exit command mode)
-		at_mode_active = 0;
-		break;
-	case 'S':
-		at_s();
+	/*
+	 * We got a plus; handle it based on our current state.
+	 */
+	switch (at_plus_state) {
+
+	case ATP_WAIT_FOR_PLUS1:
+	case ATP_WAIT_FOR_PLUS2:
+		at_plus_state++;
 		break;
 
-	case 'Z':
-		/* generate a software reset */
-		RSTSRC |= (1<<4);
-		for (;;)
-			;
+	case ATP_WAIT_FOR_PLUS3:
+		at_plus_state = ATP_WAIT_FOR_ENABLE;
+		at_plus_counter = ATP_COUNT_1S;
+		break;
 
 	default:
-		at_error();
+		at_plus_state = ATP_WAIT_FOR_IDLE;
+		/* FALLTHROUGH */
+	case ATP_WAIT_FOR_IDLE:
+	case ATP_WAIT_FOR_ENABLE:
+		at_plus_counter = ATP_COUNT_1S;
+		break;
+	}
+}
+
+/*
+ * 100Hz timer callout
+ */
+void
+at_timer(void)
+{
+	/* if the counter is running */
+	if (at_plus_counter > 0) {
+
+		/* if it reaches zero, the timeout has expired */
+		if (--at_plus_counter == 0) {
+
+			/* make the relevant state change */
+			switch (at_plus_state) {
+			case ATP_WAIT_FOR_IDLE:
+				at_plus_state = ATP_WAIT_FOR_PLUS1;
+				break;
+			case ATP_WAIT_FOR_ENABLE:
+				at_mode_active = true;
+				puts("\nOK");
+				at_plus_state = ATP_WAIT_FOR_IDLE;
+				break;
+			default:
+				/* should never happen, but otherwise harmless */
+			}
+		}
+	}
+}
+
+void
+at_command(void)
+{
+	/* require a command with the AT prefix */
+	if (at_cmd_ready) {
+		if ((at_cmd_len >= 2) && (at_cmd[0] == 'A') && (at_cmd[1] == 'T')) {
+
+			/* look at the next byte to determine what to do */
+			switch (at_cmd[2]) {
+			case '\0':		// no command -> OK
+				at_ok();
+				break;
+			case '&':
+				at_ampersand();
+				break;
+			case 'I':
+				at_i();
+				break;
+			case 'O':		// O -> go online (exit command mode)
+				at_mode_active = 0;
+				break;
+			case 'S':
+				at_s();
+				break;
+
+			case 'Z':
+				/* generate a software reset */
+				RSTSRC |= (1<<4);
+				for (;;)
+					;
+
+			default:
+				at_error();
+			}
+		}
+
+		/* unlock the command buffer */
+		at_cmd_len = 0;
+		at_cmd_ready = false;
 	}
 }
 
@@ -263,95 +374,3 @@ at_ampersand(void)
 	}
 }
 
-/*
- * +++ detector state machine
- *
- * states:
- *
- * wait_for_idle:	-> wait_for_plus1, count = 0 after 1s
- *
- * wait_for_plus:	-> wait_for_idle if char != +
- *			-> wait_for_plus, count++ if count < 3
- * wait_for_enable:	-> enabled after 1s
- *			-> wait_for_idle if any char
- */
-
-#define	ATP_WAIT_FOR_IDLE	0
-#define ATP_WAIT_FOR_PLUS1	1
-#define ATP_WAIT_FOR_PLUS2	2
-#define ATP_WAIT_FOR_PLUS3	3
-#define ATP_WAIT_FOR_ENABLE	4
-
-__data uint8_t	at_plus_state;
-__data uint8_t	at_plus_counter;
-#define ATP_COUNT_1S		100	/* 100 ticks of the 100Hz timer */
-
-static void
-at_plus_detector(uint8_t c)
-{
-	bool	istate;
-
-	interrupt_disable(istate);
-
-	/*
-	 * If we get a character that's not '+', unconditionally
-	 * reset the state machine to wait-for-idle
-	 */
-	if (c != '+')
-		at_plus_state = ATP_WAIT_FOR_IDLE;
-
-	/*
-	 * We got a plus; handle it based on our current state.
-	 */
-	switch (at_plus_state) {
-
-	case ATP_WAIT_FOR_PLUS1:
-	case ATP_WAIT_FOR_PLUS2:
-		at_plus_state++;
-		break;
-
-	case ATP_WAIT_FOR_PLUS3:
-		at_plus_state = ATP_WAIT_FOR_ENABLE;
-		at_plus_counter = ATP_COUNT_1S;
-		break;
-
-	default:
-		at_plus_state = ATP_WAIT_FOR_IDLE;
-		/* FALLTHROUGH */
-	case ATP_WAIT_FOR_IDLE:
-	case ATP_WAIT_FOR_ENABLE:
-		at_plus_counter = ATP_COUNT_1S;
-		break;
-	}
-
-	interrupt_restore(istate);
-}
-
-/*
- * 100Hz timer callout
- */
-void
-at_timer(void)
-{
-	/* if the counter is running */
-	if (at_plus_counter > 0) {
-
-		/* if it reaches zero, the timeout has expired */
-		if (--at_plus_counter == 0) {
-
-			/* make the relevant state change */
-			switch (at_plus_state) {
-			case ATP_WAIT_FOR_IDLE:
-				at_plus_state = ATP_WAIT_FOR_PLUS1;
-				break;
-			case ATP_WAIT_FOR_ENABLE:
-				at_mode_active = true;
-				puts("\nOK");
-				at_plus_state = ATP_WAIT_FOR_IDLE;
-				break;
-			default:
-				/* should never happen, but otherwise harmless */
-			}
-		}
-	}
-}

@@ -189,7 +189,7 @@ param_default(void)
 {
 	param_set16(PARAM_NODE_ID, 0);
 	param_set16(PARAM_PEER_ID, 0);
-	param_set8(PARAM_SERIAL_SPEED, BAUD_RATE_115200);
+	param_set8(PARAM_SERIAL_SPEED, B115200);
 	param_save();
 }
 
@@ -198,7 +198,7 @@ param_check(enum ParamID id, uint16_t val)
 {
 	switch (id) {
 	case PARAM_SERIAL_SPEED:
-		if (val > NUM_BAUD_RATES)
+		if (val > BMAX)
 			return false;
 		break;
 	}

@@ -42,7 +42,7 @@
 // Note that these *must* be placed in this file for SDCC to generate the
 // interrupt vector table correctly.
 //
-extern void	uartIsr(void)		__interrupt(INTERRUPT_UART0) __using(1);
+extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
 static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
@@ -100,10 +100,8 @@ main(void)
 			printf("pkt %d 0x%02x\n", rlen, rbuf[0]);
 		}
 
-		if (iskey()) {
-			uint8_t	c = getchar();
-			at_input(c);
-		}
+		/* give the AT command processor a chance to handle a command */
+		at_command();
 	}
 }
 
@@ -172,8 +170,7 @@ hardware_init(void)
 
 	// uart - leave the baud rate alone
 	// XXX should be using saved speed
-	uartInitUart(BAUD_RATE_NO_CHANGE);
-	uartSetUartOption(UART_TRANSLATE_EOL, 1);
+	serial_init(BNOCHANGE);
 
 	// global interrupt enable
 	EA = 1;
@@ -228,6 +225,27 @@ radio_init(void) __reentrant
 	s = rtPhyInitRadio();
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInitRadio failed: %u", s);
+}
+
+/*
+ * Table of supported serial speed settings.
+ */
+const __code U8 serial_baud_rates[][2] = {
+	// T1R, CKCON
+	{0x96, 0x00},	// B9600
+	{0xb0, 0x01},	// B38400
+	{0x2b, 0x08},	// B57600
+	{0x96, 0x08},	// B115200
+	{0xcb, 0x08},	// B230400
+};
+
+void
+serial_device_set_speed(uint8_t speed)
+{
+	if (speed < BMAX) {
+		TH1 = serial_baud_rates[speed][0];
+		CKCON = (CKCON & 0x0b) | serial_baud_rates[speed][1];
+	}
 }
 
 /// Timer tick interrupt handler
