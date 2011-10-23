@@ -18,6 +18,7 @@ namespace uploader
 		public void load (string fromPath)
 		{
 			StreamReader sr = new StreamReader (fromPath);
+			UInt32 loadedSize = 0;
 			
 			// discard anything we might previous have loaded
 			Clear ();
@@ -49,13 +50,15 @@ namespace uploader
 					}
 	
 					log (string.Format ("ihex: 0x{0:X}: {1}\n", address, length), 1);
-
+					loadedSize += length;
+					
 					// and add to the list of ranges
 					insert (address, b);
 				}
 			}
 			if (Count < 1)
 				throw new Exception ("no data in IntelHex file");
+			log (string.Format ("read {0} bytes from {1}\n", loadedSize, fromPath));
 		}
 		
 		private void log (string message, int level = 0)

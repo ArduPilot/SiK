@@ -15,24 +15,37 @@ namespace uploader
 		
 		private enum Code : byte
 		{
+			// response codes
 			OK				= 0x10,
 			FAILED			= 0x11,
 			INSYNC			= 0x12,
 			
+			// protocol commands
 			EOC				= 0x20,
 			GET_SYNC		= 0x21,
-			GET_DEVICE		= 0x22,
+			GET_DEVICE		= 0x22,	// returns DEVICE_ID and FREQ bytes
 			CHIP_ERASE		= 0x23,
 			LOAD_ADDRESS	= 0x24,
 			PROG_FLASH		= 0x25,
 			READ_FLASH		= 0x26,
 			PROG_MULTI		= 0x27,
 			READ_MULTI		= 0x28,
+			REBOOT			= 0x30,
 			
+			// protocol constants
 			PROG_MULTI_MAX	= 64,	// maximum number of bytes in a PROG_MULTI command
 			READ_MULTI_MAX	= 255,	// largest read that can be requested
 			
-			DEVICE_ID		= 0x4d,	// XXX should come with the firmware image...
+			// device IDs XXX should come with the firmware image...
+			DEVICE_ID_RF50	= 0x4d,
+			DEVICE_ID_HM_TRP= 0x4e,
+			
+			// frequency code bytes XXX should come with the firmware image...
+			FREQ_NONE		= 0,
+			FREQ_433		= 1,
+			FREQ_470		= 2,
+			FREQ_868		= 3,
+			FREQ_915		= 4,
 		};
 		
 		public Uploader ()
@@ -55,6 +68,7 @@ namespace uploader
 			try {
 				connect_and_sync ();
 				upload_and_verify (image_data);
+				cmdReboot ();
 			} catch (Exception e) {
 				if (port.IsOpen)
 					port.Close ();
@@ -81,7 +95,7 @@ namespace uploader
 				log ("FAIL: could not synchronise with the bootloader");
 				throw new Exception ("SYNC FAIL");
 			}
-			checkDevice ((byte)Code.DEVICE_ID);
+			checkDevice ();
 			
 			log ("connected to bootloader\n");
 		}
@@ -124,7 +138,7 @@ namespace uploader
 			}
 			log ("Success\n");
 		}
-
+		
 		private void upload_block (byte[] data)
 		{						
 			foreach (byte b in data) {
@@ -288,12 +302,23 @@ namespace uploader
 			getSync ();
 		}
 		
-		private void checkDevice (byte device_id)
+		private void cmdReboot ()
 		{
+			send (Code.REBOOT);
+		}
+		
+		private void checkDevice ()
+		{
+			Code id, freq;
+			
 			send (Code.GET_DEVICE);
 			send (Code.EOC);
 			
-			if (recv () != device_id)
+			id = (Code)recv ();
+			freq = (Code)recv ();
+			
+			// XXX should be getting valid board/frequency data from firmware file
+			if ((id != Code.DEVICE_ID_HM_TRP) && (id != Code.DEVICE_ID_RF50))
 				throw new Exception ("bootloader device ID mismatch");
 			
 			getSync ();
@@ -322,7 +347,7 @@ namespace uploader
 					log (string.Format ("got {0:X} when expecting {1:X}\n", (int)c, (int)Code.EOC), 2);
 					throw new Exception ("BAD STATUS");
 				}
-			} catch (TimeoutException) {
+			} catch {
 				log ("FAIL: lost synchronisation with the bootloader\n");
 				throw new Exception ("SYNC LOST");
 			}

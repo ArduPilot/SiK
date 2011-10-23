@@ -37,7 +37,7 @@ namespace uploader
 		Uploader	upl;
 		SerialPort	port;
 		bool		upload_in_progress;
-		int			logLevel = 0;
+		int			logLevel = 0;	// Adjust for more logging output
 		string								config_name = "SiKUploader";
 		System.Configuration.Configuration	config;
 		ConfigSection 						config_section;
@@ -106,23 +106,23 @@ namespace uploader
 				port.Close ();
 			port = null;
 			
-			// create a new one
-			port = new SerialPort (portname, 115200, Parity.None, 8, StopBits.One);
-
 			try {
-				log ("opening " + port.PortName, 1);
+				// create a new one
+				port = new SerialPort (portname, 115200, Parity.None, 8, StopBits.One);
+
+				log ("opening " + port.PortName + "\n", 1);
 				port.Open ();
-				log ("opened " + port.PortName, 1);
+				log ("opened " + port.PortName + "\n", 1);
 				
 				// remember that we successfully opened this port
 				config_section.lastPort = port.PortName;
 			} catch {
-				log ("FAIL: cannot open " + port.PortName);
+				log ("FAIL: cannot open " + port.PortName + "\n");
 				port = null;
 			}
 			
-			// if we have a monitor, connect it to the new port
-			if (mon != null)
+			// if we have a port and a monitor, connect it to the new port
+			if ((port != null) && (mon != null))
 				mon.connect (port);
 		}
 		
