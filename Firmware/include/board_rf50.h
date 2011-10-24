@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	board_rf50.h
 ///
 /// Board-specific definitions for the RF50-DEMO board.
@@ -74,8 +75,8 @@
 /// @file	board.h
 ///		Board definitions for the HopeRF RF50 demo board
 
-#ifndef _BOARD_H
-#define _BOARD_H
+#ifndef _BOARD_RF50_H
+#define _BOARD_RF50_H
 
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
@@ -116,10 +117,11 @@ do {							\
 // EzRadio / rtPhy definitions
 // Note that the RFM50 deviates from the appnote/sample code in both the oscillator cap value and the wiring
 // of the RF switch
+//
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// Per HRF demo code
 #define ENABLE_RFM50_SWITCH	1	// Per HRF demo code, verified presence of RF switch on the RFM50 module
 SBIT(IRQ,  SFR_P0, 7);			// Per HRF demo code & schematic
 SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
 SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the RFM50... HRF set it this way though
 
-#endif // _BOARD_H
+#endif // _BOARD_RF50_H

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,10 +26,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	flash_layout.h
 ///
 /// Layout definitions for the SiK bootloader and conforming applications.
-
+///
 
 #ifndef _FLASH_LAYOUT_H
 #define _FLASH_LAYOUT_H
@@ -57,4 +58,4 @@
 //
 // XXX assignment TBD.
 
-#endif /* _FLASH_LAYOUT_H */
+#endif	// _FLASH_LAYOUT_H

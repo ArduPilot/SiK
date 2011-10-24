@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*- 
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,8 +26,12 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	cdt.h
-/// 		Definitions to quiet the Eclipse CDT parser.
+///
+/// Definitions to quiet the Eclipse CDT parser while working with
+/// SDCC code.
+///
 
 #ifndef _CDT_H_
 #define _CDT_H_
@@ -44,4 +48,4 @@
 # define __reentrant
 #endif
 
-#endif /* _CDT_H_ */
+#endif	// _CDT_H_

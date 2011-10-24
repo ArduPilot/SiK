@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,10 +26,15 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/// @file	board_info.h
-///		Board information passed from the bootloader to the
-///		application.
 ///
+/// @file	board_info.h
+///
+/// Board information passed from the bootloader to the
+/// application.
+///
+
+#ifndef _BOARD_INFO_H_
+#define _BOARD_INFO_H_
 
 /// Possible board RF configurations
 ///
@@ -41,10 +46,12 @@ enum BoardFrequency {
 	FREQ_915,
 };
 
-/// SFRs used to temporarily save board information during handoff
-/// between the bootloader and the application.
-///
+// SFRs used to temporarily save board information during handoff
+// between the bootloader and the application.
+//
 #define BOARD_FREQUENCY_REG	ADC0GTH		// board frequency
 #define BOARD_BL_VERSION_REG	ADC0GTL		// bootloader version
 #define BOARD_UNUSED1_REG	ADC0LTH		// spare
 #define BOARD_UNUSED2_REG	ADC0LTL		// spare
+
+#endif // _BOARD_INFO_H

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	board_hm_trp.h
 ///
 /// Board-specific definitions for the HM-TRP board.
@@ -68,11 +69,8 @@
 ///	- configures INT0 for the radio interrupt
 ///
 
-/// @file	board_hm_trp.h
-///		Board definitions for the HopeRF HM-TRP transceiver board.
-
-#ifndef _BOARD_H
-#define _BOARD_H
+#ifndef _BOARD_H_
+#define _BOARD_H_
 
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
@@ -108,6 +106,7 @@ do {							\
 	IT0	 = 0;	/* INT0 level triggered */	\
 } while(0)
 
+
 // EzRadio / rtPhy definitions
 // Note that the HM-TRP deviates from SiLabs' appnotes in the wiring of the RF switch
 //
@@ -117,4 +116,4 @@ SBIT(IRQ,  SFR_P0, 7);			// Per board inspection
 SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
 SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50
 
-#endif // _BOARD_H
+#endif // _BOARD_H_

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,15 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
+/// @file	board.h
+///
+/// Board definitions and config file selection.
+///
+
+#ifndef _BOARD_H_
+#define _BOARD_H_
+
 #if   defined(BOARD_RF50_DEMO)
 # define BOARD_NAME	"RF50-DEMO"
 # define BOARD_ID	0x4d
@@ -39,3 +48,5 @@
 #else
 # error Must define a BOARD_ value
 #endif
+
+#endif // _BOARD_H_
