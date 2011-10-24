@@ -26,6 +26,7 @@
 //  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 
 using Gtk;
+using Gdk;
 using GLib;
 using Pango;
 using System;
@@ -57,26 +58,8 @@ namespace uploader
 			// add the port data poll timeout
 			GLib.Timeout.Add (100, check_for_data);
 			
-			// get a callback when we are being deleted
-			DeleteEvent += deleted;
-			
-			// hook up the Clear button
-			button_Clear.Clicked += clear_text;
-			
 			// default the statusbar
 			status_Monitor.Push (1, "idle");
-		}
-		
-		protected void deleted (object sender, DeleteEventArgs args)
-		{
-			// stop the timer the next time it runs
-			is_deleted = true;
-			
-			// close the port if it's open
-			disconnect ();
-			
-			if (QuitEvent != null)
-				QuitEvent ();
 		}
 		
 		private bool check_for_data ()
@@ -108,11 +91,12 @@ namespace uploader
 			status_Monitor.Push (1, "not connected");
 		}
 		
-		private void clear_text (object sender, EventArgs args)
-		{
-			text_Monitor.Buffer.Clear ();
-		}
-		
+		/// <summary>
+		/// Adds the string s to the textview at the cursor.
+		/// </summary>
+		/// <param name='s'>
+		/// String to add.
+		/// </param>
 		private void addchars (string s)
 		{
 			
@@ -132,11 +116,78 @@ namespace uploader
 				text_Monitor.ScrollMarkOnscreen (text_Monitor.Buffer.InsertMark);
 		}
 
+		/// <summary>
+		/// Log the specified message with the given level.
+		/// </summary>
+		/// <param name='message'>
+		/// Message to log
+		/// </param>
+		/// <param name='level'>
+		/// Level at which to log.
+		/// </param>
 		private void log (string message, int level = 0)
 		{
 			if (LogEvent != null)
 				LogEvent (message, level);
 		}
+
+		/// <summary>
+		/// Handle keypresses directed to the Console window.
+		/// Note that this is connected *before* the textview's handler.
+		/// </summary>
+		/// <param name='o'>
+		/// object sending the event (ignored)
+		/// </param>
+		/// <param name='args'>
+		/// Gtk.KeyPressEvent containing the pressed key.
+		/// </param>
+		[GLib.ConnectBefore]
+		protected void console_keypress (object o, Gtk.KeyPressEventArgs args)
+		{
+			uint key = args.Event.KeyValue;
+			byte[] sendbytes = new byte[1];
+			
+			switch (args.Event.Key) {
+			case Gdk.Key.Return:
+			case Gdk.Key.KP_Enter:
+				key = 13;
+				break;
+			case Gdk.Key.BackSpace:
+			case Gdk.Key.Delete:
+				key = 8;
+				break;
+			default:
+				// don't handle anything that's not 7-bit ascii
+				if (key > 128) {
+					log (string.Format ("ignoring {0}\n", key), 2);
+					return;
+				}
+				break;
+			}
+			
+			sendbytes [0] = (byte)key;
+			port.Write (sendbytes, 0, 1);
+			log (string.Format ("sending {0}\n", key), 2);
+			
+			// we have handled the event - don't pass it any further
+			args.RetVal = true;
+		}
+
+		protected void clear_pressed (object sender, System.EventArgs e)
+		{
+			text_Monitor.Buffer.Clear ();
+		}
+
+		protected void delete_event (object o, Gtk.DeleteEventArgs args)
+		{
+			// stop the timer the next time it runs
+			is_deleted = true;
+			
+			// close the port if it's open
+			disconnect ();
+			
+			if (QuitEvent != null)
+				QuitEvent ();
+		}
 	}
-	
 }

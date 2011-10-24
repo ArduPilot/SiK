@@ -243,6 +243,7 @@
     <property name="MemberName" />
     <property name="Title" translatable="yes">SiK Serial Monitor</property>
     <property name="WindowPosition">CenterOnParent</property>
+    <signal name="DeleteEvent" handler="delete_event" />
     <child>
       <widget class="Gtk.VBox" id="vbox1">
         <property name="MemberName" />
@@ -256,9 +257,12 @@
               <widget class="Gtk.TextView" id="text_Monitor">
                 <property name="MemberName" />
                 <property name="CanFocus">True</property>
+                <property name="Events">KeyPressMask</property>
                 <property name="Editable">False</property>
-                <property name="CursorVisible">False</property>
+                <property name="AcceptsTab">False</property>
                 <property name="Text" translatable="yes" />
+                <property name="WrapMode">Char</property>
+                <signal name="KeyPressEvent" handler="console_keypress" after="yes" />
               </widget>
             </child>
           </widget>
@@ -294,6 +298,7 @@
                 <property name="Type">TextOnly</property>
                 <property name="Label" translatable="yes"> Clear </property>
                 <property name="UseUnderline">True</property>
+                <signal name="Clicked" handler="clear_pressed" />
               </widget>
               <packing>
                 <property name="Position">2</property>

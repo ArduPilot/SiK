@@ -30,9 +30,11 @@ namespace uploader
 			// Container child scrolledwindow1.Gtk.Container+ContainerChild
 			this.text_Monitor = new global::Gtk.TextView ();
 			this.text_Monitor.CanFocus = true;
+			this.text_Monitor.Events = ((global::Gdk.EventMask)(1024));
 			this.text_Monitor.Name = "text_Monitor";
 			this.text_Monitor.Editable = false;
-			this.text_Monitor.CursorVisible = false;
+			this.text_Monitor.AcceptsTab = false;
+			this.text_Monitor.WrapMode = ((global::Gtk.WrapMode)(1));
 			this.scrolledwindow1.Add (this.text_Monitor);
 			this.vbox1.Add (this.scrolledwindow1);
 			global::Gtk.Box.BoxChild w2 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
@@ -76,6 +78,9 @@ namespace uploader
 			this.DefaultWidth = 570;
 			this.DefaultHeight = 252;
 			this.Show ();
+			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.delete_event);
+			this.text_Monitor.KeyPressEvent += new global::Gtk.KeyPressEventHandler (this.console_keypress);
+			this.button_Clear.Clicked += new global::System.EventHandler (this.clear_pressed);
 		}
 	}
 }
