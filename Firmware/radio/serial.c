@@ -80,12 +80,11 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 
 		/* if AT mode is active, the AT processor owns the byte */
 		if (at_mode_active) {
-
 			/* If an AT command is ready/being processed, we would ignore this byte */
-			if (!at_cmd_ready)
+			if (!at_cmd_ready) {
 				at_input(c);
+			}
 		} else {
-
 			/* run the byte past the +++ detector */
 			at_plus_detector(c);
 
@@ -100,19 +99,22 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 	/* check for anything to transmit */
 	if (TI0) {
 		/* acknowledge the interrupt */
+		TI0 = 0;
+
+		/* look for another byte we can send */
 		if (BUF_NOT_EMPTY(tx)) {
 			/* fetch and send a byte */
 			BUF_REMOVE(tx, c);
 			SBUF0 = c;
 		} else {
 			/* note that the transmitter requires a kick to restart it */
-			tx_idle;
+			tx_idle = true;
 		}
 	}
 }
 
 void
-serial_init(uint8_t speed)
+serial_init(uint8_t speed) __reentrant
 {
 	/* disable UART interrupts */
 	ES0 = 0;
