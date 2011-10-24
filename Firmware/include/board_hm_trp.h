@@ -69,8 +69,8 @@
 ///	- configures INT0 for the radio interrupt
 ///
 
-#ifndef _BOARD_H_
-#define _BOARD_H_
+#ifndef _BOARD_HM_TRP_H_
+#define _BOARD_HM_TRP_H_
 
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
@@ -116,4 +116,4 @@ SBIT(IRQ,  SFR_P0, 7);			// Per board inspection
 SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
 SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50
 
-#endif // _BOARD_H_
+#endif // _BOARD_HM_TRP_H_
