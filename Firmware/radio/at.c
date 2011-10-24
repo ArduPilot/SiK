@@ -56,7 +56,6 @@ at_input(uint8_t c) __using(1)
 	switch (c) {
 	/* CR - submits command for processing */
 	case '\r':
-		putchar('\r');
 		putchar('\n');
 		at_cmd[at_cmd_len] = 0;
 		at_cmd_ready = true;
@@ -76,6 +75,7 @@ at_input(uint8_t c) __using(1)
 	default:
 		if (at_cmd_len < AT_CMD_MAXLEN) {
 			if (isprint(c)) {
+				c = toupper(c);
 				at_cmd[at_cmd_len++] = c;
 				putchar(c);
 			}
@@ -112,9 +112,10 @@ at_input(uint8_t c) __using(1)
 #define ATP_WAIT_FOR_PLUS3	3
 #define ATP_WAIT_FOR_ENABLE	4
 
-__data uint8_t	at_plus_state;
-__data uint8_t	at_plus_counter;
 #define ATP_COUNT_1S		100	/* 100 ticks of the 100Hz timer */
+
+__data uint8_t	at_plus_state;
+__data uint8_t	at_plus_counter = ATP_COUNT_1S;
 
 void
 at_plus_detector(uint8_t c) __using(1)
@@ -169,10 +170,17 @@ at_timer(void)
 			case ATP_WAIT_FOR_IDLE:
 				at_plus_state = ATP_WAIT_FOR_PLUS1;
 				break;
+
 			case ATP_WAIT_FOR_ENABLE:
 				at_mode_active = true;
-				puts("\nOK");
 				at_plus_state = ATP_WAIT_FOR_IDLE;
+
+				/* stuff an empty 'AT' command to get the OK prompt */
+				at_cmd[0] = 'A';
+				at_cmd[1] = 'T';
+				at_cmd[2] = '\0';
+				at_cmd_len = 2;
+				at_cmd_ready = true;
 				break;
 			default:
 				/* should never happen, but otherwise harmless */
@@ -200,6 +208,7 @@ at_command(void)
 				at_i();
 				break;
 			case 'O':		// O -> go online (exit command mode)
+				at_plus_counter = ATP_COUNT_1S;
 				at_mode_active = 0;
 				break;
 			case 'S':
