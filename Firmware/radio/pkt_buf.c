@@ -44,8 +44,7 @@ __xdata uint8_t		pbuf_data[PBUF_POOL_SIZE][PBUF_MAX_SIZE];
 
 /// packet buffer queue
 ///
-struct pbuf_queue
-{
+struct pbuf_queue {
 	PBufIndex	head;
 	PBufIndex	tail;
 };

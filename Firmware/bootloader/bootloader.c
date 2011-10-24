@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -107,7 +107,7 @@ bootloader(void)
 	// - the signature is valid
 	// - the boot-to-bootloader strap/button is not in the active state
 	//
-	if (!(RSTSRC & (1<<6)) &&
+	if (!(RSTSRC & (1 << 6)) &&
 	    flash_app_valid() &&
 	    (BUTTON_BOOTLOAD != BUTTON_ACTIVE)) {
 
@@ -137,7 +137,7 @@ bootloader(void)
 		c = cin();
 		LED_BOOTLOADER = LED_OFF;
 
-		switch(c) {
+		switch (c) {
 
 		case PROTO_GET_SYNC:		// sync
 			trace('s');
@@ -163,7 +163,7 @@ bootloader(void)
 		case PROTO_LOAD_ADDRESS:	// set address
 			trace('a');
 			address = get_uint16();
-			if (cin() != PROTO_EOC) 
+			if (cin() != PROTO_EOC)
 				goto cmd_bad;
 			break;
 
@@ -210,17 +210,17 @@ bootloader(void)
 		case PROTO_REBOOT:
 			trace('b');
 			// generate a software reset, which will boot to the application
-			RSTSRC |= (1<<4);
+			RSTSRC |= (1 << 4);
 			for (;;)
 				;
 
 		default:
 			goto cmd_bad;
 		}
-	cmd_ok:
+cmd_ok:
 		sync_response();
 		continue;
-	cmd_bad:
+cmd_bad:
 		trace('n');
 		continue;
 	}

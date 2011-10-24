@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -48,7 +48,7 @@ bool		at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
 static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
-static void	at_s(void);
+static void	at_s(void) __reentrant;
 static void	at_ampersand(void);
 
 void
@@ -56,7 +56,7 @@ at_input(uint8_t c) __using(1)
 {
 	// AT mode is active and waiting for a command
 	switch (c) {
-	// CR - submits command for processing
+		// CR - submits command for processing
 	case '\r':
 		putchar('\n');
 		at_cmd[at_cmd_len] = 0;
@@ -88,7 +88,7 @@ at_input(uint8_t c) __using(1)
 		// AT mode and return to passthrough mode; this is
 		// to minimise the risk of locking up on reception
 		// of an accidental escape sequence.
-		
+
 		at_mode_active = 0;
 		at_cmd_len = 0;
 		break;
@@ -129,7 +129,7 @@ at_plus_detector(uint8_t c) __using(1)
 		at_plus_state = ATP_WAIT_FOR_IDLE;
 
 	// We got a plus; handle it based on our current state.
-	//	
+	//
 	switch (at_plus_state) {
 
 	case ATP_WAIT_FOR_PLUS1:
@@ -213,7 +213,7 @@ at_command(void)
 
 			case 'Z':
 				// generate a software reset
-				RSTSRC |= (1<<4);
+				RSTSRC |= (1 << 4);
 				for (;;)
 					;
 
@@ -270,7 +270,7 @@ at_i(void)
 }
 
 static void
-at_s(void) __reentrant
+at_s(void)
 {
 	uint8_t		idx;
 	uint8_t		sreg;

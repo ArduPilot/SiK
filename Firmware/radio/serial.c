@@ -43,8 +43,8 @@
 // 4K of __xram space, but using absolute addresses for the buffers lets
 // the compiler optimise the array indexing code.
 //
-__xdata __at (0x0e00) uint8_t	rx_buf[256] = {0};
-__xdata __at (0x0f00) uint8_t	tx_buf[256] = {0};
+__xdata __at(0x0e00) uint8_t	rx_buf[256] = {0};
+__xdata __at(0x0f00) uint8_t	tx_buf[256] = {0};
 
 // FIFO insert/remove pointers
 uint8_t				rx_insert, rx_remove;

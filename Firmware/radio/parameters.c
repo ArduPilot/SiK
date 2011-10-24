@@ -56,6 +56,11 @@ union param {
 
 __xdata static union param	parameters[PARAM_MAX];
 
+static void	flash_load_keys(void);
+static void	flash_erase_scratch(void);
+static uint8_t	flash_read_scratch(uint16_t address) __reentrant;
+static void	flash_write_scratch(uint16_t address, uint8_t c);
+
 uint8_t
 param_get8(enum ParamID param)
 {
@@ -104,7 +109,7 @@ flash_erase_scratch(void)
 }
 
 static uint8_t
-flash_read_scratch(uint16_t address)  __reentrant
+flash_read_scratch(uint16_t address)
 {
 	uint8_t	d;
 
@@ -124,7 +129,7 @@ flash_write_scratch(uint16_t address, uint8_t c)
 }
 
 bool
-param_load() __reentrant
+param_load()
 {
 	uint8_t		d;
 	uint8_t		i;
@@ -154,7 +159,7 @@ param_load() __reentrant
 }
 
 void
-param_save() __reentrant
+param_save()
 {
 	uint8_t		d;
 	uint8_t		i;

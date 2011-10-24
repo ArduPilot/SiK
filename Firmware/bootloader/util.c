@@ -1,4 +1,4 @@
-// -*- Mode: C; c-basic-offset: 8; -*- 
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS

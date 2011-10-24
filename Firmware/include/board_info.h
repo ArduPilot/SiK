@@ -39,11 +39,11 @@
 /// Possible board RF configurations
 ///
 enum BoardFrequency {
-	FREQ_NONE	= 0,
-	FREQ_433,
-	FREQ_470,
-	FREQ_868,
-	FREQ_915,
+        FREQ_NONE	= 0,
+        FREQ_433,
+        FREQ_470,
+        FREQ_868,
+        FREQ_915,
 };
 
 // SFRs used to temporarily save board information during handoff

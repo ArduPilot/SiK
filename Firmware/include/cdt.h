@@ -1,4 +1,4 @@
-// -*- Mode: C; c-basic-offset: 8; -*- 
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //

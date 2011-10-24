@@ -41,12 +41,12 @@
 /// care.  Parameter zero cannot be written by AT commands.
 ///
 enum ParamID {
-	PARAM_FORMAT = 0,		// Must always be parameter 0
-	PARAM_NODE_ID,			// this node's ID
-	PARAM_PEER_ID,			// peer node's ID (if paired)
-	PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
+        PARAM_FORMAT = 0,		// Must always be parameter 0
+        PARAM_NODE_ID,			// this node's ID
+        PARAM_PEER_ID,			// peer node's ID (if paired)
+        PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
 
-	PARAM_MAX			// must be last
+        PARAM_MAX			// must be last
 };
 
 #define PARAM_FORMAT_CURRENT	0x14UL				///< current parameter format ID
@@ -58,7 +58,7 @@ enum ParamID {
 /// @param	param		The parameter to return.
 /// @return			The low 8 bits of the saved parameter.
 ///
-extern uint8_t	param_get8 (enum ParamID param);
+extern uint8_t	param_get8(enum ParamID param);
 
 /// Returns a parameter as a 16-bit value
 ///
@@ -77,7 +77,7 @@ extern uint16_t	param_get16(enum ParamID param);
 /// @param	value		The value to assign to the parameter.
 /// @return			True if the parameter's value is valid.
 ///
-extern bool param_set8 (enum ParamID param, uint8_t value);
+extern bool param_set8(enum ParamID param, uint8_t value);
 
 /// Set a parameter to a 16-bit value
 ///
@@ -93,11 +93,11 @@ extern bool param_set16(enum ParamID param, uint16_t value);
 ///
 /// @return			True if parameters were successfully loaded.
 ///
-extern bool param_load(void);
+extern bool param_load(void) __reentrant;
 
 /// Save parameters to the flash scratchpad.
 ///
-extern void param_save(void);
+extern void param_save(void) __reentrant;
 
 /// Reset parameters to default.
 ///

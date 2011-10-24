@@ -84,8 +84,7 @@ extern __xdata uint8_t	*pbuf_data_ptr(PBufIndex idx, PBufDataCount ofs);
 #define	pbuf_size(_idx)		pbuf_pool[_idx].data_size
 #define	pbuf_next(_idx)		pbuf_pool[_idx].next
 
-struct pbuf
-{
+struct pbuf {
 	PBufIndex	next;			// next packet buffer in queue
 	PBufDataCount	data_size;		// number of bytes in the packet
 };

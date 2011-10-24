@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -31,7 +31,7 @@
 ///
 /// Early startup code.
 /// This file *must* be linked first for interrupt vector generation and main() to work.
-/// 
+///
 
 #include <stdarg.h>
 
@@ -39,22 +39,22 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Interrupt vector prototypes
-/// 
+///
 /// @note these *must* be placed in this file for SDCC to generate the
 /// interrupt vector table correctly.
-/// 
+///
 
 /// Serial rx/tx interrupt handler.
-/// 
+///
 extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
 
 /// Radio event interrupt handler.
-/// 
+///
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
 /// Timer0 interupt handler, used by the SiLabs radio driver for its internal
 /// timeout code.
-/// 
+///
 extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
 
 /// Timer tick interrupt handler
@@ -74,7 +74,7 @@ static void hardware_init(void);
 
 /// Initialise the radio and bring it online.
 ///
-static void radio_init(void);
+static void radio_init(void) __reentrant;
 
 void
 main(void)
@@ -131,7 +131,7 @@ panic(char *fmt, ...)
 	puts("\n**PANIC**");
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
-	for(;;)
+	for (;;)
 		;
 }
 
@@ -177,7 +177,7 @@ hardware_init(void)
 
 	// 100Hz timer tick using timer3
 	// Derive timer values from SYSCLK, just for laughs.
-	TMR3RLL	 =  (65536UL - ((SYSCLK / 12) / 100)) & 0xff;
+	TMR3RLL	 = (65536UL - ((SYSCLK / 12) / 100)) & 0xff;
 	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 100)) >> 8) & 0xff;
 	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
 	EIE1	|= 0x80;
@@ -197,7 +197,7 @@ hardware_init(void)
 }
 
 static void
-radio_init(void) __reentrant
+radio_init(void)
 {
 	PHY_STATUS	s;
 	uint32_t	freq;

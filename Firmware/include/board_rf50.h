@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -101,18 +101,18 @@ SBIT(BUTTON_DOWN,  SFR_P1, 6);
 
 // board-specific hardware config
 #define HW_INIT						\
-do {							\
-	/* GPIO config */				\
-	P0SKIP	|=  0x40;		/* button */	\
-	P1SKIP  |=  0x60;		/* buttons */	\
-	P2SKIP	|=  0x21;		/* LEDs */	\
-	SFRPAGE	 =  CONFIG_PAGE;			\
-	P2DRV	|=  0x21;		/* LEDs */	\
-	SFRPAGE	 =  LEGACY_PAGE;			\
-	/* INT0 is the radio interrupt, on P0.7 */	\
-	IT01CF   =  (IT01CF & 0xf) | 0x7;		\
-	IT0	 = 0;	/* INT0 leve triggered */	\
-} while(0)
+	do {							\
+		/* GPIO config */				\
+		P0SKIP	|=  0x40;		/* button */	\
+		P1SKIP  |=  0x60;		/* buttons */	\
+		P2SKIP	|=  0x21;		/* LEDs */	\
+		SFRPAGE	 =  CONFIG_PAGE;			\
+		P2DRV	|=  0x21;		/* LEDs */	\
+		SFRPAGE	 =  LEGACY_PAGE;			\
+		/* INT0 is the radio interrupt, on P0.7 */	\
+		IT01CF   =  (IT01CF & 0xf) | 0x7;		\
+		IT0	 = 0;	/* INT0 leve triggered */	\
+	} while(0)
 
 // EzRadio / rtPhy definitions
 // Note that the RFM50 deviates from the appnote/sample code in both the oscillator cap value and the wiring

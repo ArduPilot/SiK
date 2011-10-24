@@ -6,10 +6,10 @@
 // modification, are permitted provided that the following conditions
 // are met:
 //
-//  o Redistributions of source code must retain the above copyright 
+//  o Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
-//  o Redistributions in binary form must reproduce the above copyright 
-//    notice, this list of conditions and the following disclaimer in 
+//  o Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in
 //    the documentation and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -56,19 +56,18 @@
 #include "parameters.h"
 #include "at.h"
 
-// System clock frequency 
+// System clock frequency
 #define SYSCLK	24500000UL
 
 // supported serial speeds
-enum SerialSpeed
-{
-    B9600,
-    B38400,
-    B57600,
-    B115200,
-    B230400,
-    BMAX,
-    BNOCHANGE
+enum SerialSpeed {
+        B9600,
+        B38400,
+        B57600,
+        B115200,
+        B230400,
+        BMAX,
+        BNOCHANGE
 };
 
 #if DEBUG
@@ -96,7 +95,7 @@ extern void	vprintfl(char *fmt, va_list ap) __reentrant;
 
 /// Alternate printf implementation
 ///
-extern void	printfl(char * fmt, ... ) __reentrant;
+extern void	printfl(char *fmt, ...) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)
 
 // Macro evil for generating strings
