@@ -131,18 +131,25 @@ namespace uploader
 				LogEvent (message, level);
 		}
 
-		/// <summary>
-		/// Handle keypresses directed to the Console window.
-		/// Note that this is connected *before* the textview's handler.
-		/// </summary>
-		/// <param name='o'>
-		/// object sending the event (ignored)
-		/// </param>
-		/// <param name='args'>
-		/// Gtk.KeyPressEvent containing the pressed key.
-		/// </param>
+		protected void clear_pressed (object sender, System.EventArgs e)
+		{
+			text_Monitor.Buffer.Clear ();
+		}
+
+		protected void delete_event (object o, Gtk.DeleteEventArgs args)
+		{
+			// stop the timer the next time it runs
+			is_deleted = true;
+			
+			// close the port if it's open
+			disconnect ();
+			
+			if (QuitEvent != null)
+				QuitEvent ();
+		}
+		
 		[GLib.ConnectBefore]
-		protected void console_keypress (object o, Gtk.KeyPressEventArgs args)
+		protected void keypressed (object o, Gtk.KeyPressEventArgs args)
 		{
 			uint key = args.Event.KeyValue;
 			byte[] sendbytes = new byte[1];
@@ -171,23 +178,6 @@ namespace uploader
 			
 			// we have handled the event - don't pass it any further
 			args.RetVal = true;
-		}
-
-		protected void clear_pressed (object sender, System.EventArgs e)
-		{
-			text_Monitor.Buffer.Clear ();
-		}
-
-		protected void delete_event (object o, Gtk.DeleteEventArgs args)
-		{
-			// stop the timer the next time it runs
-			is_deleted = true;
-			
-			// close the port if it's open
-			disconnect ();
-			
-			if (QuitEvent != null)
-				QuitEvent ();
 		}
 	}
 }

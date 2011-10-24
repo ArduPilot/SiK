@@ -29,6 +29,7 @@ namespace uploader
 			this.scrolledwindow1.ShadowType = ((global::Gtk.ShadowType)(1));
 			// Container child scrolledwindow1.Gtk.Container+ContainerChild
 			this.text_Monitor = new global::Gtk.TextView ();
+			this.text_Monitor.Sensitive = false;
 			this.text_Monitor.CanFocus = true;
 			this.text_Monitor.Events = ((global::Gdk.EventMask)(1024));
 			this.text_Monitor.Name = "text_Monitor";
@@ -79,6 +80,7 @@ namespace uploader
 			this.DefaultHeight = 252;
 			this.Show ();
 			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.delete_event);
+			this.vbox1.KeyPressEvent += new global::Gtk.KeyPressEventHandler (this.keypressed);
 			this.text_Monitor.KeyPressEvent += new global::Gtk.KeyPressEventHandler (this.console_keypress);
 			this.button_Clear.Clicked += new global::System.EventHandler (this.clear_pressed);
 		}

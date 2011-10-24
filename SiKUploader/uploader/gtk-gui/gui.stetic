@@ -248,6 +248,7 @@
       <widget class="Gtk.VBox" id="vbox1">
         <property name="MemberName" />
         <property name="Spacing">6</property>
+        <signal name="KeyPressEvent" handler="keypressed" />
         <child>
           <widget class="Gtk.ScrolledWindow" id="scrolledwindow1">
             <property name="MemberName" />
@@ -256,13 +257,13 @@
             <child>
               <widget class="Gtk.TextView" id="text_Monitor">
                 <property name="MemberName" />
+                <property name="Sensitive">False</property>
                 <property name="CanFocus">True</property>
                 <property name="Events">KeyPressMask</property>
                 <property name="Editable">False</property>
                 <property name="AcceptsTab">False</property>
                 <property name="Text" translatable="yes" />
                 <property name="WrapMode">Char</property>
-                <signal name="KeyPressEvent" handler="console_keypress" after="yes" />
               </widget>
             </child>
           </widget>
