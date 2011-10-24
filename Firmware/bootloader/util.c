@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*- 
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	util.c
 ///
 /// Miscellaneous support utilities

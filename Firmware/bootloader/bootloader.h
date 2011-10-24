@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,13 +26,14 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	bootloader.h
 ///
 /// Bootloader structures and defines.
 ///
 
-#ifndef _BOOTLOADER_H
-#define _BOOTLOADER_H
+#ifndef _BOOTLOADER_H_
+#define _BOOTLOADER_H_
 
 #include <stdint.h>
 #include "cdt.h"
@@ -60,4 +61,4 @@
 #define PROTO_PROG_MULTI_MAX	64	// maximum PROG_MULTI size - must fit in DSEG
 #define PROTO_READ_MULTI_MAX	255	// size of the size field
 
-#endif // _BOOTLOADER_H
+#endif // _BOOTLOADER_H_

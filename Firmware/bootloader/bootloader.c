@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	bootloader.c
 ///
 /// A UART bootloader for the SiLabs Si1000 SoC.
@@ -208,7 +209,7 @@ bootloader(void)
 
 		case PROTO_REBOOT:
 			trace('b');
-			/* generate a software reset, which will boot to the application */
+			// generate a software reset, which will boot to the application
 			RSTSRC |= (1<<4);
 			for (;;)
 				;

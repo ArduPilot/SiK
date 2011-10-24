@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,13 +26,14 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	util.h
 ///
 /// Miscellaneous support utilities
 ///
 
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _UTIL_H_
+#define _UTIL_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -47,4 +48,4 @@ void	cout(uint8_t c);
 ///
 uint8_t	cin(void);
 
-#endif	// _UTIL_H
+#endif	// _UTIL_H_

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,13 +26,14 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	flash.h
 ///
 /// Flash memory related defines and prototypes.
 ///
 
-#ifndef _FLASH_H
-#define _FLASH_H
+#ifndef _FLASH_H_
+#define _FLASH_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -65,4 +66,4 @@ void	flash_write_byte(uint16_t address, uint8_t c);
 ///
 uint8_t	flash_read_byte(uint16_t address);
 
-#endif // _FLASH_H
+#endif // _FLASH_H_
