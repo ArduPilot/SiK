@@ -277,12 +277,10 @@ at_s(void)
 	uint16_t	val;
 	uint8_t		c;
 
-	idx = 3;	// first character of the sreg command proper
-
 	// get the register number first
 	sreg = 0;
-	for (;;) {
-		c = at_cmd[idx++];
+	for (idx = 3; ; idx++) {
+		c = at_cmd[idx];
 		if (!isdigit(c))
 			break;
 		sreg = (sreg * 10) + (c - '0');
