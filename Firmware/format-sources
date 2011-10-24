@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Run astyle over the firmware sources.
+#
+astyle --options=astyle.cf -r "*.c" "*.h"
+

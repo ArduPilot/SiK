@@ -1,0 +1,59 @@
+#
+# Artistic Style configuration for formatting the SiK firmware sources.
+#
+
+#
+# Note that astyle has issues with SDCC-style function attributes.
+# This can cause misplacement of the function opening brace for
+# functions marked __reentrant.  It seems to be OK to mark the
+# prototypes instead.
+#
+
+# Basic style is what AS calls K&R
+--style=k&r
+
+# Indent using 8-space tabs
+--indent=tab=8
+
+# Indent multiline preprocessor blocks
+--indent-preprocessor
+
+# Do smart multiline expression indentation
+--min-conditional-indent=0
+
+# Pad conditionals and else blocks
+# Not sure about this one yet
+#--break-blocks=all
+
+# Add space padding around operators
+--pad-oper
+
+# Add space padding after paren headers
+--pad-header
+
+# Clean up excess paren padding
+--unpad-paren
+
+# Avoid breaking up 'clever' formatting
+--keep-one-line-blocks
+--keep-one-line-statements
+
+# * belongs with the name (looks good, but syntactically bad)
+--align-pointer=name
+
+# force *nix line endings
+--lineend=linux
+
+# ignore various things that should be ignored
+ignore-exclude-errors-x
+--exclude=obj
+
+# ignore various files we want to be able to diff with upstream providers
+--exclude=Si1000_defs.h
+--exclude=compiler_defs.h
+--exclude=rtPhy.c
+--exclude=rtPhy.h
+--exclude=rtPhy_const.c
+--exclude=rtPhy_const.h
+--exclude=rtPhy_defs.h
+--exclude=printfl.c
