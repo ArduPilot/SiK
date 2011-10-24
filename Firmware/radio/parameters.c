@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	parameters.c
 ///
 /// Storage for program parameters.
@@ -41,17 +42,18 @@
 
 #include "radio.h"
 
-// In-RAM parameter store.
-//
-// It seems painful to have to do this, but we need somewhere to
-// hold all the parameters when we're rewriting the scratchpad
-// page anyway.
-//
+/// In-RAM parameter store.
+///
+/// It seems painful to have to do this, but we need somewhere to
+/// hold all the parameters when we're rewriting the scratchpad
+/// page anyway.
+///
 union param {
 	uint8_t		u8;
 	uint16_t	u16;
 	uint8_t		bytes[2];
 };
+
 __xdata static union param	parameters[PARAM_MAX];
 
 uint8_t
@@ -202,6 +204,6 @@ param_check(enum ParamID id, uint16_t val)
 			return false;
 		break;
 	}
-	/* no sanity check for this value */
+	// no sanity check for this value
 	return true;
 }

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,6 +26,7 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	flash.c
 ///
 /// Flash-related data structures, including the application signature for the bootloader.
@@ -36,7 +37,7 @@
 
 #include "radio.h"
 
-/// The application signature block.
-///
+// The application signature block.
+//
 #define APP_INFO_BLOCK_ADDRESS	(FLASH_INFO_PAGE - 2)
 __at(APP_INFO_BLOCK_ADDRESS) uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };

@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,18 +26,20 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	serial.h
-///		Serial port driver with flow control and AT command
-///		parser integration.
+///
+/// Serial port driver with flow control and AT command
+/// parser integration.
 ///
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#ifndef _SERIAL_H_
+#define _SERIAL_H_
 
 #include <stdint.h>
 #include "radio.h"
 
-/* must be supplied by device-specific code */
+// must be supplied by device-specific code
 extern void	serial_device_set_speed(uint8_t speed);
 
 extern void	serial_init(uint8_t speed);
@@ -48,4 +50,4 @@ extern uint8_t	serial_read(void);
 extern bool	serial_read_buf(__xdata uint8_t *buf, uint8_t count);
 extern uint8_t	serial_read_available(void);
 
-#endif /* SERIAL_H_ */
+#endif // _SERIAL_H_

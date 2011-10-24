@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,47 +26,46 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	at.h
-///		Prototypes for the AT command parser
+///
+/// Prototypes for the AT command parser
 ///
 
-#ifndef AT_H_
-#define AT_H_
+#ifndef _AT_H_
+#define _AT_H_
 
-extern bool	at_mode_active;	/**< if true, the AT interpreter is in command mode */
-extern bool	at_cmd_ready;	/**< if true, at_cmd / at_cmd_len contain valid data */
+extern bool	at_mode_active;	///< if true, the AT interpreter is in command mode
+extern bool	at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
 
 /// Timer tick handler for the AT command interpreter
 ///
 extern void	at_timer(void);
 
-/**
- * +++ detector.  Handles the state machine for detecting the AT escape
- * sequence.
- *
- * Call this at interrupt time for every incoming character when at_mode_active
- * is false.
- *
- * @param	c		Received character.
- */
+/// +++ detector.  Handles the state machine for detecting the AT escape
+/// sequence.
+///
+/// Call this at interrupt time for every incoming character when at_mode_active
+/// is false.
+///
+/// @param	c		Received character.
+///
 extern void	at_plus_detector(uint8_t c) __using(1);
 
-/**
- * AT command character input method.
- *
- * Call this at interrupt time for every incoming character when at_mode_active
- * is true, and don't buffer those characters.
- *
- * @param	c		Received character.
- */
+/// AT command character input method.
+///
+/// Call this at interrupt time for every incoming character when at_mode_active
+/// is true, and don't buffer those characters.
+///
+///  @param	c		Received character.
+///
 extern void	at_input(uint8_t c) __using(1);
 
-/**
- *  Check for and execute AT commands
- *
- *  Call this from non-interrupt context when it's safe for an AT command
- *  to be executed.  It's cheap if at_mode_active is false.
- */
+/// Check for and execute AT commands
+///
+/// Call this from non-interrupt context when it's safe for an AT command
+/// to be executed.  It's cheap if at_mode_active is false.
+///
 extern void	at_command(void);
 
-#endif
+#endif	// _AT_H_

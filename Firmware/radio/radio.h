@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,20 +26,20 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	radio.h
 ///
 /// General definitions for the radio application
 ///
 
-#ifndef RADIO_H_
-#define RADIO_H_
+#ifndef _RADIO_H_
+#define _RADIO_H_
 
-/*
- * Notes on hardware allocation:
- *
- * Timer0 is used by rtPhy for its timeouts.
- * Timer1 is used by the UART driver.
- */
+// Notes on hardware allocation:
+//
+// Timer0 is used by rtPhy for its timeouts.
+// Timer1 is used by the UART driver.
+// Timer3 is used to generate the 10ms timer tick.
 
 #include <ctype.h>
 #include <stdint.h>
@@ -56,10 +56,10 @@
 #include "parameters.h"
 #include "at.h"
 
-/* System clock frequency */
+// System clock frequency 
 #define SYSCLK	24500000UL
 
-/* supported serial speeds */
+// supported serial speeds
 enum SerialSpeed
 {
     B9600,
@@ -78,22 +78,28 @@ enum SerialSpeed
 #endif
 
 /// Print a message and halt, largely for debug purposes
+///
 extern void	panic(char *fmt, ...);
 
 /// Disable interrupts and save their current state
+///
 #define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
 
 /// Restore saved interrupt state
+///
 #define interrupt_restore(_save)	do { EA = _save; } while(0)
 
 /// Alternate vprintf implementation
+///
 extern void	vprintfl(char *fmt, va_list ap) __reentrant;
 #define	vprintf(_fmt, _ap)	vprintfl(_fmt, _ap)
 
 /// Alternate printf implementation
+///
 extern void	printfl(char * fmt, ... ) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)
 
+// Macro evil for generating strings
 #define __stringify(_x)		#_x
 #define stringify(_x)		__stringify(_x)
 
@@ -103,4 +109,4 @@ extern __code const char g_banner_string[];			///< printable startup banner stri
 extern __pdata enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
 extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
 
-#endif /* RADIO_H_ */
+#endif // _RADIO_H_

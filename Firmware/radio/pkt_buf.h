@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,11 +26,14 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef PTK_BUF_H_
-#define PTK_BUF_H_
-
+///
 /// @file	pkt_buf.h
-///		Packet buffers.
+///
+/// Packet buffers.
+///
+
+#ifndef _PKT_BUF_H_
+#define _PKT_BUF_H_
 
 #include "radio.h"
 
@@ -50,33 +53,31 @@ typedef uint8_t		PBufDataCount;	///< count of bytes in a packet buffer
 ///
 extern void		pbuf_init(void);
 
-/*
- * pbuf queue manipulation
- *
- * Note that as the queues are singly linked, it is not possible to remove a buffer from the
- * tail of a queue.
- */
+// pbuf queue manipulation
+//
+// Note that as the queues are singly linked, it is not possible to remove a buffer from the
+// tail of a queue.
+//
 extern void		pbuf_queue_add_head(PBufQueueIndex qi, PBufIndex pi);
 extern void		pbuf_queue_add_tail(PBufQueueIndex qi, PBufIndex pi);
 extern PBufIndex	pbuf_queue_remove_head(PBufQueueIndex qi);
 extern bool		pbuf_queue_empty(PBufQueueIndex qi);
 
-/* copy data from an arbitrary buffer to a pbuf */
+// copy data from an arbitrary buffer to a pbuf
 extern void		pbuf_copy_to_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
 
-/* copy data from a pbuf to an arbitrary buffer */
+// copy data from a pbuf to an arbitrary buffer
 extern void 		pbuf_copy_from_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
 
-/* returns a pointer in the data buffer for a given packet buffer */
+// returns a pointer in the data buffer for a given packet buffer
 extern __xdata uint8_t	*pbuf_data_ptr(PBufIndex idx, PBufDataCount ofs);
 
-/*
- * Packet buffer accessor macros.
- *
- * Use these macros and packet buffer indices rather than pointers to buffers
- * to access fields in the packet buffer header.  This will make it easier to
- * e.g. separate the fields at a later stage.
- */
+// Packet buffer accessor macros.
+//
+// Use these macros and packet buffer indices rather than pointers to buffers
+// to access fields in the packet buffer header.  This will make it easier to
+// e.g. separate the fields at a later stage.
+//
 #define pbuf_getbuf()		pbuf_queue_remove_head(PBUF_QUEUE_FREE);
 #define pbuf_putbuf(_idx)	pbuf_queue_add_head(PBUF_QUEUE_FREE, _idx);
 
@@ -92,4 +93,4 @@ extern __xdata struct pbuf		pbuf_pool[];
 
 
 
-#endif /* PTK_BUF_H_ */
+#endif // PTK_BUF_H_

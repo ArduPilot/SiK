@@ -25,22 +25,33 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
+/// @file	pkt_buf.c
+///
+/// Packet buffers for in/outbound radio packets
+///
+
 #include "pkt_buf.h"
 
-/* packet buffer pool */
-/* XXX could be pdata? */
+/// packet buffer pool
+/// @todo could be pdata?
+///
 __xdata struct pbuf		pbuf_pool[PBUF_POOL_SIZE];
 
-/* packet data pool */
+/// packet data pool
+///
 __xdata uint8_t		pbuf_data[PBUF_POOL_SIZE][PBUF_MAX_SIZE];
 
-/* packet buffer queues */
+/// packet buffer queue
+///
 struct pbuf_queue
 {
 	PBufIndex	head;
 	PBufIndex	tail;
 };
-/* XXX could be pdata? */
+
+/// packet buffer queues
+///
 __xdata struct pbuf_queue	pbuf_queues[PBUF_MAX_QUEUES];
 
 
@@ -50,13 +61,13 @@ pbuf_init(void)
 	PBufQueueIndex	queue_index;
 	PBufIndex		buffer_index;
 
-	/* initialise all the packet buffer queues to empty */
+	// initialise all the packet buffer queues to empty
 	for (queue_index = 0; queue_index < PBUF_MAX_QUEUES; queue_index++) {
 		pbuf_queues[queue_index].head = PBUF_NULL;
 		pbuf_queues[queue_index].tail = PBUF_NULL;
 	}
 
-	/* free all the packet buffers */
+	// free all the packet buffers
 	for (buffer_index = 0; buffer_index < PBUF_POOL_SIZE; buffer_index++)
 		pbuf_putbuf(buffer_index);
 }
@@ -70,17 +81,17 @@ pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index)
 
 	interrupt_disable(istate);
 
-	/* get the next buffer in the queue */
+	// get the next buffer in the queue
 	hi = pq->head;
 
-	/* make this buffer the head of the queue */
+	// make this buffer the head of the queue
 	pq->head = buffer_index;
 
-	/* if the queue was empty, point the tail to this buffer as well */
+	// if the queue was empty, point the tail to this buffer as well
 	if (hi == PBUF_NULL)
 		pq->tail = buffer_index;
 
-	/* link this buffer to the next */
+	// link this buffer to the next
 	pbuf_next(buffer_index) = hi;
 
 	interrupt_restore(istate);
@@ -95,18 +106,18 @@ pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index)
 
 	interrupt_disable(istate);
 
-	/* get the last buffer in the queue */
+	// get the last buffer in the queue
 	ti = pq->head;
 
-	/* make this buffer the last one */
+	// make this buffer the last one
 	pq->tail = buffer_index;
 
-	/* if the queue is not empty */
+	// if the queue is not empty
 	if (ti != PBUF_NULL) {
-		/* link the last buffer to this one */
+		// link the last buffer to this one
 		pbuf_next(ti) = buffer_index;
 	} else {
-		/* queue was empty, new buffer is also the head */
+		// queue was empty, new buffer is also the head
 		pq->head = buffer_index;
 	}
 
@@ -138,7 +149,7 @@ pbuf_queue_remove_head(PBufQueueIndex queue_index)
 
 	interrupt_disable(istate);
 
-	/* get the first buffer */
+	// get the first buffer
 	hi = pbuf_queues[queue_index].head;
 	if (hi != PBUF_NULL)
 		pbuf_queue_remove(queue_index, PBUF_NULL, hi);

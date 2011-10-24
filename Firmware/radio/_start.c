@@ -1,4 +1,4 @@
-/* -*- Mode: C; c-basic-offset: 8; -*- */
+// -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2011 Michael Smith, All Rights Reserved
 //
@@ -26,36 +26,54 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+///
 /// @file	_start.c
 ///
 /// Early startup code.
-///
 /// This file *must* be linked first for interrupt vector generation and main() to work.
-///
+/// 
 
 #include <stdarg.h>
 
 #include "radio.h"
 
-// Interrupt vector prototypes
-//
-// Note that these *must* be placed in this file for SDCC to generate the
-// interrupt vector table correctly.
-//
+////////////////////////////////////////////////////////////////////////////////
+/// Interrupt vector prototypes
+/// 
+/// @note these *must* be placed in this file for SDCC to generate the
+/// interrupt vector table correctly.
+/// 
+
+/// Serial rx/tx interrupt handler.
+/// 
 extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
+
+/// Radio event interrupt handler.
+/// 
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
+
+/// Timer0 interupt handler, used by the SiLabs radio driver for its internal
+/// timeout code.
+/// 
 extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
+
+/// Timer tick interrupt handler
+///  * @todo switch this and everything it calls to use another register bank
+///
 static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
 
 __code const char g_banner_string[] = "SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
 __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW);
 
-// board info from the bootloader
-__pdata enum BoardFrequency	g_board_frequency;
-__pdata uint8_t			g_board_bl_version;
+__pdata enum BoardFrequency	g_board_frequency;	///< board info from the bootloader
+__pdata uint8_t			g_board_bl_version;	///< from the bootloader
 
-// Local prototypes
+/// Configure the Si1000 for operation.
+///
 static void hardware_init(void);
+
+/// Initialise the radio and bring it online.
+///
 static void radio_init(void);
 
 void
@@ -69,19 +87,19 @@ main(void)
 	g_board_frequency = BOARD_FREQUENCY_REG;
 	g_board_bl_version = BOARD_BL_VERSION_REG;
 
-	// Do hardware initialisation
+	// Do hardware initialisation.
 	hardware_init();
 
 	// try to load parameters; set them to defaults if that fails
-	// XXX default parameter selection should be based on strapping
-	// options
+	// XXX default parameter selection should be based on board info
+	//
 	if (!param_load())
 		param_default();
 
 	// do radio initialisation
 	radio_init();
 
-	puts(g_banner_string);
+	puts(g_banner_string);	///< @todo might not want to do this... it'll end up in the local client's buffer
 
 	// turn on the receiver
 	s = rtPhyRxOn();
@@ -100,13 +118,11 @@ main(void)
 			printf("pkt %d 0x%02x\n", rlen, rbuf[0]);
 		}
 
-		/* give the AT command processor a chance to handle a command */
+		// give the AT command processor a chance to handle a command
 		at_command();
 	}
 }
 
-/// Panic and stop the system
-///
 void
 panic(char *fmt, ...)
 {
@@ -119,8 +135,6 @@ panic(char *fmt, ...)
 		;
 }
 
-/// Do basic hardware initialisation.
-///
 static void
 hardware_init(void)
 {
@@ -179,7 +193,7 @@ hardware_init(void)
 	LED_RADIO = LED_ON;
 	LED_BOOTLOADER = LED_OFF;
 
-//	XBR2	 =  0x40;		// Crossbar (GPIO) enable
+	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
 
 static void
@@ -189,7 +203,6 @@ radio_init(void) __reentrant
 	uint32_t	freq;
 
 	// Do generic PHY initialisation
-	//
 	s = rtPhyInit();
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInit failed: %u", s);
@@ -214,7 +227,6 @@ radio_init(void) __reentrant
 	}
 
 	// Set PHY parameters for the initial operational state
-	//
 	rtPhySet(TRX_FREQUENCY,		freq);
 	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
 	rtPhySet(TRX_DEVIATION,		 35000UL);	// XXX
@@ -227,9 +239,9 @@ radio_init(void) __reentrant
 		panic("rtPhyInitRadio failed: %u", s);
 }
 
-/*
- * Table of supported serial speed settings.
- */
+///
+/// Table of supported serial speed settings.
+///
 const __code U8 serial_baud_rates[][2] = {
 	// T1R, CKCON
 	{0x96, 0x00},	// B9600
@@ -248,16 +260,13 @@ serial_device_set_speed(uint8_t speed)
 	}
 }
 
-/// Timer tick interrupt handler
-///
-/// XXX Could switch this and everything it calls to use another register bank?
-///
 static void
 T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 {
-	/* re-arm the interrupt */
+
+	// re-arm the interrupt
 	TMR3CN = 0x04;
 
-	/* call the AT parser tick */
+	// call the AT parser tick
 	at_timer();
 }
