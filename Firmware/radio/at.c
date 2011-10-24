@@ -64,7 +64,9 @@ at_input(uint8_t c) __using(1)
 		break;
 
 		// backspace - delete a character
+		// delete - delete a character
 	case '\b':
+	case '\x7f':
 		if (at_cmd_len > 0) {
 			putchar('\b');
 			putchar(' ');
