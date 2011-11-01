@@ -28,66 +28,104 @@
 # Common rules and targets for the HopeRF radio apps
 #
 
-# Board configuration
-CFLAGS			+=	-DBOARD_$(BOARD)
-CFLAGS			+=	-DBOARD_FREQUENCY=$(BOARD_FREQUENCY)
+ifeq ($(BOARD),)
+$(error Must define BOARD before attempting to build.)
+endif
+ifeq ($(SRCROOT),)
+$(error Must define SRCROOT before attempting to build.)
+endif
 
-# Compiler
-SDCC			 =	/usr/local/
-CC				 =	$(SDCC)/bin/sdcc -mmcs51
-AS				 =	$(SDCC)/bin/sdas8051 -jloscp
-LD				 =	$(SDCC)/bin/sdcc
-INCLUDES		 =	$(SRCROOT)/../include
+#
+# Get board-specific definitions
+#
+include $(SRCROOT)/include/rules_$(BOARD).mk
+
+#
+# Common build options.
+#
+CFLAGS			+=	-DBOARD_$(BOARD)
+
+#
+# Paths.
+#
+OBJROOT		 	 =	$(SRCROOT)/obj/$(BOARD)/$(PRODUCT)
+DSTROOT			 =	$(SRCROOT)/dst
+
+#
+# Buildable and installable products
+#
+PRODUCT_HEX		 =	$(OBJROOT)/$(PRODUCT).hex
+PRODUCT_INSTALL	?=	$(PRODUCT_HEX)
+
+#
+# Compiler and tools
+#
+ifeq ($(shell which sdcc),)
+$(error Could not find SDCC on your path - cannot build.)
+endif
+CC				 =	sdcc -mmcs51
+AS				 =	sdas8051 -jloscp
+LD				 =	sdcc
+INCLUDES		 =	$(SRCROOT)/include
 CFLAGS			+=	$(addprefix -I,$(INCLUDES))
 DEPFLAGS		 =	-MM $(CFLAGS)
 
-GLOBAL_DEPS		+=	$(MAKEFILE_LIST)
-
-# Flash tool
-EC2TOOLS		 =	/Users/msmith/bin
-EC2FLASH	 	 =	$(EC2TOOLS)/ec2writeflash
+# Flash tool - don't check for it, it's not mandatory
+EC2FLASH	 	 =	ec2writeflash
 EC2FLASH_ARGS	 =	--port=USB --mode=c2 --hex
-
-OBJROOT		 =	$(SRCROOT)/obj
-$(shell mkdir -p $(OBJROOT))
 
 # Assembly source/objects must come first to ensure startup files
 # can be in front.  Sort by name to guarantee ordering.
-ASRCS			+=	$(sort $(wildcard $(SRCROOT)/*.asm))
-OBJS			+=	$(patsubst $(SRCROOT)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
+ASRCS			+=	$(sort $(wildcard $(PRODUCT_DIR)/*.asm))
+OBJS			+=	$(patsubst $(PRODUCT_DIR)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
 
-CSRCS			+=	$(wildcard $(SRCROOT)/*.c)
-OBJS			+=	$(patsubst $(SRCROOT)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
+CSRCS			+=	$(wildcard $(PRODUCT_DIR)/*.c)
+OBJS			+=	$(patsubst $(PRODUCT_DIR)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
 
 ifeq ($(VERBOSE),)
-v		=	@
+v			=	@
 else
 CFLAGS		+=	-V
 endif
 
-all:	$(PRODUCT)
+#
+# Build rules
+#
+build:	$(PRODUCT_HEX)
 
-$(PRODUCT):	$(OBJS)
+$(PRODUCT_HEX):	$(OBJS)
 	@echo LD $@
+	@mkdir -p $(dir $@)
 	$(v)$(LD) -o $@ $(LDFLAGS) $(OBJS)
 
-$(OBJROOT)/%.rel: $(SRCROOT)/%.c
+$(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.c
 	@echo CC $<
+	@mkdir -p $(dir $@)
 	$(v)$(CC) $(DEPFLAGS) $< | sed s%^%$(OBJROOT)/% > $(subst .rel,.dep,$@)
 	$(v)$(CC) -c -o $@ $(CFLAGS) $<
 
-$(OBJROOT)/%.rel: $(SRCROOT)/%.asm
+$(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.asm
 	@echo AS $<
-	$(v)cp $< $(OBJROOT)/$<
-	$(v)$(AS) $(ASFLAGS) $(OBJROOT)/$<
+	@mkdir -p $(dir $@)
+	$(v)cp $< $(subst $(PRODUCT_DIR),$(OBJROOT),$<)
+	$(v)$(AS) $(ASFLAGS) $(subst $(PRODUCT_DIR),$(OBJROOT),$<)
 
 .PHONY:	upload
-upload:	$(PRODUCT)
+upload:	$(PRODUCT_HEX)
 	@echo UPLOAD $<
 	$(v)$(EC2FLASH) $(EC2FLASH_ARGS) $<
 
 clean:
-	$(v)rm -rf $(OBJROOT) $(SRCROOT)/*~
+	$(v)rm -rf $(OBJROOT)
 
+install:	$(PRODUCT_INSTALL)
+	@echo INSTALL $^
+	$(v)mkdir -p $(DSTROOT)
+	$(v)cp $(PRODUCT_INSTALL) $(DSTROOT)/
+
+#
+# Dependencies
+#
+GLOBAL_DEPS		+=	$(MAKEFILE_LIST)
 $(OBJS):	$(GLOBAL_DEPS)
 -include $(wildcard $(OBJROOT)/*.dep)

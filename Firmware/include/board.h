@@ -29,24 +29,18 @@
 ///
 /// @file	board.h
 ///
-/// Board definitions and config file selection.
+/// Includes the board-specific configuration header.
 ///
 
 #ifndef _BOARD_H_
 #define _BOARD_H_
 
-#if   defined(BOARD_RF50_DEMO)
-# define BOARD_NAME	"RF50-DEMO"
-# define BOARD_ID	0x4d
+#if   defined(BOARD_rf50)
 # include "board_rf50.h"
-
-#elif defined(BOARD_HM_TRP)
-# define BOARD_NAME	"HM-TRP"
-# define BOARD_ID	0x4e
+#elif defined(BOARD_hm_trp)
 # include "board_hm_trp.h"
-
 #else
-# error Must define a BOARD_ value
+# error Must define a BOARD_ value before including this file.
 #endif
 
 #endif // _BOARD_H_

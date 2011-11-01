@@ -75,6 +75,9 @@
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
 
+#define BOARD_ID	0x4e
+#define BOARD_NAME	"HM-TRP"
+
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P1, 6);
 SBIT(LED_GREEN,	   SFR_P1, 5);

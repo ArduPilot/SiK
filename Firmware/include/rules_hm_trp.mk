@@ -24,20 +24,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
 #
-# Makefile for the Si1000 UART bootloader.
+# Configuration options for the HM_TRP board.
 #
-
-VERSION		 =	1
-
-PRODUCT		 =	$(OBJROOT)/bl.hex
-
-CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
-#CFLAGS		+=	--fverbose-asm
-CFLAGS		+=	-DBL_VERSION=$(VERSION)
-
-LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x00fc00 --stack-size 64 --nostdlib
-
-SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-include ../include/rules.mk
-
+FREQUENCIES			= 433 470 868 915

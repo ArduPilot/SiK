@@ -81,6 +81,9 @@
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
 
+#define BOARD_ID	0x4d
+#define BOARD_NAME	"RF50_DEMO"
+
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P2, 0);
 SBIT(LED_GREEN,	   SFR_P2, 5);

@@ -24,23 +24,36 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Makefile for the Si1000 radio application
+#
+# Makefile for the Si1000 UART bootloader.
 #
 
-VERSION_MAJOR	=	0
-VERSION_MINOR	=	1
+VERSION		 =	1
+PRODUCT		 =	bootloader.$(BOARD)
+PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+PRODUCT_INSTALL = $(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT).$(frequency).hex)				
 
-PRODUCT		 =	$(OBJROOT)/radio.hex
+CFLAGS		+=	-DBL_VERSION=$(VERSION)
+CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
+#CFLAGS		+=	--fverbose-asm
 
-CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
-CFLAGS		+=	--model-small --opt-code-size --Werror
-#CFLAGS		+=	--fverbose-asm 
+LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x000400 --stack-size 64 --nostdlib
 
-# enable SDCC register tracking optimisations
-#export SDCC_REGTRACK			=	YES
-#export SDCC_REGTRACK_VERBOSE	=	YES
+include $(SRCROOT)/include/rules.mk
 
-LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 64
-
-SRCROOT		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-include ../include/rules.mk
+#
+# Patch the frequency code into the hex file.
+#
+# This depends on a long chain of careful hackery.
+# - The search pattern depends on the linker emitting a separate line
+#   in the hex file for the frequency code.  This is normally safe 
+#   because it's alone the end of the first flash page and the linker
+#   doesn't emit un-written bytes.
+# - The frequency codes are, in hex, the first two digits of the decimal
+#   frequency (i.e. frequency in tens of MHz).
+#
+$(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
+$(PRODUCT_INSTALL):	$(PRODUCT_HEX)
+	@echo PATCH $@
+	$(v)mkdir -p $(dir $@)
+	$(v)sed -e "s/:0103FF00F00D/:103FF00`expr $(frequency) / 10`F00D/" < $(PRODUCT_HEX) >$@

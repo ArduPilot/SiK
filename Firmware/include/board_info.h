@@ -36,14 +36,17 @@
 #ifndef _BOARD_INFO_H_
 #define _BOARD_INFO_H_
 
-/// Possible board RF configurations
+/// Possible board RF configurations.
+///
+/// These bytes are patched into the last byte of the first 
+/// page of flash.
 ///
 enum BoardFrequency {
-        FREQ_NONE	= 0,
-        FREQ_433,
-        FREQ_470,
-        FREQ_868,
-        FREQ_915,
+        FREQ_433	= 0x43,
+        FREQ_470	= 0x47,
+        FREQ_868	= 0x86,
+        FREQ_915	= 0x91,
+        FREQ_NONE	= 0xf0,
 };
 
 // SFRs used to temporarily save board information during handoff

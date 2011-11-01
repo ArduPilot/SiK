@@ -45,18 +45,6 @@
 #include "flash.h"
 #include "util.h"
 
-#if   BOARD_FREQUENCY == 433
-# define FREQUENCY	FREQ_433
-#elif BOARD_FREQUENCY == 470
-# define FREQUENCY	FREQ_470
-#elif BOARD_FREQUENCY == 868
-# define FREQUENCY	FREQ_868
-#elif BOARD_FREQUENCY == 915
-# define FREQUENCY	FREQ_915
-#else
-# error Must define BOARD_FREQUENCY
-#endif
-
 #if 0
 # define trace(_x)	cout(_x);
 #else
@@ -74,6 +62,11 @@ static uint16_t	get_uint16(void);
 // Initialise the Si1000 and board hardware
 //
 static void	hardware_init(void);
+
+// Patchbay for the board frequency byte.
+// This is patched in the hex file(s) after building.
+//
+__at(0x3ff) uint8_t __code board_frequency = FREQ_NONE;
 
 uint8_t __data	buf[PROTO_PROG_MULTI_MAX];
 
@@ -113,7 +106,7 @@ bootloader(void)
 
 		// Stash board info in SFRs for the application to find later
 		//
-		BOARD_FREQUENCY_REG = FREQUENCY;
+		BOARD_FREQUENCY_REG = board_frequency;
 		BOARD_BL_VERSION_REG = BL_VERSION;
 
 		// And jump
@@ -150,7 +143,7 @@ bootloader(void)
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
 			cout(BOARD_ID);
-			cout(FREQUENCY);
+			cout(board_frequency);
 			break;
 
 		case PROTO_CHIP_ERASE:		// erase the program area
