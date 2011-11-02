@@ -38,7 +38,7 @@
 
 /// Possible board RF configurations.
 ///
-/// These bytes are patched into the last byte of the first 
+/// These bytes are patched into the last byte of the first
 /// page of flash.
 ///
 enum BoardFrequency {

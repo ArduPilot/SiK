@@ -36,22 +36,22 @@
 #
 # Generic actions (targets) that the user may invoke.
 #
-ACTIONS			= build clean install
+ACTIONS		 = build clean install
 
 #
 # Locate the root of the firmware source tree
 #
-export SRCROOT	= $(dir $(lastword $(MAKEFILE_LIST)))
+export SRCROOT	 = $(dir $(lastword $(MAKEFILE_LIST)))
 
 #
 # Work out which board(s) we know how to support
 #
-KNOWN_BOARDS	= $(patsubst rules_%.mk,%,$(notdir $(wildcard $(SRCROOT)/include/rules_*.mk)))
+KNOWN_BOARDS	 = $(patsubst rules_%.mk,%,$(notdir $(wildcard $(SRCROOT)/include/rules_*.mk)))
 
 #
 # Allow the user to subset the boards for which we will build.
 #
-BOARDS			?= $(KNOWN_BOARDS)
+BOARDS		?= $(KNOWN_BOARDS)
 ifneq ($(filter_out $(VALID_BOARDS),$(BOARDS)),)
 $(error One or more invalid board names in '$(BOARDS)'.)
 endif
@@ -61,18 +61,18 @@ endif
 #
 # XXX radio should become firmware? 
 #
-BOOTLOADERS		= $(foreach board, $(BOARDS), bootloader.$(board))
-FIRMWARES		= $(foreach board, $(BOARDS), radio.$(board))
-PRODUCTS		= $(BOOTLOADERS) $(FIRMWARES)
+BOOTLOADERS	 = $(foreach board, $(BOARDS), bootloader.$(board))
+FIRMWARES	 = $(foreach board, $(BOARDS), radio.$(board))
+PRODUCTS	 = $(BOOTLOADERS) $(FIRMWARES)
 
 #
 # Build a full list of the things that may be built.
 #
-TARGETS			= $(foreach action,$(ACTIONS), \
-					$(foreach product,$(PRODUCTS), \
-						$(action).$(product)))
+TARGETS		 = $(foreach action,$(ACTIONS), \
+			$(foreach product,$(PRODUCTS), \
+				$(action).$(product)))
 
-all:			build
+all:		build
 
 #
 # Composite targets for handling actions.
@@ -85,10 +85,10 @@ clean:		$(filter clean.%,$(TARGETS))
 # Composite target for handling the generic actions for each possible combination
 # of action and configuration.
 #
-$(TARGETS):		config    = $(subst ., ,$@)
-$(TARGETS):		action    = $(word 1, $(config))
-$(TARGETS):		product   = $(word 2, $(config))
-$(TARGETS):		board     = $(word 3, $(config))
+$(TARGETS):	config    = $(subst ., ,$@)
+$(TARGETS):	action    = $(word 1, $(config))
+$(TARGETS):	product   = $(word 2, $(config))
+$(TARGETS):	board     = $(word 3, $(config))
 $(TARGETS):
 	@echo % $(action) $(product) for $(board)
 	@make -f $(product)/product.mk $(action) \
@@ -181,4 +181,3 @@ FMT		+= --exclude=rtPhy_const.c
 FMT		+= --exclude=rtPhy_const.h
 FMT		+= --exclude=rtPhy_defs.h
 FMT		+= --exclude=printfl.c
-

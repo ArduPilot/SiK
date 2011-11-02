@@ -27,16 +27,16 @@
 # Makefile for the Si1000 radio application
 #
 
-VERSION_MAJOR	=	0
-VERSION_MINOR	=	1
+VERSION_MAJOR	 =	0
+VERSION_MINOR	 =	1
 
-PRODUCT		 	=	radio.$(BOARD)
-PRODUCT_DIR		:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+PRODUCT		 =	radio.$(BOARD)
+PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 
-CFLAGS			+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
-CFLAGS			+=	--model-small --opt-code-size --Werror
-#CFLAGS			+=	--fverbose-asm 
+CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
+CFLAGS		+=	--model-small --opt-code-size --Werror
+#CFLAGS		+=	--fverbose-asm 
 
-LDFLAGS			+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 64
+LDFLAGS		+=	--iram-size 256 --xram-size 4096 --code-loc 0x400 --code-size 0x00f400 --stack-size 64
 
 include $(SRCROOT)/include/rules.mk

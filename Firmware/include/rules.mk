@@ -29,10 +29,10 @@
 #
 
 ifeq ($(BOARD),)
-$(error Must define BOARD before attempting to build.)
+$(error Must define BOARD before attempting to build)
 endif
 ifeq ($(SRCROOT),)
-$(error Must define SRCROOT before attempting to build.)
+$(error Must define SRCROOT before attempting to build)
 endif
 
 #
@@ -43,47 +43,45 @@ include $(SRCROOT)/include/rules_$(BOARD).mk
 #
 # Common build options.
 #
-CFLAGS			+=	-DBOARD_$(BOARD)
+CFLAGS		+=	-DBOARD_$(BOARD)
 
 #
 # Paths.
 #
-OBJROOT		 	 =	$(SRCROOT)/obj/$(BOARD)/$(PRODUCT)
-DSTROOT			 =	$(SRCROOT)/dst
+OBJROOT		?=	$(SRCROOT)/obj/$(BOARD)/$(PRODUCT)
+DSTROOT		?=	$(SRCROOT)/dst
 
 #
 # Buildable and installable products
 #
-PRODUCT_HEX		 =	$(OBJROOT)/$(PRODUCT).hex
+PRODUCT_HEX	 =	$(OBJROOT)/$(PRODUCT).hex
 PRODUCT_INSTALL	?=	$(PRODUCT_HEX)
 
 #
 # Compiler and tools
 #
 ifeq ($(shell which sdcc),)
-$(error Could not find SDCC on your path - cannot build.)
+$(error Could not find SDCC on your path - cannot build)
 endif
-CC				 =	sdcc -mmcs51
-AS				 =	sdas8051 -jloscp
-LD				 =	sdcc
-INCLUDES		 =	$(SRCROOT)/include
-CFLAGS			+=	$(addprefix -I,$(INCLUDES))
-DEPFLAGS		 =	-MM $(CFLAGS)
+CC		 =	sdcc -mmcs51
+AS		 =	sdas8051 -jloscp
+LD		 =	sdcc
+INCLUDES	 =	$(SRCROOT)/include
+CFLAGS		+=	$(addprefix -I,$(INCLUDES))
+DEPFLAGS	 =	-MM $(CFLAGS)
 
-# Flash tool - don't check for it, it's not mandatory
-EC2FLASH	 	 =	ec2writeflash
-EC2FLASH_ARGS	 =	--port=USB --mode=c2 --hex
-
+#
 # Assembly source/objects must come first to ensure startup files
 # can be in front.  Sort by name to guarantee ordering.
-ASRCS			+=	$(sort $(wildcard $(PRODUCT_DIR)/*.asm))
-OBJS			+=	$(patsubst $(PRODUCT_DIR)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
+#
+ASRCS		+=	$(sort $(wildcard $(PRODUCT_DIR)/*.asm))
+OBJS		+=	$(patsubst $(PRODUCT_DIR)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
 
-CSRCS			+=	$(wildcard $(PRODUCT_DIR)/*.c)
-OBJS			+=	$(patsubst $(PRODUCT_DIR)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
+CSRCS		+=	$(wildcard $(PRODUCT_DIR)/*.c)
+OBJS		+=	$(patsubst $(PRODUCT_DIR)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
 
 ifeq ($(VERBOSE),)
-v			=	@
+v		 =	@
 else
 CFLAGS		+=	-V
 endif
@@ -126,6 +124,6 @@ install:	$(PRODUCT_INSTALL)
 #
 # Dependencies
 #
-GLOBAL_DEPS		+=	$(MAKEFILE_LIST)
+GLOBAL_DEPS	+=	$(MAKEFILE_LIST)
 $(OBJS):	$(GLOBAL_DEPS)
 -include $(wildcard $(OBJROOT)/*.dep)
