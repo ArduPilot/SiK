@@ -27,62 +27,10 @@
 //
 
 ///
-/// @file	flash.c
-///
-/// Flash-related data structures and functions, including the application
-/// signature for the bootloader.
+/// @file	flash.h
+///		Prototypes for the flash interface.
 ///
 
-#include <stdint.h>
-#include <flash_layout.h>
-
-#include "radio.h"
-
-// The application signature block.
-//
-// The presence of this block, which is the first thing to be erased and the
-// last thing to be programmed during an update, tells the bootloader that
-// a valid application is installed.
-//
-#define APP_INFO_BLOCK_ADDRESS	(FLASH_INFO_PAGE - 2)
-__at(APP_INFO_BLOCK_ADDRESS) uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
-
-/// Load the write-enable keys into the hardware in order to enable
-/// one write or erase operation.
-///
-static void
-flash_load_keys(void)
-{
-	FLKEY = 0xa5;
-	FLKEY = 0xf1;
-}
-
-void
-flash_erase_scratch(void)
-{
-	// erase the scratch page
-	flash_load_keys();		// unlock flash for one operation
-	PSCTL = 0x07;			// enable flash erase of the scratch page
-	*(uint8_t __xdata *)0 = 0xff;	// trigger the erase
-	PSCTL = 0x00;			// disable flash write & scratch access
-}
-
-uint8_t
-flash_read_scratch(uint16_t address)
-{
-	uint8_t	d;
-
-	PSCTL = 0x04;
-	d = *(uint8_t __code *)address;
-	PSCTL = 0x00;
-	return d;
-}
-
-void
-flash_write_scratch(uint16_t address, uint8_t c)
-{
-	flash_load_keys();
-	PSCTL = 0x05;
-	*(uint8_t __xdata *)address = c;
-	PSCTL = 0x00;
-}
+extern void	flash_erase_scratch(void);
+extern uint8_t	flash_read_scratch(uint16_t address) __reentrant;
+extern void	flash_write_scratch(uint16_t address, uint8_t c);

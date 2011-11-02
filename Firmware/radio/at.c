@@ -295,7 +295,7 @@ at_s(void)
 
 	switch (at_cmd[idx]) {
 	case '?':
-		val = param_get16(sreg);
+		val = param_get(sreg);
 		printf("%d\n", val);
 		return;
 
@@ -305,7 +305,7 @@ at_s(void)
 			for (;;) {
 				c = at_cmd[++idx];
 				if (c == '\0') {
-					if (param_set16(sreg, val)) {
+					if (param_set(sreg, val)) {
 						at_ok();
 					} else {
 						at_error();

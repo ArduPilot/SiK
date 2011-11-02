@@ -42,90 +42,70 @@
 
 #include "radio.h"
 
+/// In-ROM parameter info table.
+///
+__code const struct parameter_info {
+	const char	*name;
+	param_t		default_value;
+} parameter_info[PARAM_MAX] = {
+	[PARAM_FORMAT]		= {"FORMAT", 		PARAM_FORMAT_CURRENT},
+	[PARAM_NODE_ID]		= {"NODEID",		0},
+	[PARAM_PEER_ID]		= {"PEERID",		0},
+	[PARAM_SERIAL_SPEED]	= {"SERIAL_SPEED",	B115200},
+};
+
 /// In-RAM parameter store.
 ///
 /// It seems painful to have to do this, but we need somewhere to
 /// hold all the parameters when we're rewriting the scratchpad
 /// page anyway.
 ///
-union param {
-	uint8_t		u8;
-	uint16_t	u16;
+union param_private {
+	param_t		val;
 	uint8_t		bytes[2];
 };
+__xdata union param_private	parameter_values[PARAM_MAX];
 
-__xdata static union param	parameters[PARAM_MAX];
-
-static void	flash_load_keys(void);
-static void	flash_erase_scratch(void);
-static uint8_t	flash_read_scratch(uint16_t address) __reentrant;
-static void	flash_write_scratch(uint16_t address, uint8_t c);
-
-uint8_t
-param_get8(enum ParamID param)
+static bool
+param_check(enum ParamID id, uint16_t val)
 {
-	return parameters[param].u8;
-}
-
-uint16_t
-param_get16(enum ParamID param)
-{
-	return parameters[param].u16;
-}
-
-bool
-param_set8(enum ParamID param, uint8_t value)
-{
-	return param_set16(param, value);
-}
-
-bool
-param_set16(enum ParamID param, uint16_t value)
-{
-	if (!param_check(param, value))
+	// parameter value out of range - fail
+	if (id >= PARAM_MAX)
 		return false;
-	parameters[param].u16 = value;
+
+	switch (id) {
+	case PARAM_FORMAT:
+		return false;
+
+	case PARAM_SERIAL_SPEED:
+		if (val > BMAX)
+			return false;
+		break;
+
+	default:
+		// no sanity check for this value
+		break;
+	}
 	return true;
 }
 
-/// Load the write-enable keys into the hardware in order to enable
-/// one write or erase operation.
-///
-static void
-flash_load_keys(void)
+bool
+param_set(enum ParamID param, param_t value)
 {
-	FLKEY = 0xa5;
-	FLKEY = 0xf1;
+	// Sanity-check the parameter value first.
+	if (!param_check(param, value))
+		return false;
+
+	parameter_values[param].val = value;
+	return true;
 }
 
-static void
-flash_erase_scratch(void)
+param_t
+param_get(enum ParamID param)
 {
-	// erase the scratch page
-	flash_load_keys();		// unlock flash for one operation
-	PSCTL = 0x07;			// enable flash erase of the scratch page
-	*(uint8_t __xdata *)0 = 0xff;	// trigger the erase
-	PSCTL = 0x00;			// disable flash write & scratch access
-}
-
-static uint8_t
-flash_read_scratch(uint16_t address)
-{
-	uint8_t	d;
-
-	PSCTL = 0x04;
-	d = *(uint8_t __code *)address;
-	PSCTL = 0x00;
-	return d;
-}
-
-static void
-flash_write_scratch(uint16_t address, uint8_t c)
-{
-	flash_load_keys();
-	PSCTL = 0x05;
-	*(uint8_t __xdata *)address = c;
-	PSCTL = 0x00;
+	if (param >= PARAM_MAX)
+		return 0;
+	return parameter_values[param].val;
 }
 
 bool
@@ -139,9 +119,9 @@ param_load()
 	sum = 0;
 
 	// loop reading the parameters array
-	for (i = 0; i < sizeof(parameters); i ++) {
+	for (i = 0; i < sizeof(parameter_values); i ++) {
 		d = flash_read_scratch(i);
-		parameters[0].bytes[i] = d;
+		parameter_values[0].bytes[i] = d;
 		sum ^= d;
 	}
 
@@ -151,8 +131,8 @@ param_load()
 		return false;
 
 	// decide whether we read a supported version of the structure
-	if (parameters[PARAM_FORMAT].u16 != PARAM_FORMAT_CURRENT) {
-		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT].u16, PARAM_FORMAT_CURRENT);
+	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
+		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
 	return true;
@@ -166,7 +146,7 @@ param_save()
 	uint8_t		sum;
 
 	// tag parameters with the current format
-	parameters[PARAM_FORMAT].u16 = PARAM_FORMAT_CURRENT;
+	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
 
 	// erase the scratch space
 	flash_erase_scratch();
@@ -175,8 +155,8 @@ param_save()
 	sum = 0;
 
 	// save parameters to the scratch page
-	for (i = 0; i < sizeof(parameters); i++) {
-		d = parameters[0].bytes[i];	// byte we are going to write
+	for (i = 0; i < sizeof(parameter_values); i++) {
+		d = parameter_values[0].bytes[i];	// byte we are going to write
 		sum ^= d;
 		flash_write_scratch(i, d);
 	}
@@ -185,30 +165,34 @@ param_save()
 	flash_write_scratch(i, sum);
 }
 
-static void
-param_default_common(void)
-{
-
-}
-
 void
 param_default(void)
 {
-	param_set16(PARAM_NODE_ID, 0);
-	param_set16(PARAM_PEER_ID, 0);
-	param_set8(PARAM_SERIAL_SPEED, B115200);
-	param_save();
+	uint8_t	i;
+
+	// set all parameters to their default values
+	for (i = 0; i < PARAM_MAX; i++) {
+		parameter_values[i].val = parameter_info[i].default_value;
+	}
 }
 
-bool
-param_check(enum ParamID id, uint16_t val)
+enum ParamID
+param_id(char *name)
 {
-	switch (id) {
-	case PARAM_SERIAL_SPEED:
-		if (val > BMAX)
-			return false;
-		break;
+	uint8_t i;
+
+	for (i = 0; i < PARAM_MAX; i++) {
+		if (!strcmp(name, parameter_info[i].name))
+			break;
 	}
-	// no sanity check for this value
-	return true;
+	return i;
+}
+
+const char *__code
+param_name(enum ParamID param)
+{
+	if (param < PARAM_MAX) {
+		return parameter_info[param].name;
+	}
+	return 0;
 }

@@ -55,6 +55,7 @@
 #include "board_info.h"
 #include "parameters.h"
 #include "at.h"
+#include "flash.h"
 
 // System clock frequency
 #define SYSCLK	24500000UL

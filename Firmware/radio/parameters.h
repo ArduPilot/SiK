@@ -34,11 +34,16 @@
 
 /// Parameter IDs.
 ///
-/// This enumeration should be updated
-/// if/when we switch to using the hop register and fixed channel spacing, etc.
-///
 /// Parameter IDs here match AT S-register numbers, so change them with extreme
 /// care.  Parameter zero cannot be written by AT commands.
+///
+/// Note that this enumeration is used to initialise the parameter_names
+/// array, and parameters not listed in that array will not be visible by name.
+///
+/// When adding or removing a parameter here, you must also update:
+///
+///   parameters.c:parameter_names[]
+///   parameters.c:param_check()
 ///
 enum ParamID {
         PARAM_FORMAT = 0,		// Must always be parameter 0
@@ -51,25 +56,13 @@ enum ParamID {
 
 #define PARAM_FORMAT_CURRENT	0x14UL				///< current parameter format ID
 
-/// Returns a parameter as an 8-bit value
+/// Parameter type.
 ///
-/// @note Passing a parameter ID that is out of range will return garbage.
+/// All parameters have this type.
 ///
-/// @param	param		The parameter to return.
-/// @return			The low 8 bits of the saved parameter.
-///
-extern uint8_t	param_get8(enum ParamID param);
+typedef uint16_t	param_t;
 
-/// Returns a parameter as a 16-bit value
-///
-/// @note Passing a parameter ID that is out of range will return garbage.
-///
-/// @param	param		The parameter to return.
-/// @return			The parameter.
-///
-extern uint16_t	param_get16(enum ParamID param);
-
-/// Set a parameter to an 8-bit value
+/// Set a parameter
 ///
 /// @note Parameters are not saved until param_save is called.
 ///
@@ -77,17 +70,31 @@ extern uint16_t	param_get16(enum ParamID param);
 /// @param	value		The value to assign to the parameter.
 /// @return			True if the parameter's value is valid.
 ///
-extern bool param_set8(enum ParamID param, uint8_t value);
+extern bool param_set(enum ParamID param, param_t value);
 
-/// Set a parameter to a 16-bit value
+/// Get a parameter
 ///
-/// @note Parameters are not saved until param_save is called.
+/// @param	param		The parameter to get.
+/// @return			The parameter value, or zero if the param
+///				argument is invalid.
 ///
-/// @param	param		The parameter to set.
-/// @param	value		The value to assign to the parameter.
-/// @return			True if the parameter's value is valid.
+extern param_t param_get(enum ParamID param);
+
+/// Look up a parameter by name
 ///
-extern bool param_set16(enum ParamID param, uint16_t value);
+/// @param	name		The parameter name
+/// @return			The parameter ID, or PARAM_MAX if the
+///				parameter is not known.
+///
+extern enum ParamID param_id(char *name);
+
+/// Return the name of a parameter.
+///
+/// @param	param		The parameter ID to look up.
+/// @return			A pointer to the name of the parameter,
+///				or NULL if the parameter is not known.
+///
+extern const char *__code param_name(enum ParamID param);
 
 /// Load parameters from the flash scratchpad.
 ///
@@ -101,11 +108,6 @@ extern void param_save(void) __reentrant;
 
 /// Reset parameters to default.
 ///
+/// Note that this just resets - it does not save.
+///
 extern void param_default(void);
-
-/// Validates that a parameter has a valid value
-///
-/// @param	param		The parameter to validate.
-/// @param	val		The value to validate.
-///
-extern bool param_check(enum ParamID id, uint16_t val);
