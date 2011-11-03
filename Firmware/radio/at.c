@@ -127,7 +127,7 @@ at_plus_detector(uint8_t c) __using(1)
 	// reset the state machine to wait-for-idle; this will
 	// restart the 1S timer.
 	//
-	if (c != '+')
+	if (c != (uint8_t)'+')
 		at_plus_state = ATP_WAIT_FOR_IDLE;
 
 	// We got a plus; handle it based on our current state.
