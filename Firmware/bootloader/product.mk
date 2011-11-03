@@ -52,6 +52,8 @@ include $(SRCROOT)/include/rules.mk
 # - The frequency codes are, in hex, the first two digits of the decimal
 #   frequency (i.e. frequency in tens of MHz).
 #
+# XXX it's busted.  The checksum isn't being computed correctly.
+#
 $(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@

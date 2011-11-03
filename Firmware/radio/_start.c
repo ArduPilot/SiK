@@ -38,11 +38,11 @@
 #include "radio.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Interrupt vector prototypes
+/// @name	Interrupt vector prototypes
 ///
 /// @note these *must* be placed in this file for SDCC to generate the
 /// interrupt vector table correctly.
-///
+//@{
 
 /// Serial rx/tx interrupt handler.
 ///
@@ -58,9 +58,12 @@ extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
 
 /// Timer tick interrupt handler
-///  * @todo switch this and everything it calls to use another register bank
+///
+/// @todo switch this and everything it calls to use another register bank?
 ///
 static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
+
+//@}
 
 __code const char g_banner_string[] = "SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
 __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW);
@@ -106,16 +109,28 @@ main(void)
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyRxOn failed: %u", s);
 
+	// just a simple transparent serial implementation
 	for (;;) {
 		uint8_t		rlen;
 		__xdata uint8_t	rbuf[64];
 
-		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+		// if we received something via the radio, turn around and send it out the serial port
+		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {	
 			LED_ACTIVITY = LED_ON;
-			rtPhyTx(rlen, rbuf);
+			serial_write_buf(rbuf, rlen);
 			LED_ACTIVITY = LED_OFF;
+		}
+
+		// if we have received something via serial, transmit it
+		rlen = serial_read_available();
+		if (rlen > sizeof(rbuf))
+			rlen = sizeof(rbuf);
+		if (rlen > 0) {
+			LED_ACTIVITY = LED_ON;
+			serial_read_buf(rbuf, rlen);
+			rtPhyTx(rlen, rbuf);
 			rtPhyRxOn();
-			printf("pkt %d 0x%02x\n", rlen, rbuf[0]);
+			LED_ACTIVITY = LED_OFF;
 		}
 
 		// give the AT command processor a chance to handle a command
@@ -131,6 +146,7 @@ panic(char *fmt, ...)
 	puts("\n**PANIC**");
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
+	puts("");
 	for (;;)
 		;
 }
