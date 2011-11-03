@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Trivial uploader script, assumes that you have the EC2 tools somewhere on your path.
+#
+
+EWF=`which ec2writeflash`
+
+if [ -z $EWF ]; then
+	echo "Could not find ec2writeflash on your path - did you install the EC2 tools?"
+	exit 1
+fi
+if [ -z $1 ]; then
+	echo "Missing firmware filename."
+	exit 1
+fi
+if [ ! -r $1 ]; then
+	echo "Input file '$1' not readable."
+	exit 1
+fi
+
+${EWF} --port=USB --mode=c2 --run --hex $1

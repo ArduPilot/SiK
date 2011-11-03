@@ -108,11 +108,6 @@ $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.asm
 	$(v)cp $< $(subst $(PRODUCT_DIR),$(OBJROOT),$<)
 	$(v)$(AS) $(ASFLAGS) $(subst $(PRODUCT_DIR),$(OBJROOT),$<)
 
-.PHONY:	upload
-upload:	$(PRODUCT_HEX)
-	@echo UPLOAD $<
-	$(v)$(EC2FLASH) $(EC2FLASH_ARGS) $<
-
 clean:
 	$(v)rm -rf $(OBJROOT)
 
