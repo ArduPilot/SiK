@@ -29,7 +29,54 @@
 ///
 /// @file	board_hm_trp.h
 ///
-/// Board-specific definitions for the HM-TRP board.
+/// Board-specific definitions and documentation for the HM-TRP board.
+///
+
+///
+/// @page hm_trp_programming Programming the HM-TRP Board
+///
+/// The HopeRF HM-TRP board conveniently provides pads for programming
+/// the Si1000.  These are the four 2mm-spaced holes next to the LEDs,
+/// near the edge of the board ('o' in this picture).
+///
+/// +-----------~~
+/// | O #:#:
+/// | O = +------+
+/// | O = |      |
+/// | O   |      |
+/// | O o +------+  <- C2CK
+/// | O o     +-+   <- C2D
+/// | O o # # | |   <- VDD_MCU
+/// | O o     +-+   <- GND
+/// +---^-------~~
+///     |
+///  This row of 4 holes.
+///
+/// The SiLabs programmer has a 10-pin ribbon cable, for which you will
+/// need to make an adapter.  The User Guide, linked from the page here:
+///
+///  http://www.silabs.com/products/mcu/Pages/USBDebug.aspx
+///
+/// describes the pinout of the cable.
+///
+/// WARNING: The SiLabs adapter provides 5V on the USB Power pin.  DO NOT
+/// connect this directly to the VDD_MCU pin on the HM-TRP module, or you
+/// will (probably) destroy the chip.  If your HM-TRP board is mounted on
+/// a breakout module that supports 5V input, you can connect USB Power
+/// there.  If not, you must arrange for your own power supply, either by
+/// adding a regulator to your cable or by using some other power source.
+///
+/// Connect the SiLabs debug adapter to the HM-TRP as follows:
+///
+/// Debug Adapter Pin:                 HM-TRP pin
+///
+///        2 <--------------------------> GND
+///        4 <--------------------------> C2D
+///        7 <--------------------------> C2CK
+///       10 <-> 5V to 3.3V converter <-> VDD_MCU
+///
+///
+
 ///
 /// Expected to define:
 ///

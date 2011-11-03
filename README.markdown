@@ -39,9 +39,14 @@ Building the SiK firmware generates bootloaders and firmware for each of the sup
 
 The SiLabs debug adapter can be used to flash both the bootloader and the firmware. Alternatively, once the bootloader has been flashed the updater application can be used to update the firmware (it's faster than flashing, too).
 
-The `Firmware/tools/upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.
+The `Firmware/tools/upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.  Further details on the connections required to flash a specific board should be found in the `Firmware/include/board_*.h` header for the board in question.
 
-To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.
+To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.  You will need to get the board into the bootloader; how you do this varies from board to board, but it will normally involve either holding down a button or pulling a pin high or low when the board is reset or powered on. 
+
+For the supported boards:
+
+ - HM-TRP: hold the CONFIG pin low when applying power to the board.
+ - RF50-DEMO: hold the ENTER button down and press RST.
 
 The uploader application contains a bidirectional serial console that can be used for interacting with the radio firmware.
 
