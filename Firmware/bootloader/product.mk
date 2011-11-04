@@ -58,4 +58,5 @@ $(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@
 	$(v)mkdir -p $(dir $@)
-	$(v)sed -e "s/:0103FF00F00D/:103FF00`expr $(frequency) / 10`F00D/" < $(PRODUCT_HEX) >$@
+	$(v)$(SRCROOT)/tools/hexpatch --patch 0x3ff:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+	
