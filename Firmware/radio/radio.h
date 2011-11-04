@@ -64,21 +64,6 @@
 ///       oscillator, but we should have a way to override it.
 #define SYSCLK	24500000UL
 
-/// Supported serial speeds
-///
-/// Note that this list is missing 19200, which is difficult to generate
-/// from the 24.5MHz oscillator clock.
-///
-enum SerialSpeed {
-        B9600,
-        B38400,
-        B57600,
-        B115200,
-        B230400,
-        BMAX,
-        BNOCHANGE
-};
-
 #if DEBUG
 # define debug(fmt, args...)	printf_small(fmt "\n", ##args)
 #else

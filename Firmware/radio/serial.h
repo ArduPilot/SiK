@@ -39,15 +39,86 @@
 #include <stdint.h>
 #include "radio.h"
 
-// must be supplied by device-specific code
-extern void	serial_device_set_speed(uint8_t speed);
+/// Supported serial speeds
+///
+/// Note that this list is missing 19200, which is difficult to generate
+/// from the 24.5MHz oscillator clock.
+///
+enum SerialSpeed {
+        B9600,
+        B38400,
+        B57600,
+        B115200,
+        B230400,
+        BMAX,
+        BNOCHANGE
+};
 
-extern void	serial_init(uint8_t speed);
+/// Set the serial device speed. 
+///
+/// Since this typically depends on chip-specific register tweaking,
+/// this function must be supplied by external code.
+///
+/// @param	speed		The serial speed to configure.
+///
+extern void	serial_device_set_speed(enum SerialSpeed speed);
+
+/// Initialise the serial port.
+///
+/// @param	speed		The serial speed to configure, passed
+///				to serial_device_set_speed at the appropriate
+///				point during initialisation.
+///
+extern void	serial_init(enum SerialSpeed speed);
+
+/// Write a byte to the serial port.
+///
+/// @param	c		The byte to write.
+/// @return			True if the byte was written, false if the
+///				FIFO is full.
+///
 extern bool	serial_write(uint8_t c);
+
+/// Write bytes to the serial port.
+///
+/// @param	buf		Pointer to the data to write.
+/// @param	count		The number of bytes to write.
+/// @return			True if all of the data was written.
+///				False if there is not enough room in the
+///				buffer for @a count bytes (no bytes are
+///				written in this case).
+///
 extern bool	serial_write_buf(__xdata uint8_t *buf, uint8_t count);
+
+/// Check for space in the write FIFO
+///
+/// @return			The number of bytes that can be written.
+///
 extern uint8_t	serial_write_space(void);
+
+/// Read a byte from the serial port.
+///
+/// @return			The next byte in the receive FIFO.
+///				If no bytes are available, returns zero.
+///
 extern uint8_t	serial_read(void);
+
+/// Read bytes from the serial port.
+///
+/// @param	buf		Buffer for read data.
+/// @param	count		The number of bytes to read.
+/// @return			True if @count bytes were read, false
+///				if there is not enough data in the buffer
+///				to satisfy the request (no bytes are read
+///				in this case).
+///
 extern bool	serial_read_buf(__xdata uint8_t *buf, uint8_t count);
+
+/// Check for bytes in the read FIFO
+///
+/// @return			The number of bytes available to be read
+///				from the FIFO.
+///
 extern uint8_t	serial_read_available(void);
 
 #endif // _SERIAL_H_
