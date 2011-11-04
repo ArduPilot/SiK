@@ -81,7 +81,6 @@ namespace uploader
 			this.Show ();
 			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.delete_event);
 			this.vbox1.KeyPressEvent += new global::Gtk.KeyPressEventHandler (this.keypressed);
-			this.text_Monitor.KeyPressEvent += new global::Gtk.KeyPressEventHandler (this.console_keypress);
 			this.button_Clear.Clicked += new global::System.EventHandler (this.clear_pressed);
 		}
 	}

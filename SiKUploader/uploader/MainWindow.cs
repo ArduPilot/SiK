@@ -39,7 +39,7 @@ namespace uploader
 			// get serial port names and populate the combo box
 			foreach (string port in SerialPort.GetPortNames ()) {
 				if (port.StartsWith ("/dev/tty") && 
-				(!port.StartsWith ("/dev/tty.") || port.StartsWith ("/dev/tty.Bluetooth")))
+					(!port.StartsWith ("/dev/tty.") || port.StartsWith ("/dev/tty.Bluetooth")))
 					continue;				// ignore this, it's a pty or a Mac Bluetooth interface
 			
 				combo_Port.AppendText (port);
