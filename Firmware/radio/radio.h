@@ -77,6 +77,30 @@
 ///
 extern void	panic(char *fmt, ...);
 
+/// Set the delay timer
+///
+/// @note Maximum delay is ~2.5sec in the current implementation.
+///
+/// @param	msec		Minimum time before the timer expiers.  The actual time
+///				may be greater.
+///
+extern void	delay_set(uint16_t msec);
+
+/// Check the delay timer.
+///
+/// @return			True if the timer has expired.
+///
+extern bool	delay_expired(void);
+
+/// Wait for a period of time to expire.
+///
+/// @note Maximum wait is ~2.5sec in the current implementation.
+///
+/// @param	msec		Minimum time to wait.  The actual time
+///				may be greater.
+///
+extern void	delay_msec(uint16_t msec);
+
 /// Disable interrupts and save their current state
 ///
 /// @param	_save		A local bool or __bit in which to save

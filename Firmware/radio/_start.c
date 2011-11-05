@@ -52,11 +52,6 @@ extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
 ///
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
-/// Timer0 interupt handler, used by the SiLabs radio driver for its internal
-/// timeout code.
-///
-extern void	T0_ISR(void)		__interrupt(INTERRUPT_TIMER0);
-
 /// Timer tick interrupt handler
 ///
 /// @todo switch this and everything it calls to use another register bank?
@@ -70,6 +65,10 @@ __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify
 
 __pdata enum BoardFrequency	g_board_frequency;	///< board info from the bootloader
 __pdata uint8_t			g_board_bl_version;	///< from the bootloader
+
+/// Counter used by delay_msec
+///
+uint8_t		delay_counter;
 
 /// Configure the Si1000 for operation.
 ///
@@ -198,9 +197,8 @@ hardware_init(void)
 	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
 	EIE1	|= 0x80;
 
-	// uart - leave the baud rate alone
-	// XXX should be using saved speed
-	serial_init(BNOCHANGE);
+	// UART - set the configured speed
+	serial_init(param_get(PARAM_SERIAL_SPEED));
 
 	// global interrupt enable
 	EA = 1;
@@ -259,8 +257,9 @@ radio_init(void)
 /// Table of supported serial speed settings.
 ///
 const __code U8 serial_baud_rates[][2] = {
-	// T1R, CKCON
+	// TH1, CKCON
 	{0x96, 0x00},	// B9600
+	{0x60, 0x01},	// B19200
 	{0xb0, 0x01},	// B38400
 	{0x2b, 0x08},	// B57600
 	{0x96, 0x08},	// B115200
@@ -272,7 +271,7 @@ serial_device_set_speed(uint8_t speed)
 {
 	if (speed < BMAX) {
 		TH1 = serial_baud_rates[speed][0];
-		CKCON = (CKCON & 0x0b) | serial_baud_rates[speed][1];
+		CKCON = (CKCON & ~0x0b) | serial_baud_rates[speed][1];
 	}
 }
 
@@ -285,4 +284,29 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 
 	// call the AT parser tick
 	at_timer();
+
+	// update the delay counter
+	if (delay_counter > 0)
+		delay_counter--;
+}
+
+void
+delay_set(uint16_t msec)
+{
+	// note that this limits the delay to ~2550ms.
+	delay_counter = (msec + 9) / 10;
+}
+
+bool
+delay_expired()
+{
+	return delay_counter == 0;
+}
+
+void
+delay_msec(uint16_t msec)
+{
+	delay_set(msec);
+	while (!delay_expired())
+		;
 }

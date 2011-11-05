@@ -37,6 +37,7 @@
 #include "board.h"
 #include "rtPhy.h"
 #include "rtPhy_const.h"
+#include "radio.h"
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -67,12 +68,11 @@ __bit PhyInitialized = 0;
 U8    InitSoftwareReset(void);
 void  SetTimeOut (U16);
 void  ClearTimeOut (void);
-void  delay (U16);
-
 
 void  SetTRxFrequency (U32);
 void  SetTRxChannelSpacing  (U32);
-void  SetTxFrequencyDeviation (U32);
+
+void  SetTxFrequencyDeviation (U32);
 void  SetTxDataRate (U32);
 
 void  UpdateRxModemSettings(void);
@@ -106,7 +106,7 @@ PHY_STATUS rtPhyInit(void)
 
    SDN = 0;
 
-   delay(MILLISECONDS(25));
+   delay_msec(25);
 
    status = phyRead(EZRADIOPRO_DEVICE_VERSION); // check version
    if(status == 0xFF)
@@ -130,13 +130,12 @@ PHY_STATUS rtPhyInit(void)
       phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
 
       // wait on IRQ with 2 MS timeout
-      SetTimeOut(MILLISECONDS(2));
+      delay_set(2);
       while(IRQ)
       {
-         if(TIMEOUT_T0)
+         if(delay_expired())
             return PHY_STATUS_ERROR_RADIO_XTAL;
       }
-      ClearTimeOut();
    }
    return PHY_STATUS_SUCCESS; // success
 }
@@ -165,13 +164,12 @@ U8 InitSoftwareReset(void)
    phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, (EZRADIOPRO_SWRES|EZRADIOPRO_XTON));
 
    // wait on IRQ with 2 MS timeout
-   SetTimeOut(MILLISECONDS(2));
+   delay_set(2);
    while(IRQ)
    {
-      if(TIMEOUT_T0)
+      if(delay_expired())
          return PHY_STATUS_ERROR_NO_IRQ;
    }
-   ClearTimeOut();
 
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 
@@ -182,13 +180,12 @@ U8 InitSoftwareReset(void)
       phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
 
       // wait on IRQ with 2 MS timeout
-      SetTimeOut(MILLISECONDS(2));
+      delay_set(2);
       while(IRQ)
       {
-         if(TIMEOUT_T0)
+         if(delay_expired())
             return PHY_STATUS_ERROR_RADIO_XTAL;
       }
-      ClearTimeOut();
    }
 
    return PHY_STATUS_SUCCESS; // success
@@ -222,13 +219,12 @@ PHY_STATUS rtPhyIdle(void)
       phyWrite (EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_XTON);
 
       // wait on IRQ with 2 MS timeout
-      SetTimeOut(MILLISECONDS(2));
+      delay_set(2);
       while(IRQ)
       {
-         if(TIMEOUT_T0)
+         if(delay_expired())
             return PHY_STATUS_ERROR_RADIO_XTAL;
       }
-      ClearTimeOut();
 
       return PHY_STATUS_SUCCESS;
    }
@@ -285,16 +281,15 @@ PHY_STATUS rtPhyReStart(void)
 
    SDN = 0;
 
-   delay(MILLISECONDS(2));
+   delay_msec(2);
 
    // wait on IRQ with 25 MS timeout
-   SetTimeOut(MILLISECONDS(25));
+   delay_set(2);
    while(IRQ)
    {
-      if(TIMEOUT_T0)
+      if(delay_expired())
          return PHY_STATUS_ERROR_RADIO_XTAL;
    }
-   ClearTimeOut();
 
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 
@@ -309,13 +304,12 @@ PHY_STATUS rtPhyReStart(void)
       phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
 
       // wait on IRQ with 2 MS timeout
-      SetTimeOut(MILLISECONDS(2));
+      delay_set(2);
       while(IRQ)
       {
-         if(TIMEOUT_T0)
+         if(delay_expired())
             return PHY_STATUS_ERROR_RADIO_XTAL;
       }
-      ClearTimeOut();
    }
    return PHY_STATUS_SUCCESS; // success
 }
@@ -954,13 +948,12 @@ U8 rtPhyTx (U8 length, VARIABLE_SEGMENT_POINTER(txBuffer, U8, BUFFER_MSPACE))
 
    // wait on IRQ with 70 MS timeout
    // time out based on longest message and lowest data rate
-   SetTimeOut(MILLISECONDS(70));
+   delay_set(70);
    while(IRQ)
    {
-      if(TIMEOUT_T0)
+      if(delay_expired())
        return PHY_STATUS_ERROR_RADIO_XTAL;
    }
-   ClearTimeOut();
 
    return 0;
 }
@@ -1024,72 +1017,6 @@ PHY_STATUS rtPhyRxOff (void)
    return PHY_STATUS_SUCCESS;
 }
 #endif
-//-----------------------------------------------------------------------------
-// delay ()
-//-----------------------------------------------------------------------------
-void delay (U16 ticks)
-{
-   UU16 reload;
-
-   reload.U16 = -ticks;
-
-   TR0 = 0;
-   TF0 = 0;
-
-   TMOD  &= ~0x0F;                     // clear T0 bits in TMOD
-   TMOD  |=  0x01;                     // T0 uses prescaller
-   CKCON &= ~0x03;                     // clear T0 bits in CKCON
-   CKCON |=  0x02;                     // divide by 48 prescaller
-
-   TL0     = reload.U8[LSB];
-   TH0     = reload.U8[MSB];
-
-   TR0 = 1;
-   while (!TF0);
-   TR0 = 0;
-   TF0 = 0;
-}
-//-----------------------------------------------------------------------------
-// timeout ()
-//-----------------------------------------------------------------------------
-void SetTimeOut (U16 ticks)
-{
-   UU16 reload;
-
-   reload.U16 = -ticks;
-
-   TR0 = 0;
-   TF0 = 0;
-
-   TMOD  &= ~0x0F;                     // clear T0 bits in TMOD
-   TMOD  |=  0x01;                     // T0 uses prescaller
-   CKCON &= ~0x03;                     // clear T0 bits in CKCON
-   CKCON |=  0x02;                     // divide by 48 prescaller
-
-   TL0     = reload.U8[LSB];
-   TH0     = reload.U8[MSB];
-
-   TR0 = 1;
-   ET0 = 1;
-}
-//-----------------------------------------------------------------------------
-// T0_ISR() used with timeout
-//-----------------------------------------------------------------------------
-INTERRUPT(T0_ISR, INTERRUPT_TIMER0)
-{
-   ET0 = 0;
-   TF0 = 0;
-   TR0 = 0;
-}
-//-----------------------------------------------------------------------------
-// ClearTimeOut() used to cancel TimeOut
-//-----------------------------------------------------------------------------
-void ClearTimeOut (void)
-{
-   ET0 = 0;
-   TF0 = 0;
-   TR0 = 0;
-}
 //=============================================================================
 //
 // spi Functions for rtPhy.c module
