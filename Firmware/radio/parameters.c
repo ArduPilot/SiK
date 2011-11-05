@@ -48,10 +48,10 @@ __code const struct parameter_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
-	[PARAM_FORMAT]		= {"FORMAT", 		PARAM_FORMAT_CURRENT},
-	[PARAM_NODE_ID]		= {"NODEID",		0},
-	[PARAM_PEER_ID]		= {"PEERID",		0},
-	[PARAM_SERIAL_SPEED]	= {"SERIAL_SPEED",	B115200},
+	{"FORMAT", 		PARAM_FORMAT_CURRENT},
+	{"NODEID",		0},
+	{"PEERID",		0},
+	{"SERIAL_SPEED",	B115200},
 };
 
 /// In-RAM parameter store.
