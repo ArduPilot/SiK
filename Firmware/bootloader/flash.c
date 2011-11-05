@@ -111,10 +111,12 @@ flash_erase_app(void)
 void
 flash_write_byte(uint16_t address, uint8_t c)
 {
-	flash_load_keys();
-	PSCTL = 0x01;				// set PSWE, clear PSEE
-	*(uint8_t __xdata *)address = c;	// write the byte
-	PSCTL = 0x00;				// disable PSWE/PSEE
+	if (flash_address_visible(address)) {
+		flash_load_keys();
+		PSCTL = 0x01;				// set PSWE, clear PSEE
+		*(uint8_t __xdata *)address = c;	// write the byte
+		PSCTL = 0x00;				// disable PSWE/PSEE
+	}
 }
 
 uint8_t
