@@ -101,8 +101,6 @@ main(void)
 	// do radio initialisation
 	radio_init();
 
-	puts(g_banner_string);	///< @todo might not want to do this... it'll end up in the local client's buffer
-
 	// turn on the receiver
 	s = rtPhyRxOn();
 	if (s != PHY_STATUS_SUCCESS)
