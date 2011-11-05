@@ -184,6 +184,10 @@ serial_write_buf(__xdata uint8_t *buf, uint8_t count)
 	while (count--)
 		BUF_INSERT(tx, *buf++);
 
+	// if the transmitter is idle, restart it
+	if (tx_idle)
+		serial_restart();
+
 	interrupt_restore(istate);
 
 	return true;
