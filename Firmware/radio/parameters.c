@@ -52,6 +52,8 @@ __code const struct parameter_info {
 	{"NODEID",		0},
 	{"PEERID",		0},
 	{"SERIAL_SPEED",	B115200},
+	{"DEVIATION",		20},
+	{"BANDWIDTH",		80},
 };
 
 /// In-RAM parameter store.

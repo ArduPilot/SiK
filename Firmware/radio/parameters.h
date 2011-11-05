@@ -50,6 +50,8 @@ enum ParamID {
         PARAM_NODE_ID,			// this node's ID
         PARAM_PEER_ID,			// peer node's ID (if paired)
         PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
+	PARAM_DEVIATION,                // TRX_DEVIATION
+	PARAM_BANDWIDTH,                // RX_BAND_WIDTH
 
         PARAM_MAX			// must be last
 };
