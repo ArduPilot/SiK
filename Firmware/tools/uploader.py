@@ -58,6 +58,7 @@ class firmware(object):
 class uploader(object):
 	'''Uploads a firmware file to the SiK bootloader'''
 
+	NOP		= chr(0x00)
 	OK		= chr(0x10)
 	FAILED		= chr(0x11)
 	INSYNC		= chr(0x12)
@@ -72,36 +73,50 @@ class uploader(object):
 	READ_MULTI	= chr(0x28)
 	REBOOT		= chr(0x30)
 	
-	PROG_MULTI_MAX	= 64
+	PROG_MULTI_MAX	= 32 # 64 causes serial hangs with some USB-serial adapters
 	READ_MULTI_MAX	= 255
 
 	def __init__(self, portname):
 		self.port = serial.Serial(portname, 115200, timeout=5)
 
-	def __getSync(self):
+	def __send(self, c):
+		#print("send " + binascii.hexlify(c))
+		self.port.write(c)
+
+	def __recv(self):
 		c = self.port.read()
+		if (len(c) < 1):
+			raise RuntimeError("timeout waiting for data")
+		#print("recv " + binascii.hexlify(c))
+		return c
+
+	def __getSync(self):
+		c = self.__recv()
 		if (c != self.INSYNC):
 			raise RuntimeError("unexpected 0x%x instead of INSYNC" % ord(c))
-		c = self.port.read()
+		c = self.__recv()
 		if (c != self.OK):
 			raise RuntimeError("unexpected 0x%x instead of OK" % ord(c))
 
 	# attempt to get back into sync with the bootloader
 	def __sync(self):
+		# send a stream of ignored bytes longer than the longest possible conversation
+		# that we might still have in progress
+		self.__send(uploader.NOP * (uploader.PROG_MULTI_MAX + 2))
 		self.port.flushInput()
-		self.port.write(uploader.GET_SYNC 
+		self.__send(uploader.GET_SYNC 
 				+ uploader.EOC)
 		self.__getSync()
 
 	# send the CHIP_ERASE command and wait for the bootloader to become ready
 	def __erase(self):
-		self.port.write(uploader.CHIP_ERASE 
+		self.__send(uploader.CHIP_ERASE 
 				+ uploader.EOC)
 		self.__getSync()
 
 	# send a LOAD_ADDRESS command
 	def __set_address(self, address):
-		self.port.write(uploader.LOAD_ADDRESS
+		self.__send(uploader.LOAD_ADDRESS
 				+ chr(address & 0xff)
 				+ chr(address >> 8)
 				+ uploader.EOC)
@@ -109,61 +124,64 @@ class uploader(object):
 
 	# send a PROG_FLASH command to program one byte
 	def __program(self, data):
-		self.port.write(uploader.PROG_FLASH
+		self.__send(uploader.PROG_FLASH
 				+ chr(data)
 				+ uploader.EOC)
 		self.__getSync()
 
 	# send a PROG_MULTI command to write a collection of bytes
 	def __program_multi(self, data):
-		self.port.write(uploader.PROG_MULTI
+		self.__send(uploader.PROG_MULTI
 				+ chr(len(data)))
-		self.port.write(data)
-		self.port.write(uploader.EOC)
+		self.__send(data)
+		self.__send(uploader.EOC)
 		self.__getSync()
 		
 	# verify a byte in flash
 	def __verify(self, data):
-		self.port.write(uploader.READ_FLASH
+		self.__send(uploader.READ_FLASH
 				+ uploader.EOC)
-		if (self.port.read() != chr(data)):
+		if (self.__recv() != chr(data)):
 			return False
 		self.__getSync()
 		return True
 		
 	# verify multiple bytes in flash
 	def __verify_multi(self, data):
-		self.port.write(uploader.READ_MULTI
-				+ chr(len(data)))
+		self.__send(uploader.READ_MULTI
+				+ chr(len(data))
+				+ uploader.EOC)
 		for i in data:
-			if (self.port.read() != chr(i)):
+			if (self.__recv() != chr(i)):
 				return False
 		self.__getSync()
 		return True
 		
 	# send the reboot command
 	def __reboot(self):
-		self.port.write(uploader.REBOOT)
+		self.__send(uploader.REBOOT)
 
 	# split a sequence into a list of size-constrained pieces
-	def __split_len(seq, length):
+	def __split_len(self, seq, length):
     		return [seq[i:i+length] for i in range(0, len(seq), length)]
 
 	# upload code
-	def __program(self, code):
+	def __program(self, fw):
+		code = fw.code()
 		for address in sorted(code.keys()):
-			__set_address(address)
-			groups = __split_len(code[address], uploader.PROG_MULTI_MAX)
+			self.__set_address(address)
+			groups = self.__split_len(code[address], uploader.PROG_MULTI_MAX)
 			for bytes in groups:
-				__program_multi(bytes)
+				self.__program_multi(bytes)
 
 	# verify code
-	def __verify(self, code):
+	def __verify(self, fw):
+		code = fw.code()
 		for address in sorted(code.keys()):
-			__set_address(address)
-			groups = __split_len(code[address], uploader.READ_MULTI_MAX)
+			self.__set_address(address)
+			groups = self.__split_len(code[address], uploader.READ_MULTI_MAX)
 			for bytes in groups:
-				if (not __verify_multi(bytes)):
+				if (not self.__verify_multi(bytes)):
 					raise RuntimeError("Verification failed in group at 0x%x" % address)
 
 	# verify whether the bootloader is present and responding
@@ -171,17 +189,22 @@ class uploader(object):
 		self.__sync()
 
 	def identify(self):
-		self.port.write(uploader.GET_DEVICE
+		self.__send(uploader.GET_DEVICE
 				+ uploader.EOC)
-		board_id = ord(self.port.read()[0])
-		board_freq = ord(self.port.read()[0])
+		board_id = ord(self.__recv()[0])
+		board_freq = ord(self.__recv()[0])
+		self.__getSync()
 		return board_id, board_freq
 
-	def upload(self, code):
-		__erase()
-		__program(code)
-		__verify(code)
-		__reboot()
+	def upload(self, fw):
+		print("erase...")
+		self.__erase()
+		print("program...")
+		self.__program(fw)
+		print("verify...")
+		self.__verify(fw)
+		print("done.")
+		self.__reboot()
 	
 
 # Parse commandline arguments
@@ -197,6 +220,8 @@ fw = firmware(args.firmware)
 up = uploader(args.port)
 up.check()
 id, freq = up.identify()
-
 print("board %x  freq %x" % (id, freq))
 
+# XXX here we should check the firmware board ID against the board we're connected to
+
+up.upload(fw)
