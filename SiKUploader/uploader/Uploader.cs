@@ -41,11 +41,11 @@ namespace uploader
 			DEVICE_ID_HM_TRP= 0x4e,
 			
 			// frequency code bytes XXX should come with the firmware image...
-			FREQ_NONE		= 0,
-			FREQ_433		= 1,
-			FREQ_470		= 2,
-			FREQ_868		= 3,
-			FREQ_915		= 4,
+			FREQ_NONE		= 0xf0,
+			FREQ_433		= 0x43,
+			FREQ_470		= 0x47,
+			FREQ_868		= 0x86,
+			FREQ_915		= 0x91,
 		};
 		
 		public Uploader ()
