@@ -44,15 +44,8 @@ include $(SRCROOT)/include/rules.mk
 #
 # Patch the frequency code into the hex file.
 #
-# This depends on a long chain of careful hackery.
-# - The search pattern depends on the linker emitting a separate line
-#   in the hex file for the frequency code.  This is normally safe 
-#   because it's alone the end of the first flash page and the linker
-#   doesn't emit un-written bytes.
-# - The frequency codes are, in hex, the first two digits of the decimal
-#   frequency (i.e. frequency in tens of MHz).
-#
-# XXX it's busted.  The checksum isn't being computed correctly.
+# Note that we have secret knowledge here that the frequency code byte is 
+# located at 0x3ff, and its specific encoding.
 #
 $(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
