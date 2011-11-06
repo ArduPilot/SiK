@@ -37,10 +37,12 @@ CFLAGS		+=	-DBL_VERSION=$(VERSION)
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 #CFLAGS		+=	--fverbose-asm
 
-# Note that code is split into two parts; low code at 0, and high code at 0xf800.
+# Set limits for the low (CSEG) and high (HIGHCSEG) code segments.
 #
-# Splitting the code like this gives us more space, but at the cost of not being
-# able to easily verify that the bootloader has not overgrown its limits.
+CSEG_LIMIT	 =	$(shell printf %d 0x0400)	# start of application space
+HIGHCSEG_LIMIT	 =	$(shell printf %d 0xfbfc)	# room for four patch bytes at the end
+
+# Note that code is split into two parts; low code at 0, and high code at 0xf800.
 #
 LDFLAGS		 =	--iram-size 256 --xram-size 4096 --stack-size 64 --nostdlib \
 			-Wl -bHIGHCSEG=0xf800
@@ -59,3 +61,19 @@ $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	$(v)mkdir -p $(dir $@)
 	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
 	
+#
+# Check that the bootloader has not overflowed its allocated space
+#
+$(PRODUCT_INSTALL):	sizecheck
+
+sizecheck:	mapfile = $(subst .hex,.map,$(PRODUCT_HEX))
+sizecheck:	cseg_base = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 41-44`)
+sizecheck:	cseg_size = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 53-56`)
+sizecheck:	cseg_end  = $(shell expr $(cseg_base) + $(cseg_size))
+sizecheck:	highcseg_base = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) | cut -c 41-44`)
+sizecheck:	highcseg_size = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) | cut -c 53-56`)
+sizecheck:	highcseg_end  = $(shell expr $(highcseg_base) + $(highcseg_size))
+sizecheck:	$(PRODUCT_HEX)
+	@echo SIZECHECK $<: CSEG $(cseg_size) HIGHCSEG $(highcseg_size)
+	$(v)test $(cseg_end)     -lt $(CSEG_LIMIT)     || (echo error: CSEG too large; exit 1)
+	$(v)test $(highcseg_end) -lt $(HIGHCSEG_LIMIT) || (echo error: HIGHCSEG too large; exit 1)
