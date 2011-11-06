@@ -99,7 +99,7 @@ $(PRODUCT_HEX):	$(OBJS)
 $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.c
 	@echo CC $<
 	@mkdir -p $(dir $@)
-	$(v)$(CC) $(DEPFLAGS) $< | sed s%^%$(OBJROOT)/% > $(subst .rel,.dep,$@)
+	$(v)(/bin/echo -n $(OBJROOT)/ && $(CC) $(DEPFLAGS) $<) > $(subst .rel,.dep,$@)
 	$(v)$(CC) -c -o $@ $(CFLAGS) $<
 
 $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.asm
