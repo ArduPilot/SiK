@@ -71,6 +71,7 @@ class uploader(object):
 	READ_FLASH	= chr(0x26)
 	PROG_MULTI	= chr(0x27)
 	READ_MULTI	= chr(0x28)
+	PARAM_ERASE	= chr(0x29)
 	REBOOT		= chr(0x30)
 	
 	PROG_MULTI_MAX	= 32 # 64 causes serial hangs with some USB-serial adapters
@@ -109,10 +110,14 @@ class uploader(object):
 		self.__getSync()
 
 	# send the CHIP_ERASE command and wait for the bootloader to become ready
-	def __erase(self):
+	def __erase(self, erase_params = FALSE):
 		self.__send(uploader.CHIP_ERASE 
 				+ uploader.EOC)
 		self.__getSync()
+		if (erase_params):
+			self.__send(uploader.PARAM_ERASE 
+					+ uploader.EOC)
+			self.__getSync()
 
 	# send a LOAD_ADDRESS command
 	def __set_address(self, address):
@@ -205,13 +210,12 @@ class uploader(object):
 			return
 
 	# verify whether the bootloader is present and responding
-	def check(self, autosync=False):
-		if autosync:
-			try:
-				self.__sync()
-				return
-			except RuntimeError:
-				self.autosync()
+	def check(self):
+		try:
+			self.__sync()
+			return
+		except RuntimeError:
+			self.autosync()
 		self.__sync()
 
 	def identify(self):
@@ -222,9 +226,9 @@ class uploader(object):
 		self.__getSync()
 		return board_id, board_freq
 
-	def upload(self, fw):
+	def upload(self, fw, erase_params = False):
 		print("erase...")
-		self.__erase()
+		self.__erase(erase_params)
 		print("program...")
 		self.__program(fw)
 		print("verify...")
@@ -236,7 +240,7 @@ class uploader(object):
 # Parse commandline arguments
 parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
 parser.add_argument('--port', action="store", required=True, help="Serial port to which the SiK radio is attached.")
-parser.add_argument('--autosync', action="store_true", help="automatically put radio into update mode if needed")
+parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
 parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
 args = parser.parse_args()
 
@@ -245,10 +249,10 @@ fw = firmware(args.firmware)
 
 # Connect to the device and identify it
 up = uploader(args.port)
-up.check(args.autosync)
+up.check()
 id, freq = up.identify()
 print("board %x  freq %x" % (id, freq))
 
 # XXX here we should check the firmware board ID against the board we're connected to
 
-up.upload(fw)
+up.upload(fw,args.resetparams)
