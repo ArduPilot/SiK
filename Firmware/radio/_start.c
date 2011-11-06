@@ -78,6 +78,37 @@ static void hardware_init(void);
 ///
 static void radio_init(void) __reentrant;
 
+// a simple transparent serial implementation
+static void transparent_serial_loop(void)
+{
+	for (;;) {
+		uint8_t		rlen;
+		__xdata uint8_t	rbuf[64];
+
+		// if we received something via the radio, turn around and send it out the serial port
+		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+			LED_ACTIVITY = LED_ON;
+			serial_write_buf(rbuf, rlen);
+			LED_ACTIVITY = LED_OFF;
+		}
+
+		// if we have received something via serial, transmit it
+		rlen = serial_read_available();
+		if (rlen > sizeof(rbuf))
+			rlen = sizeof(rbuf);
+		if (rlen > 0) {
+			LED_ACTIVITY = LED_ON;
+			serial_read_buf(rbuf, rlen);
+			rtPhyTx(rlen, rbuf);
+			rtPhyRxOn();
+			LED_ACTIVITY = LED_OFF;
+		}
+
+		// give the AT command processor a chance to handle a command
+		at_command();
+	}
+}
+
 void
 main(void)
 {
@@ -106,33 +137,7 @@ main(void)
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyRxOn failed: %u", s);
 
-	// just a simple transparent serial implementation
-	for (;;) {
-		uint8_t		rlen;
-		__xdata uint8_t	rbuf[64];
-
-		// if we received something via the radio, turn around and send it out the serial port
-		if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {	
-			LED_ACTIVITY = LED_ON;
-			serial_write_buf(rbuf, rlen);
-			LED_ACTIVITY = LED_OFF;
-		}
-
-		// if we have received something via serial, transmit it
-		rlen = serial_read_available();
-		if (rlen > sizeof(rbuf))
-			rlen = sizeof(rbuf);
-		if (rlen > 0) {
-			LED_ACTIVITY = LED_ON;
-			serial_read_buf(rbuf, rlen);
-			rtPhyTx(rlen, rbuf);
-			rtPhyRxOn();
-			LED_ACTIVITY = LED_OFF;
-		}
-
-		// give the AT command processor a chance to handle a command
-		at_command();
-	}
+	transparent_serial_loop();
 }
 
 void
