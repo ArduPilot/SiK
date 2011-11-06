@@ -1198,6 +1198,11 @@ PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8,
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+// Prevent allocation of arguments and local variables in the overlay segment
+// for routines below, which can be called from interrupt context.
+#pragma save
+#pragma nooverlay
+
 #ifndef TRANSMITTER_ONLY
 INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
@@ -1213,10 +1218,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
       if(RxPacketReceived==0)
       {
          RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
-         RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
-	 if (RxPacketLength != 0) {
-		 RxPacketReceived = 1;
-	 }
+	      if (RxPacketLength != 0) {
+            RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
+		      RxPacketReceived = 1;
+	      }
       }
       else
       {
@@ -1366,6 +1371,8 @@ void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE)
    EA = restoreEA;
 }
 #endif
+
+#pragma restore
 
 //-----------------------------------------------------------------------------
 //=============================================================================

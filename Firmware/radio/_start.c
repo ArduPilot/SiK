@@ -86,10 +86,6 @@ static void transparent_serial_loop(void)
 		__xdata uint8_t	rbuf[64];
 
 		// if we received something via the radio, turn around and send it out the serial port
-		// 
-		// XXX Note - it does not seem to be safe to call rtPhyGetRxPacket unless RxPacketReceived
-		// is true, even though the function itself will immediately check it again.
-		// Possibly a compiler/optimiser artifact?
 		//
 		if (RxPacketReceived) {
 			LED_ACTIVITY = LED_ON;
