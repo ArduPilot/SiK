@@ -12,9 +12,6 @@ import argparse, sys, binascii, struct
 
 class ihrange(object):
 	'''Comprehend a line of IntelHex'''
-	address_offset = 0
-	address_shift = 0
-
 	def __init__(self, line):
 		# parse the header off the line
 		self.line = line
@@ -27,16 +24,6 @@ class ihrange(object):
 		# regular data line
 		if (self.command == 0):
 			self.bytes = list(self.binstr[4:])
-
-		# segment address line
-		if (self.command == 2):
-			ihrange.address_offset = self.address
-			ihrange.address_shift = 4
-
-		# high word address line
-		if (self.command == 5):
-			ihrange.address_offset = self.address
-			ihrange.address_shift = 16
 
 	def __str__(self):
 		# only data lines can be patched
@@ -61,7 +48,6 @@ class ihrange(object):
 		# only worth patching if command is zero
 		if (self.command != 0):
 			return
-		effective_address = self.address + (ihrange.address_offset << ihrange.address_shift)
 		if ((address >= self.address) and (address < (self.address + self.count))):
 			self.bytes[address - self.address] = chr(value)
 
