@@ -264,6 +264,14 @@ at_i(void)
 	case '4':
 		val = g_board_bl_version;
 		break;
+	case '5': {
+		enum ParamID id;
+		// convenient way of showing all parameters
+		for (id=0; id<PARAM_MAX; id++) {
+			printf("%s=%d\n", param_name(id), (unsigned)param_get(id));
+		}
+		return;
+	}
 	default:
 		at_error();
 		return;
