@@ -51,11 +51,11 @@ include $(SRCROOT)/include/rules.mk
 # Patch the frequency code into the hex file.
 #
 # Note that we have secret knowledge here that the frequency code byte is 
-# located at 0x3ff, and its specific encoding.
+# located at 0xfbfe, and its specific encoding.
 #
 $(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@
 	$(v)mkdir -p $(dir $@)
-	$(v)$(SRCROOT)/tools/hexpatch --patch 0x3ff:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
 	

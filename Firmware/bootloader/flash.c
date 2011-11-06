@@ -34,6 +34,7 @@
 
 #include <compiler_defs.h>
 #include <Si1000_defs.h>
+#include <board_info.h>
 
 #include <stdint.h>
 
@@ -55,14 +56,19 @@
 /// These must be supplied by the application as part of the uploaded image,
 /// they should be programmed last.
 ///
-__at(FLASH_INFO_PAGE - 2) uint8_t __code flash_signature[2];
+__at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
 
 /// Lock byte
 ///
 /// We explicitly initialise the lock byte to prevent code in the high
 /// page from overwriting it.
 ///
-__at(0xfbff) uint8_t __code flash_lock_byte = 0xff;
+__at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xff;
+
+/// Patchbay for the board frequency byte.
+/// This is patched in the hex file(s) after building.
+///
+__at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
 
 char
 flash_app_valid(void)

@@ -59,12 +59,6 @@ static void	sync_response(void);
 //
 static void	hardware_init(void);
 
-// Patchbay for the board frequency byte.
-// This is patched in the hex file(s) after building.
-//
-// XXX We could (should?) move this to the info page.
-__at(0x3ff) uint8_t __code board_frequency = FREQ_NONE;
-
 uint8_t __data	buf[PROTO_PROG_MULTI_MAX];
 
 // Bootloader entry logic
