@@ -44,8 +44,7 @@
 // last thing to be programmed during an update, tells the bootloader that
 // a valid application is installed.
 //
-#define APP_INFO_BLOCK_ADDRESS	(FLASH_INFO_PAGE - 2)
-__at(APP_INFO_BLOCK_ADDRESS) uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
+__at(FLASH_SIGNATURE_BYTES) uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
 
 /// Load the write-enable keys into the hardware in order to enable
 /// one write or erase operation.
