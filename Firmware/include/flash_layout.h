@@ -45,17 +45,19 @@
 #define FLASH_PAGE_SHIFT	10
 #define FLASH_APP_START		0x0400		// 1 page reserved for bootloader
 #define FLASH_INFO_PAGE		0xf800		// 1 page reserved for bootloader
+#define FLASH_LOCK_BYTE		0xfbff
 
 // Anticipated flash signature bytes
 //
 #define FLASH_SIG0	0x3d
 #define FLASH_SIG1	0xc2
 
-// Flash scratchpad layout.
+// Location of the flash signature
 //
-// The flash scratchpad is used for storing configuration data.  Each parameter is assigned
-// 4 bytes in this space.
+#define FLASH_SIGNATURE_BYTES	(FLASH_INFO_PAGE - 2)
+
+// Bootloader patchbay for frequency code
 //
-// XXX assignment TBD.
+#define FLASH_FREQUENCY_BYTE	(FLASH_LOCK_BYTE - 1)
 
 #endif	// _FLASH_LAYOUT_H
