@@ -72,13 +72,10 @@ pbuf_init(void)
 }
 
 void
-pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index)
+pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index) __critical
 {
 	__xdata struct pbuf_queue *pq = &pbuf_queues[queue_index];
-	bool		istate;
 	PBufIndex	hi;
-
-	interrupt_disable(istate);
 
 	// get the next buffer in the queue
 	hi = pq->head;
@@ -92,18 +89,13 @@ pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index)
 
 	// link this buffer to the next
 	pbuf_next(buffer_index) = hi;
-
-	interrupt_restore(istate);
 }
 
 void
-pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index)
+pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index) __critical
 {
 	__xdata struct pbuf_queue *pq = &pbuf_queues[queue_index];
-	bool		istate;
 	PBufIndex	ti;
-
-	interrupt_disable(istate);
 
 	// get the last buffer in the queue
 	ti = pq->head;
@@ -119,8 +111,6 @@ pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index)
 		// queue was empty, new buffer is also the head
 		pq->head = buffer_index;
 	}
-
-	interrupt_restore(istate);
 }
 
 static void
@@ -141,19 +131,14 @@ pbuf_queue_remove(PBufQueueIndex queue_index, PBufIndex previous_index, PBufInde
 }
 
 PBufIndex
-pbuf_queue_remove_head(PBufQueueIndex queue_index)
+pbuf_queue_remove_head(PBufQueueIndex queue_index) __critical
 {
-	bool		istate;
 	PBufIndex	hi;
-
-	interrupt_disable(istate);
 
 	// get the first buffer
 	hi = pbuf_queues[queue_index].head;
 	if (hi != PBUF_NULL)
 		pbuf_queue_remove(queue_index, PBUF_NULL, hi);
-
-	interrupt_restore(istate);
 
 	return hi;
 }

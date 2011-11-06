@@ -31,6 +31,8 @@
 ///
 /// Early startup code.
 /// This file *must* be linked first for interrupt vector generation and main() to work.
+/// XXX this may no longer be the case - it may be sufficient for the interrupt vectors 
+/// to be located in the same file as main()
 ///
 
 #include <stdarg.h>

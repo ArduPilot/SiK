@@ -101,20 +101,6 @@ extern bool	delay_expired(void);
 ///
 extern void	delay_msec(uint16_t msec);
 
-/// Disable interrupts and save their current state
-///
-/// @param	_save		A local bool or __bit in which to save
-///				the current interrupt-enable state.
-///
-#define interrupt_disable(_save)	do { _save = EA; EA = 0; } while(0)
-
-/// Restore saved interrupt state
-///
-/// @param	_save		The local bool or __bit in which 
-///				interrupt_disable previously saved state.
-///
-#define interrupt_restore(_save)	do { EA = _save; } while(0)
-
 /// Alternate vprintf implementation
 ///
 extern void	vprintfl(char *fmt, va_list ap) __reentrant;

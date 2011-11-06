@@ -62,6 +62,12 @@ volatile bool			tx_idle;
 #define BUF_FREE(_which)	(_which##_remove - _which##_insert - 1)
 
 // FIFO insert/remove operations
+//
+// Note that these are nominally interrupt-safe as only one of each
+// buffer's end pointer is adjusted by either of interrupt or regular 
+// mode code.  This is violated if printing from interrupt context,
+// which should generally be avoided when possible.
+//
 #define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert++] = (_c); } while(0)
 #define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove++]; } while(0)
 
@@ -151,11 +157,8 @@ serial_write(uint8_t c)
 }
 
 static void
-_serial_write(uint8_t c)
+_serial_write(uint8_t c) __critical
 {
-	bool	istate;
-
-	interrupt_disable(istate);
 
 	// if we have space to store the character
 	if (BUF_NOT_FULL(tx)) {
@@ -167,19 +170,13 @@ _serial_write(uint8_t c)
 		if (tx_idle)
 			serial_restart();
 	}
-
-	interrupt_restore(istate);
 }
 
 bool
-serial_write_buf(__xdata uint8_t *buf, uint8_t count)
+serial_write_buf(__xdata uint8_t *buf, uint8_t count) __critical
 {
-	bool	istate;
-
 	if (serial_write_space() < count)
 		return false;
-
-	interrupt_disable(istate);
 
 	while (count--)
 		BUF_INSERT(tx, *buf++);
@@ -187,8 +184,6 @@ serial_write_buf(__xdata uint8_t *buf, uint8_t count)
 	// if the transmitter is idle, restart it
 	if (tx_idle)
 		serial_restart();
-
-	interrupt_restore(istate);
 
 	return true;
 }
@@ -220,12 +215,9 @@ serial_restart(void)
 }
 
 uint8_t
-serial_read(void)
+serial_read(void) __critical
 {
-	bool		istate;
 	uint8_t		c;
-
-	interrupt_disable(istate);
 
 	if (BUF_NOT_EMPTY(rx)) {
 		BUF_REMOVE(rx, c);
@@ -233,25 +225,17 @@ serial_read(void)
 		c = '\0';
 	}
 
-	interrupt_restore(istate);
-
 	return c;
 }
 
 bool
-serial_read_buf(__xdata uint8_t *buf, uint8_t count)
+serial_read_buf(__xdata uint8_t *buf, uint8_t count) __critical
 {
-	bool		istate;
-
 	if (serial_read_available() < count)
 		return false;
 
-	interrupt_disable(istate);
-
 	while (count--)
 		BUF_REMOVE(rx, *buf++);
-
-	interrupt_restore(istate);
 
 	return true;
 }

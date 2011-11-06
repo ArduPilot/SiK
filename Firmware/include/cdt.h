@@ -46,6 +46,7 @@
 # define __interrupt(_x)
 # define __using(_x)
 # define __reentrant
+# define __critical
 #endif
 
 #endif	// _CDT_H_
