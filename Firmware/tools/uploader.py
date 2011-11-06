@@ -81,7 +81,7 @@ class uploader(object):
 
 	def __send(self, c):
 		#print("send " + binascii.hexlify(c))
-		self.port.write(c)
+		self.port.write(str(c))
 
 	def __recv(self):
 		c = self.port.read()
