@@ -46,12 +46,23 @@
 # define trace(_x)
 #endif
 
+// Place all code in the high page
+//
+#pragma codeseg HIGHCSEG
+
 /// Signature bytes at the very end of the application space.
 ///
 /// These must be supplied by the application as part of the uploaded image,
 /// they should be programmed last.
 ///
 __at(FLASH_INFO_PAGE - 2) uint8_t __code flash_signature[2];
+
+/// Lock byte
+///
+/// We explicitly initialise the lock byte to prevent code in the high
+/// page from overwriting it.
+///
+__at(0xfbff) uint8_t __code flash_lock_byte = 0xff;
 
 char
 flash_app_valid(void)

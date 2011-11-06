@@ -37,7 +37,13 @@ CFLAGS		+=	-DBL_VERSION=$(VERSION)
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 #CFLAGS		+=	--fverbose-asm
 
-LDFLAGS		 =	--iram-size 256 --xram-size 4096 --code-size 0x000400 --stack-size 64 --nostdlib
+# Note that code is split into two parts; low code at 0, and high code at 0xf800.
+#
+# Splitting the code like this gives us more space, but at the cost of not being
+# able to easily verify that the bootloader has not overgrown its limits.
+#
+LDFLAGS		 =	--iram-size 256 --xram-size 4096 --stack-size 64 --nostdlib \
+			-Wl -bHIGHCSEG=0xf800
 
 include $(SRCROOT)/include/rules.mk
 
