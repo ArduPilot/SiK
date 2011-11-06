@@ -1183,7 +1183,7 @@ PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8,
 
       EX0 = restoreEX0;
 
-      *pLength = RxPacketLength;
+      *pLength = i;
 
       return PHY_STATUS_SUCCESS;
    }
@@ -1214,7 +1214,9 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
       {
          RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
          RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
-         RxPacketReceived = 1;
+	 if (RxPacketLength != 0) {
+		 RxPacketReceived = 1;
+	 }
       }
       else
       {
