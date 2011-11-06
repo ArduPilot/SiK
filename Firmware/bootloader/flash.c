@@ -109,6 +109,16 @@ flash_erase_app(void)
 }
 
 void
+flash_erase_scratch(void)
+{
+	// erase the scratch page
+	flash_load_keys();		// unlock flash for one operation
+	PSCTL = 0x07;			// enable flash erase of the scratch page
+	*(uint8_t __xdata *)0 = 0xff;	// trigger the erase
+	PSCTL = 0x00;			// disable flash write & scratch access
+}
+
+void
 flash_write_byte(uint16_t address, uint8_t c)
 {
 	if (flash_address_visible(address)) {

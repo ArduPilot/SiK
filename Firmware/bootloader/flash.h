@@ -51,6 +51,10 @@ char	flash_app_valid(void);
 ///
 void	flash_erase_app(void);
 
+/// Erases the scratch page, where applications keep their parameters.
+///
+void	flash_erase_scratch(void);
+
 /// Writes a byte to flash.
 ///
 /// @param	address		The address at which to write the byte

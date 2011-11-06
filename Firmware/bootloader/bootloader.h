@@ -55,6 +55,7 @@
 #define PROTO_READ_FLASH	0x26	// read byte at address + increment
 #define PROTO_PROG_MULTI	0x27	// write up to PROTO_PROG_MULTI_MAX bytes at address + increment
 #define PROTO_READ_MULTI	0x28	// read up to 255 bytes at address + increment
+#define PROTO_PARAM_ERASE	0x29	// erase the parameter flash
 
 #define PROTO_REBOOT		0x30	// reboot the board & start the app
 

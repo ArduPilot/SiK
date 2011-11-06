@@ -88,11 +88,6 @@ bootloader(void)
 
 	trace('R');
 	trace(RSTSRC);
-	if (BUTTON_BOOTLOAD == BUTTON_ACTIVE) {
-		trace('1');
-	} else {
-		trace('0');
-	}
 
 	// Boot the application if:
 	//
@@ -114,11 +109,6 @@ bootloader(void)
 	}
 
 	trace('B');
-	trace('o');
-	trace('o');
-	trace('t');
-	trace('\n');
-	cout('B');
 
 	// Main bootloader loop
 	//
@@ -130,38 +120,42 @@ bootloader(void)
 		c = cin();
 		LED_BOOTLOADER = LED_OFF;
 
+		// common tests for EOC
+		switch (c) {
+		case PROTO_GET_SYNC:
+		case PROTO_GET_DEVICE:
+		case PROTO_CHIP_ERASE:
+		case PROTO_PARAM_ERASE:
+		case PROTO_READ_FLASH:
+			if (cin() != PROTO_EOC)
+				goto cmd_bad;
+		}
+
 		switch (c) {
 
 		case PROTO_GET_SYNC:		// sync
-			trace('s');
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
 			break;
 
 		case PROTO_GET_DEVICE:
-			trace('d');
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
 			cout(BOARD_ID);
 			cout(board_frequency);
 			break;
 
 		case PROTO_CHIP_ERASE:		// erase the program area
-			trace('e');
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
 			flash_erase_app();
 			break;
 
+		case PROTO_PARAM_ERASE:
+			flash_erase_scratch();
+			break;
+
 		case PROTO_LOAD_ADDRESS:	// set address
-			trace('a');
 			address = get_uint16();
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
 			break;
 
 		case PROTO_PROG_FLASH:		// program byte
-			trace('w');
 			c = cin();
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
@@ -169,15 +163,11 @@ bootloader(void)
 			break;
 
 		case PROTO_READ_FLASH:		// readback byte
-			trace('r');
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
 			c = flash_read_byte(address++);
 			cout(c);
 			break;
 
 		case PROTO_PROG_MULTI:
-			trace('m');
 			count = cin();
 			if (count > sizeof(buf))
 				goto cmd_bad;
@@ -190,7 +180,6 @@ bootloader(void)
 			break;
 
 		case PROTO_READ_MULTI:
-			trace('p');
 			count = cin();
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
@@ -201,11 +190,8 @@ bootloader(void)
 			break;
 
 		case PROTO_REBOOT:
-			trace('b');
 			// generate a software reset, which will boot to the application
 			RSTSRC |= (1 << 4);
-			for (;;)
-				;
 
 		default:
 			goto cmd_bad;
@@ -214,7 +200,6 @@ cmd_ok:
 		sync_response();
 		continue;
 cmd_bad:
-		trace('n');
 		continue;
 	}
 }
