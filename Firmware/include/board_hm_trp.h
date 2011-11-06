@@ -77,45 +77,6 @@
 ///
 ///
 
-///
-/// Expected to define:
-///
-/// BOARD_ID
-///	A unique byte identifying this board.
-///
-/// LED_BOOTLOADER
-///	A __bit controlling an LED for the bootloader.
-///
-/// LED_RADIO
-///     A __bit controlling an LED for the radio.
-///
-/// LED_ACTIVITY
-///	A __bit controlling an LED that can be blinked to show activity.
-///
-/// LED_ON
-///	The value to write to LED to turn LEDs on.
-///
-/// LED_OFF
-///	The value to write to LED to turn LEDs off.
-///
-/// BUTTON_BOOTLOAD
-///	A __bit corresponding to a button or strap that will cause the
-///	bootloader to stop and wait for a download.
-///
-/// BUTTON_ACTIVE
-///	The value that BUTTON_bootload will have when the bootloader should stop.
-///
-/// SYSCLK
-///	Frequency of the system clock in MHz.
-///
-/// HW_INIT
-///	A code fragment called at early startup time that configures
-///	the SoC for board-specific operation.
-///	- configures LED GPIO(s)
-///	- configures button GPIO(s)
-///	- configures INT0 for the radio interrupt
-///
-
 #ifndef _BOARD_HM_TRP_H_
 #define _BOARD_HM_TRP_H_
 

@@ -31,46 +31,6 @@
 ///
 /// Board-specific definitions for the RF50-DEMO board.
 ///
-/// Expected to define:
-///
-/// BOARD_ID
-///	A unique byte identifying this board.
-///
-/// LED_BOOTLOADER
-///	A __bit controlling an LED for the bootloader.
-///
-/// LED_RADIO
-///     A __bit controlling an LED for the radio.
-///
-/// LED_ACTIVITY
-///	A __bit controlling an LED that can be blinked to show activity.
-///
-/// LED_ON
-///	The value to write to LED to turn the LED on.
-///
-/// LED_OFF
-///	The value to write to LED to turn the LED off.
-///
-/// BUTTON_BOOTLOAD
-///	A __bit corresponding to a button or strap that will cause the
-///	bootloader to stop and wait for a download.
-///
-/// BUTTON_ACTIVE
-///	The value that BUTTON will have when the bootloader should stop.
-///
-/// SYSCLK
-///	Frequency of the system clock in MHz.
-///
-/// HW_INIT
-///	A code fragment called at early startup time that configures
-///	the SoC for board-specific operation.
-///	- configures LED GPIO(s)
-///	- configures button GPIO(s)
-///	- configures INT0 for the radio interrupt
-///
-/// TBD:
-///     strapping options for board frequency band selection
-///
 
 /// @file	board.h
 ///		Board definitions for the HopeRF RF50 demo board

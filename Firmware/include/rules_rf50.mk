@@ -26,6 +26,6 @@
 #
 
 #
-# Configuration options for the HM_TRP board.
+# Configuration options for the RF50-DEMO board.
 #
 FREQUENCIES			= 433 470 868 915

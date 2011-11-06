@@ -26,6 +26,6 @@
 #
 
 #
-# Configuration options for the HM_TRP board.
+# Configuration options for the HM-TRP board.
 #
 FREQUENCIES			= 433 470 868 915
