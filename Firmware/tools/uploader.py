@@ -184,8 +184,34 @@ class uploader(object):
 				if (not self.__verify_multi(bytes)):
 					raise RuntimeError("Verification failed in group at 0x%x" % address)
 
+	def autosync(self):
+		'''use AT&UPDATE to put modem in update mode'''
+		import fdpexpect, time
+		ser = fdpexpect.fdspawn(self.port.fileno(), logfile=sys.stdout)
+		ser.send('\r\n')
+		time.sleep(1)
+		ser.send('+++')
+		time.sleep(1)
+		ser.send('\r\nATI\r\n')
+		try:
+			ser.expect(['OK','SiK .* on HM-TRP'], timeout=2)
+		except fdpexpect.TIMEOUT:
+			return
+		ser.send('AT&UPDATE\r\n')
+		# swallow any remaininig characters
+		try:
+			ser.expect('B!', timeout=2)
+		except fdpexpect.TIMEOUT:
+			return
+
 	# verify whether the bootloader is present and responding
-	def check(self):
+	def check(self, autosync=False):
+		if autosync:
+			try:
+				self.__sync()
+				return
+			except RuntimeError:
+				self.autosync()
 		self.__sync()
 
 	def identify(self):
@@ -210,6 +236,7 @@ class uploader(object):
 # Parse commandline arguments
 parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
 parser.add_argument('--port', action="store", required=True, help="Serial port to which the SiK radio is attached.")
+parser.add_argument('--autosync', action="store_true", help="automatically put radio into update mode if needed")
 parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
 args = parser.parse_args()
 
@@ -218,7 +245,7 @@ fw = firmware(args.firmware)
 
 # Connect to the device and identify it
 up = uploader(args.port)
-up.check()
+up.check(args.autosync)
 id, freq = up.identify()
 print("board %x  freq %x" % (id, freq))
 
