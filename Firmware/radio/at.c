@@ -48,7 +48,7 @@ bool		at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
 static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
-static void	at_s(void) __reentrant;
+static void	at_s(void);
 static void	at_ampersand(void);
 
 #pragma save
@@ -254,7 +254,7 @@ at_error(void)
 static void
 at_i(void)
 {
-	uint16_t	val;
+	__pdata uint16_t	val;
 
 	switch (at_cmd[3]) {
 	case '\0':
@@ -276,7 +276,7 @@ at_i(void)
 	case '5': {
 		enum ParamID id;
 		// convenient way of showing all parameters
-		for (id=0; id<PARAM_MAX; id++) {
+		for (id = 0; id < PARAM_MAX; id++) {
 			printf("%s=%d\n", param_name(id), (unsigned)param_get(id));
 		}
 		return;
@@ -291,10 +291,10 @@ at_i(void)
 static void
 at_s(void)
 {
-	uint8_t		idx;
-	uint8_t		sreg;
-	uint16_t	val;
-	uint8_t		c;
+	__pdata uint8_t		idx;
+	__pdata uint8_t		sreg;
+	__pdata uint16_t	val;
+	__pdata uint8_t		c;
 
 	// get the register number first
 	sreg = 0;

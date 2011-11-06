@@ -55,7 +55,7 @@ enum SerialSpeed {
         BNOCHANGE
 };
 
-/// Set the serial device speed. 
+/// Set the serial device speed.
 ///
 /// Since this typically depends on chip-specific register tweaking,
 /// this function must be supplied by external code.

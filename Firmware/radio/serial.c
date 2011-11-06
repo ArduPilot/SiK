@@ -64,7 +64,7 @@ volatile bool			tx_idle;
 // FIFO insert/remove operations
 //
 // Note that these are nominally interrupt-safe as only one of each
-// buffer's end pointer is adjusted by either of interrupt or regular 
+// buffer's end pointer is adjusted by either of interrupt or regular
 // mode code.  This is violated if printing from interrupt context,
 // which should generally be avoided when possible.
 //
@@ -157,8 +157,8 @@ serial_write(uint8_t c)
 }
 
 static void
-_serial_write(uint8_t c) __critical
-{
+_serial_write(uint8_t c)
+__critical {
 
 	// if we have space to store the character
 	if (BUF_NOT_FULL(tx)) {
@@ -173,8 +173,8 @@ _serial_write(uint8_t c) __critical
 }
 
 bool
-serial_write_buf(__xdata uint8_t *buf, uint8_t count) __critical
-{
+serial_write_buf(__xdata uint8_t *buf, uint8_t count)
+__critical {
 	if (serial_write_space() < count)
 		return false;
 
@@ -215,9 +215,9 @@ serial_restart(void)
 }
 
 uint8_t
-serial_read(void) __critical
-{
-	uint8_t		c;
+serial_read(void)
+__critical {
+	register uint8_t	c;
 
 	if (BUF_NOT_EMPTY(rx)) {
 		BUF_REMOVE(rx, c);
@@ -229,8 +229,8 @@ serial_read(void) __critical
 }
 
 bool
-serial_read_buf(__xdata uint8_t *buf, uint8_t count) __critical
-{
+serial_read_buf(__xdata uint8_t *buf, uint8_t count)
+__critical {
 	if (serial_read_available() < count)
 		return false;
 

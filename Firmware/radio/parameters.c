@@ -113,9 +113,9 @@ param_get(enum ParamID param)
 bool
 param_load()
 {
-	uint8_t		d;
-	uint8_t		i;
-	uint8_t		sum;
+	__pdata uint8_t		d;
+	__pdata uint8_t		i;
+	__pdata uint8_t		sum;
 
 	// initialise checksum
 	sum = 0;
@@ -143,9 +143,9 @@ param_load()
 void
 param_save()
 {
-	uint8_t		d;
-	uint8_t		i;
-	uint8_t		sum;
+	__pdata uint8_t		d;
+	__pdata uint8_t		i;
+	__pdata uint8_t		sum;
 
 	// tag parameters with the current format
 	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
@@ -170,7 +170,7 @@ param_save()
 void
 param_default(void)
 {
-	uint8_t	i;
+	__pdata uint8_t	i;
 
 	// set all parameters to their default values
 	for (i = 0; i < PARAM_MAX; i++) {
@@ -181,7 +181,7 @@ param_default(void)
 enum ParamID
 param_id(char *name)
 {
-	uint8_t i;
+	__pdata uint8_t i;
 
 	for (i = 0; i < PARAM_MAX; i++) {
 		if (!strcmp(name, parameter_info[i].name))

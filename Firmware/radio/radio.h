@@ -60,7 +60,7 @@
 
 /// System clock frequency
 ///
-/// @todo This is standard for the Si1000 if running off the internal 
+/// @todo This is standard for the Si1000 if running off the internal
 ///       oscillator, but we should have a way to override it.
 #define SYSCLK	24500000UL
 

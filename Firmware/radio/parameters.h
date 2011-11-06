@@ -50,8 +50,8 @@ enum ParamID {
         PARAM_NODE_ID,			// this node's ID
         PARAM_PEER_ID,			// peer node's ID (if paired)
         PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-	PARAM_DEVIATION,                // TRX_DEVIATION
-	PARAM_BANDWIDTH,                // RX_BAND_WIDTH
+        PARAM_DEVIATION,                // TRX_DEVIATION
+        PARAM_BANDWIDTH,                // RX_BAND_WIDTH
 
         PARAM_MAX			// must be last
 };
@@ -102,11 +102,11 @@ extern const char *__code param_name(enum ParamID param);
 ///
 /// @return			True if parameters were successfully loaded.
 ///
-extern bool param_load(void) __reentrant;
+extern bool param_load(void);
 
 /// Save parameters to the flash scratchpad.
 ///
-extern void param_save(void) __reentrant;
+extern void param_save(void);
 
 /// Reset parameters to default.
 ///

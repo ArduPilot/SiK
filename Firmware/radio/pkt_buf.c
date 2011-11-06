@@ -57,8 +57,8 @@ __xdata struct pbuf_queue	pbuf_queues[PBUF_MAX_QUEUES];
 void
 pbuf_init(void)
 {
-	PBufQueueIndex	queue_index;
-	PBufIndex		buffer_index;
+	__pdata PBufQueueIndex	queue_index;
+	__pdata PBufIndex	buffer_index;
 
 	// initialise all the packet buffer queues to empty
 	for (queue_index = 0; queue_index < PBUF_MAX_QUEUES; queue_index++) {
@@ -72,8 +72,8 @@ pbuf_init(void)
 }
 
 void
-pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index) __critical
-{
+pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index)
+__critical {
 	__xdata struct pbuf_queue *pq = &pbuf_queues[queue_index];
 	PBufIndex	hi;
 
@@ -92,8 +92,8 @@ pbuf_queue_add_head(PBufQueueIndex queue_index, PBufIndex buffer_index) __critic
 }
 
 void
-pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index) __critical
-{
+pbuf_queue_add_tail(PBufQueueIndex queue_index, PBufIndex buffer_index)
+__critical {
 	__xdata struct pbuf_queue *pq = &pbuf_queues[queue_index];
 	PBufIndex	ti;
 
@@ -131,8 +131,8 @@ pbuf_queue_remove(PBufQueueIndex queue_index, PBufIndex previous_index, PBufInde
 }
 
 PBufIndex
-pbuf_queue_remove_head(PBufQueueIndex queue_index) __critical
-{
+pbuf_queue_remove_head(PBufQueueIndex queue_index)
+__critical {
 	PBufIndex	hi;
 
 	// get the first buffer

@@ -31,7 +31,7 @@
 ///
 /// Early startup code.
 /// This file *must* be linked first for interrupt vector generation and main() to work.
-/// XXX this may no longer be the case - it may be sufficient for the interrupt vectors 
+/// XXX this may no longer be the case - it may be sufficient for the interrupt vectors
 /// to be located in the same file as main()
 ///
 
@@ -78,13 +78,13 @@ static void hardware_init(void);
 
 /// Initialise the radio and bring it online.
 ///
-static void radio_init(void) __reentrant;
+static void radio_init(void);
 
 // a simple transparent serial implementation
 static void transparent_serial_loop(void)
 {
 	for (;;) {
-		uint8_t		rlen;
+		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
 
 		// if we received something via the radio, turn around and send it out the serial port
@@ -116,7 +116,7 @@ static void transparent_serial_loop(void)
 void
 main(void)
 {
-	PHY_STATUS	s;
+	__pdata PHY_STATUS	s;
 
 	// Stash board info from the bootloader before we let anything touch
 	// the SFRs.
@@ -161,7 +161,7 @@ panic(char *fmt, ...)
 static void
 hardware_init(void)
 {
-	uint16_t	i;
+	__pdata uint16_t	i;
 
 	// Disable the watchdog timer
 	PCA0MD	&= ~0x40;
@@ -221,8 +221,8 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	PHY_STATUS	s;
-	uint32_t	freq;
+	__pdata PHY_STATUS	s;
+	__pdata uint32_t	freq;
 
 	// Do generic PHY initialisation
 	s = rtPhyInit();
@@ -252,8 +252,8 @@ radio_init(void)
 	rtPhySet(TRX_FREQUENCY,		freq);
 	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
 	rtPhySet(TRX_DATA_RATE,		 40000UL);	// air data rate (baud)
-	rtPhySet(TRX_DEVIATION,		 param_get(PARAM_DEVIATION)*1000UL);
-	rtPhySet(RX_BAND_WIDTH,		 param_get(PARAM_BANDWIDTH)*1000UL);
+	rtPhySet(TRX_DEVIATION,		 param_get(PARAM_DEVIATION) * 1000UL);
+	rtPhySet(RX_BAND_WIDTH,		 param_get(PARAM_BANDWIDTH) * 1000UL);
 
 	// And intilise the radio with them.
 	s = rtPhyInitRadio();
