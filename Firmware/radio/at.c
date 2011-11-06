@@ -51,6 +51,8 @@ static void	at_i(void);
 static void	at_s(void) __reentrant;
 static void	at_ampersand(void);
 
+#pragma save
+#pragma nooverlay
 void
 at_input(uint8_t c) __using(1)
 {
@@ -96,6 +98,7 @@ at_input(uint8_t c) __using(1)
 		break;
 	}
 }
+#pragma restore
 
 // +++ detector state machine
 //
@@ -120,6 +123,8 @@ at_input(uint8_t c) __using(1)
 __data uint8_t	at_plus_state;
 __data uint8_t	at_plus_counter = ATP_COUNT_1S;
 
+#pragma save
+#pragma nooverlay
 void
 at_plus_detector(uint8_t c) __using(1)
 {
@@ -153,7 +158,10 @@ at_plus_detector(uint8_t c) __using(1)
 		break;
 	}
 }
+#pragma restore
 
+#pragma save
+#pragma nooverlay
 void
 at_timer(void)
 {
@@ -186,6 +194,7 @@ at_timer(void)
 		}
 	}
 }
+#pragma restore
 
 void
 at_command(void)
