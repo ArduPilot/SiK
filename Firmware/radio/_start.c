@@ -120,14 +120,15 @@ main(void)
 	g_board_frequency = BOARD_FREQUENCY_REG;
 	g_board_bl_version = BOARD_BL_VERSION_REG;
 
-	// Do hardware initialisation.
-	hardware_init();
-
-	// try to load parameters; set them to defaults if that fails
+	// try to load parameters; set them to defaults if that fails.
+	// this is done before hardware_init() to get the serial speed
 	// XXX default parameter selection should be based on board info
 	//
 	if (!param_load())
 		param_default();
+
+	// Do hardware initialisation.
+	hardware_init();
 
 	// do radio initialisation
 	radio_init();
