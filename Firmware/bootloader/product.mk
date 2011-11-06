@@ -31,7 +31,7 @@
 VERSION		 =	1
 PRODUCT		 =	bootloader.$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-PRODUCT_INSTALL = $(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT).$(frequency).hex)				
+PRODUCT_INSTALL	 =	$(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT).$(frequency).hex)				
 
 CFLAGS		+=	-DBL_VERSION=$(VERSION)
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
