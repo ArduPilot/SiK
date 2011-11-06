@@ -84,19 +84,6 @@ flash_load_keys(void)
 	FLKEY = 0xf1;
 }
 
-/// Erases a page in flash
-///
-/// @param	address		Address within the page to be erased.
-///
-static void
-flash_erase_page(uint16_t address)
-{
-	flash_load_keys();
-	PSCTL = 0x03;				// set PSWE and PSEE
-	*(uint8_t __xdata *)address = 0xff;	// do the page erase
-	PSCTL = 0x00;				// disable PSWE/PSEE
-}
-
 void
 flash_erase_app(void)
 {
@@ -104,7 +91,10 @@ flash_erase_app(void)
 
 	// start with the signature so that a partial erase will fail the signature check on startup
 	for (address = FLASH_INFO_PAGE - FLASH_PAGE_SIZE; address >= FLASH_APP_START; address -= FLASH_PAGE_SIZE) {
-		flash_erase_page(address);
+		flash_load_keys();
+		PSCTL = 0x03;				// set PSWE and PSEE
+		*(uint8_t __xdata *)address = 0xff;	// do the page erase
+		PSCTL = 0x00;				// disable PSWE/PSEE
 	}
 }
 

@@ -55,10 +55,6 @@
 //
 static void	sync_response(void);
 
-// Read a 16-bit unsigned quantity in little-endian form
-//
-static uint16_t	get_uint16(void);
-
 // Initialise the Si1000 and board hardware
 //
 static void	hardware_init(void);
@@ -150,7 +146,8 @@ bootloader(void)
 			break;
 
 		case PROTO_LOAD_ADDRESS:	// set address
-			address = get_uint16();
+			address = cin();
+			address |= (uint16_t)cin() << 8;
 			if (cin() != PROTO_EOC)
 				goto cmd_bad;
 			break;
@@ -209,20 +206,6 @@ sync_response(void)
 {
 	cout(PROTO_INSYNC);	// "in sync"
 	cout(PROTO_OK);		// "OK"
-}
-
-static uint16_t
-get_uint16(void)
-{
-	uint16_t	val;
-
-	val = cin();
-	val |= (uint16_t)cin() << 8;
-
-	trace(val & 0xff);
-	trace(val >> 8);
-
-	return val;
 }
 
 // Do minimal hardware init required for bootloader
