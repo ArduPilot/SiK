@@ -110,7 +110,7 @@ class uploader(object):
 		self.__getSync()
 
 	# send the CHIP_ERASE command and wait for the bootloader to become ready
-	def __erase(self, erase_params = FALSE):
+	def __erase(self, erase_params = False):
 		self.__send(uploader.CHIP_ERASE 
 				+ uploader.EOC)
 		self.__getSync()
