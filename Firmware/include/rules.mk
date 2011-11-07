@@ -72,7 +72,7 @@ DEPFLAGS	 =	-MM $(CFLAGS)
 
 #
 # Assembly source/objects must come first to ensure startup files
-# can be in front.  Sort by name to guarantee ordering.
+# can be in front.
 #
 ASRCS		+=	$(sort $(wildcard $(PRODUCT_DIR)/*.asm))
 OBJS		+=	$(patsubst $(PRODUCT_DIR)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
