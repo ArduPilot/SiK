@@ -61,9 +61,11 @@ __at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
 /// Lock byte
 ///
 /// We explicitly initialise the lock byte to prevent code in the high
-/// page from overwriting it.
+/// page from overwriting it, and clear the LSB to lock the first page
+/// of flash.  This has the side-effect of locking the high page as well;
+/// combined this means that the bootloader code cannot be overwritten.
 ///
-__at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xff;
+__at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
 
 /// Patchbay for the board frequency byte.
 /// This is patched in the hex file(s) after building.

@@ -18,4 +18,4 @@ if [ ! -r $1 ]; then
 	exit 1
 fi
 
-${EWF} --port=USB --mode=c2 --run --hex $1
+${EWF} --port=USB --mode=c2 --eraseall --run --hex $1
