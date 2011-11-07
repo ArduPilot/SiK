@@ -74,20 +74,13 @@
 
 #define PROTO_EOC		0x20	// end of command
 #define PROTO_GET_SYNC		0x21	// NOP for re-establishing sync
-#define PROTO_GET_DEVICE	0x22	// get device ID bytes
-					//    <reply_data>: <board ID><frequency code>
+#define PROTO_GET_DEVICE	0x22	// get device ID bytes,                       <reply_data>: <board ID><frequency code>
 #define PROTO_CHIP_ERASE	0x23	// erase program area
-#define PROTO_LOAD_ADDRESS	0x24	// set next programming address
-					//    <command_data>: <lowbyte><highbyte>
-#define PROTO_PROG_FLASH	0x25	// write byte at address + increment address
-					//    <command_data>: <databyte>
-#define PROTO_READ_FLASH	0x26	// read byte at address + increment address
-					//    <reply_data>: <databyte>
-#define PROTO_PROG_MULTI	0x27	// write up to PROTO_PROG_MULTI_MAX bytes at address + increment
-					//    <command_data>: <count><databytes>
-#define PROTO_READ_MULTI	0x28	// read up to 255 bytes at address + increment
-					//    <command_data>: <count>
-					//    <reply_data>: <databytes>
+#define PROTO_LOAD_ADDRESS	0x24	// set next programming address               <command_data>: <lowbyte><highbyte>
+#define PROTO_PROG_FLASH	0x25	// write byte at address + increment address  <command_data>: <databyte>
+#define PROTO_READ_FLASH	0x26	// read byte at address + increment address   <reply_data>: <databyte>
+#define PROTO_PROG_MULTI	0x27	// write bytes at address + increment         <command_data>: <count><databytes>
+#define PROTO_READ_MULTI	0x28	// read bytes at address + increment          <command_data>: <count>,  <reply_data>: <databytes>
 #define PROTO_PARAM_ERASE	0x29	// erase the parameter flash
 
 #define PROTO_REBOOT		0x30	// reboot the board & start the app

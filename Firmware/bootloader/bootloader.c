@@ -66,7 +66,7 @@ bool		app_valid;
 
 // Bootloader entry logic
 //
-void 
+void
 bl_main(void)
 {
 	uint8_t		i;
@@ -87,10 +87,10 @@ bl_main(void)
 	// Do some simple debouncing on the bootloader-entry
 	// strap/button.
 	debounce_count = 0;
-    	for (i = 0; i < 255; i++) {
-    		if (BUTTON_BOOTLOAD == BUTTON_ACTIVE)
-    			debounce_count++;
-    	}
+	for (i = 0; i < 255; i++) {
+		if (BUTTON_BOOTLOAD == BUTTON_ACTIVE)
+			debounce_count++;
+	}
 
 	// Turn on the LED to indicate the bootloader is running
 	LED_BOOTLOADER = LED_ON;
@@ -103,11 +103,11 @@ bl_main(void)
 	// - The boot-to-bootloader strap/button is not in the active state.
 	//
 	if (!(reset_source & (1 << 6)) && app_valid) {
-	    	
-	    	// The button was not entirely pressed - play it safe
-	    	// and boot the app.
-	    	//
-	    	if (debounce_count < 200) {
+
+		// The button was not entirely pressed - play it safe
+		// and boot the app.
+		//
+		if (debounce_count < 200) {
 
 			// Stash board info in SFRs for the application to find later
 			//

@@ -93,10 +93,10 @@ __critical {
 
 	ni = pbufQueues[qi].head;
 	pbufNext[pi] = ni;
-	pbufQueues[qi].head = pi;	
-	if (ni == PBUF_NULL)				
+	pbufQueues[qi].head = pi;
+	if (ni == PBUF_NULL)
 		pbufQueues[qi].tail = pi;
-}							
+}
 
 /// Add a pbuf to the tail of a queue
 ///
@@ -105,18 +105,18 @@ __critical {
 ///
 static inline void
 pbuf_queue_add_tail(PBufQueueIndex qi, PBufIndex pi)
-__critical {						
+__critical {
 	PBufIndex	li;
 
 	pbufNext[pi] = PBUF_NULL;
 	li = pbufQueues[qi].tail;
 	pbufQueues[qi].tail = pi;
-	if (li == PBUF_NULL) {				
+	if (li == PBUF_NULL) {
 		pbufQueues[qi].head = pi;
-	} else {					
+	} else {
 		pbufNext[li] = pi;
-	}						
-}							
+	}
+}
 
 /// Remove a pbuf from the head of a queue
 ///
@@ -126,7 +126,7 @@ __critical {
 ///
 static inline PBufIndex
 pbuf_queue_remove_head(PBufQueueIndex qi)
-__critical {						
+__critical {
 	PBufIndex	hi, ni;
 
 	hi = pbufQueues[qi].head;
