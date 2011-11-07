@@ -45,12 +45,6 @@
 #include "flash.h"
 #include "util.h"
 
-#if 0
-# define trace(_x)	cout(_x);
-#else
-# define trace(_x)
-#endif
-
 // Send the default 'in sync' response.
 //
 static void	sync_response(void);
@@ -59,141 +53,177 @@ static void	sync_response(void);
 //
 static void	hardware_init(void);
 
+// Bootloader protocol handler
+//
+static void	bootloader(void);
+
+
 uint8_t __data	buf[PROTO_PROG_MULTI_MAX];
+
+uint8_t		reset_source;
+uint8_t		debounce_count;
+bool		app_valid;
 
 // Bootloader entry logic
 //
-void
-bootloader(void)
+void 
+bl_main(void)
 {
-	uint8_t		c;
-	uint16_t	address;
-	uint8_t		count, i;
+	uint8_t		i;
 
 	// Do early hardware init
 	hardware_init();
 
-	// Turn on the LED to indicate the bootloader is running
+	// Work out why we reset
 	//
-	LED_BOOTLOADER = LED_ON;
+	// Note that if PORSF (bit 1) is set, all other bits are invalid.
+	reset_source = RSTSRC;
+	if (reset_source & (1 << 1))
+		reset_source = 1 << 1;
 
-	trace('R');
-	trace(RSTSRC);
+	// Check for app validity
+	app_valid = flash_app_valid();
+
+	// Do some simple debouncing on the bootloader-entry
+	// strap/button.
+	debounce_count = 0;
+    	for (i = 0; i < 255; i++) {
+    		if (BUTTON_BOOTLOAD == BUTTON_ACTIVE)
+    			debounce_count++;
+    	}
+
+	// Turn on the LED to indicate the bootloader is running
+	LED_BOOTLOADER = LED_ON;
 
 	// Boot the application if:
 	//
-	// - the reset was not due to a flash error
-	// - the signature is valid
-	// - the boot-to-bootloader strap/button is not in the active state
+	// - The reset was not due to a flash error (the app uses this to reboot
+	//   into the bootloader)
+	// - The signature is valid.
+	// - The boot-to-bootloader strap/button is not in the active state.
 	//
-	if (!(RSTSRC & (1 << 6)) &&
-	    flash_app_valid() &&
-	    (BUTTON_BOOTLOAD != BUTTON_ACTIVE)) {
+	if (!(reset_source & (1 << 6)) && app_valid) {
+	    	
+	    	// The button was not entirely pressed - play it safe
+	    	// and boot the app.
+	    	//
+	    	if (debounce_count < 200) {
 
-		// Stash board info in SFRs for the application to find later
-		//
-		BOARD_FREQUENCY_REG = board_frequency;
-		BOARD_BL_VERSION_REG = BL_VERSION;
+			// Stash board info in SFRs for the application to find later
+			//
+			BOARD_FREQUENCY_REG = board_frequency;
+			BOARD_BL_VERSION_REG = BL_VERSION;
 
-		// And jump
-		((void (__code *)(void))FLASH_APP_START)();
+			// And jump
+			((void (__code *)(void))FLASH_APP_START)();
+		}
 	}
 
-	trace('B');
-
-	// Main bootloader loop
+	// Bootloader loop
 	//
-	address = 0;
-	for (;;) {
+	for (;;)
+		bootloader();
+}
 
-		// Wait for a command byte
-		LED_BOOTLOADER = LED_ON;
+// Bootloader protocol logic
+//
+static void
+bootloader(void)
+{
+	uint8_t		c;
+	uint8_t		count, i;
+	static uint16_t	address;
+
+	// Wait for a command byte
+	LED_BOOTLOADER = LED_ON;
+	c = cin();
+	LED_BOOTLOADER = LED_OFF;
+
+	// common tests for EOC
+	switch (c) {
+	case PROTO_GET_SYNC:
+	case PROTO_GET_DEVICE:
+	case PROTO_CHIP_ERASE:
+	case PROTO_PARAM_ERASE:
+	case PROTO_READ_FLASH:
+	case PROTO_DEBUG:
+		if (cin() != PROTO_EOC)
+			goto cmd_bad;
+	}
+
+	switch (c) {
+
+	case PROTO_GET_SYNC:		// sync
+		break;
+
+	case PROTO_GET_DEVICE:
+		cout(BOARD_ID);
+		cout(board_frequency);
+		break;
+
+	case PROTO_CHIP_ERASE:		// erase the program area
+		flash_erase_app();
+		break;
+
+	case PROTO_PARAM_ERASE:
+		flash_erase_scratch();
+		break;
+
+	case PROTO_LOAD_ADDRESS:	// set address
+		address = cin();
+		address |= (uint16_t)cin() << 8;
+		if (cin() != PROTO_EOC)
+			goto cmd_bad;
+		break;
+
+	case PROTO_PROG_FLASH:		// program byte
 		c = cin();
-		LED_BOOTLOADER = LED_OFF;
+		if (cin() != PROTO_EOC)
+			goto cmd_bad;
+		flash_write_byte(address++, c);
+		break;
 
-		// common tests for EOC
-		switch (c) {
-		case PROTO_GET_SYNC:
-		case PROTO_GET_DEVICE:
-		case PROTO_CHIP_ERASE:
-		case PROTO_PARAM_ERASE:
-		case PROTO_READ_FLASH:
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
-		}
+	case PROTO_READ_FLASH:		// readback byte
+		c = flash_read_byte(address++);
+		cout(c);
+		break;
 
-		switch (c) {
+	case PROTO_PROG_MULTI:
+		count = cin();
+		if (count > sizeof(buf))
+			goto cmd_bad;
+		for (i = 0; i < count; i++)
+			buf[i] = cin();
+		if (cin() != PROTO_EOC)
+			goto cmd_bad;
+		for (i = 0; i < count; i++)
+			flash_write_byte(address++, buf[i]);
+		break;
 
-		case PROTO_GET_SYNC:		// sync
-			break;
-
-		case PROTO_GET_DEVICE:
-			cout(BOARD_ID);
-			cout(board_frequency);
-			break;
-
-		case PROTO_CHIP_ERASE:		// erase the program area
-			flash_erase_app();
-			break;
-
-		case PROTO_PARAM_ERASE:
-			flash_erase_scratch();
-			break;
-
-		case PROTO_LOAD_ADDRESS:	// set address
-			address = cin();
-			address |= (uint16_t)cin() << 8;
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
-			break;
-
-		case PROTO_PROG_FLASH:		// program byte
-			c = cin();
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
-			flash_write_byte(address++, c);
-			break;
-
-		case PROTO_READ_FLASH:		// readback byte
+	case PROTO_READ_MULTI:
+		count = cin();
+		if (cin() != PROTO_EOC)
+			goto cmd_bad;
+		for (i = 0; i < count; i++) {
 			c = flash_read_byte(address++);
 			cout(c);
-			break;
-
-		case PROTO_PROG_MULTI:
-			count = cin();
-			if (count > sizeof(buf))
-				goto cmd_bad;
-			for (i = 0; i < count; i++)
-				buf[i] = cin();
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
-			for (i = 0; i < count; i++)
-				flash_write_byte(address++, buf[i]);
-			break;
-
-		case PROTO_READ_MULTI:
-			count = cin();
-			if (cin() != PROTO_EOC)
-				goto cmd_bad;
-			for (i = 0; i < count; i++) {
-				c = flash_read_byte(address++);
-				cout(c);
-			}
-			break;
-
-		case PROTO_REBOOT:
-			// generate a software reset, which will boot to the application
-			RSTSRC |= (1 << 4);
-
-		default:
-			goto cmd_bad;
 		}
-cmd_ok:
-		sync_response();
-		continue;
-cmd_bad:
-		continue;
+		break;
+
+	case PROTO_REBOOT:
+		// generate a software reset, which should boot to the application
+		RSTSRC |= (1 << 4);
+
+	case PROTO_DEBUG:
+		// XXX reserved for ad-hoc debugging as required
+		break;
+
+	default:
+		goto cmd_bad;
 	}
+	sync_response();
+cmd_bad:
+	return;
 }
 
 static void

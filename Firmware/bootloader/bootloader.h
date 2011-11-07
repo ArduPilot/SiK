@@ -90,7 +90,9 @@
 					//    <reply_data>: <databytes>
 #define PROTO_PARAM_ERASE	0x29	// erase the parameter flash
 
-#define PROTO_REBOOT		0x30	// complet the program cycle, reboot the board & start the app
+#define PROTO_REBOOT		0x30	// reboot the board & start the app
+
+#define PROTO_DEBUG		0x31	// emit debug information - format not defined
 
 #define PROTO_PROG_MULTI_MAX	64	// maximum PROG_MULTI size
 #define PROTO_READ_MULTI_MAX	255	// size of the size field

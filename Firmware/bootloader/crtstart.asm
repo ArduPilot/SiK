@@ -94,11 +94,11 @@ __offset = 0x400		; XXX would be nice to get this from somewhere
 	.ds	5
 
 	;; bootloader entry
-	.globl	_bootloader
+	.globl	_bl_main
 
 	.area	GSINIT0	(CODE)
 
 L__start:
 	mov	sp, #L__stack - 1
-	lcall	_bootloader
+	lcall	_bl_main
 	sjmp	.

@@ -41,12 +41,6 @@
 #include "flash.h"
 #include "util.h"
 
-#if 0
-# define trace(_x)	cout(_x);
-#else
-# define trace(_x)
-#endif
-
 // Place all code in the high page
 //
 #pragma codeseg HIGHCSEG
@@ -75,8 +69,6 @@ __at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
 char
 flash_app_valid(void)
 {
-	trace(flash_signature[0]);
-	trace(flash_signature[1]);
 	return (flash_signature[0] == FLASH_SIG0) && (flash_signature[1] == FLASH_SIG1);
 }
 
