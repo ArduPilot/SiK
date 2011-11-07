@@ -48,6 +48,26 @@
 typedef	uint8_t		PBufIndex;	///< packet buffer 'pointer', index into global buffer array(s)
 typedef uint8_t		PBufQueueIndex;	///< packet buffer queue 'pointer'
 typedef uint8_t		PBufDataCount;	///< count of bytes in a packet buffer
+typedef __xdata uint8_t *PBufDataPtr;	///< pointer to pbuf data
+
+/// packet buffer queue
+///
+typedef struct {
+	PBufIndex	head;
+	PBufIndex	tail;
+} PBufQueue;
+
+/// packet buffer data pool
+///
+extern __xdata uint8_t		pbufData[PBUF_POOL_SIZE][PBUF_MAX_SIZE];
+
+/// Pointers to the first and last pbuf in each queue.
+///
+extern __pdata PBufQueue	pbufQueues[PBUF_MAX_QUEUES];
+
+/// Forward linkage pointers for each pbuf
+///
+extern __pdata PBufIndex	pbufNext[PBUF_POOL_SIZE];
 
 /// initialise the pbuf system
 ///
@@ -58,38 +78,108 @@ extern void		pbuf_init(void);
 // Note that as the queues are singly linked, it is not possible to remove a buffer from the
 // tail of a queue.
 //
-extern void		pbuf_queue_add_head(PBufQueueIndex qi, PBufIndex pi);
-extern void		pbuf_queue_add_tail(PBufQueueIndex qi, PBufIndex pi);
-extern PBufIndex	pbuf_queue_remove_head(PBufQueueIndex qi);
-extern bool		pbuf_queue_empty(PBufQueueIndex qi);
+// XXX TBD: these are inlines to avoid making function calls when they're used in
+// interrupt context.  Should we have non-inline versions for other code's use?
 
-// copy data from an arbitrary buffer to a pbuf
-extern void		pbuf_copy_to_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
+/// Add a pbuf to the head of a queue
+///
+/// @param _queue_index		The queue to add the packet to.
+/// @param _packet_index	The packet to add.
+///
+static inline void
+pbuf_queue_add_head(PBufQueueIndex qi, PBufIndex pi)
+__critical {
+	PBufIndex	ni;
 
-// copy data from a pbuf to an arbitrary buffer
-extern void 		pbuf_copy_from_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
+	ni = pbufQueues[qi].head;
+	pbufNext[pi] = ni;
+	pbufQueues[qi].head = pi;	
+	if (ni == PBUF_NULL)				
+		pbufQueues[qi].tail = pi;
+}							
 
-// returns a pointer in the data buffer for a given packet buffer
-extern __xdata uint8_t	*pbuf_data_ptr(PBufIndex idx, PBufDataCount ofs);
+/// Add a pbuf to the tail of a queue
+///
+/// @param _queue_index		The queue to add the packet to.
+/// @param _packet_index	The packet to add.
+///
+static inline void
+pbuf_queue_add_tail(PBufQueueIndex qi, PBufIndex pi)
+__critical {						
+	PBufIndex	li;
 
-// Packet buffer accessor macros.
-//
-// Use these macros and packet buffer indices rather than pointers to buffers
-// to access fields in the packet buffer header.  This will make it easier to
-// e.g. separate the fields at a later stage.
-//
-#define pbuf_getbuf()		pbuf_queue_remove_head(PBUF_QUEUE_FREE);
-#define pbuf_putbuf(_idx)	pbuf_queue_add_head(PBUF_QUEUE_FREE, _idx);
+	pbufNext[pi] = PBUF_NULL;
+	li = pbufQueues[qi].tail;
+	pbufQueues[qi].tail = pi;
+	if (li == PBUF_NULL) {				
+		pbufQueues[qi].head = pi;
+	} else {					
+		pbufNext[li] = pi;
+	}						
+}							
 
-#define	pbuf_size(_idx)		pbuf_pool[_idx].data_size
-#define	pbuf_next(_idx)		pbuf_pool[_idx].next
+/// Remove a pbuf from the head of a queue
+///
+/// @param _queue_index		The queue to remove a packet from
+/// @param _head_index		Returns the packet index that was removed,
+///				or PBUF_NULL if the queue was empty.
+///
+static inline PBufIndex
+pbuf_queue_remove_head(PBufQueueIndex qi)
+__critical {						
+	PBufIndex	hi, ni;
 
-struct pbuf {
-	PBufIndex	next;			// next packet buffer in queue
-	PBufDataCount	data_size;		// number of bytes in the packet
-};
-extern __xdata struct pbuf		pbuf_pool[];
+	hi = pbufQueues[qi].head;
+	if (hi != PBUF_NULL) {
+		ni = pbufNext[hi];
+		pbufQueues[qi].head = ni;
+		if (ni == PBUF_NULL)
+			pbufQueues[qi].tail = ni;
+	}
+	return hi;
+}
 
+/// Test whether a queue is empty.
+///
+static inline bool
+pbuf_queue_empty(PBufQueueIndex qi)
+{
+	return pbufQueues[qi].head == PBUF_NULL;
+}
 
+/// Return a pointer to a pbuf's data buffer
+///
+static inline PBufDataPtr
+pbuf_data_ptr(PBufIndex pi)
+{
+	return &pbufData[pi][0];
+}
+
+/// Return the next pbuf in a chain
+///
+static inline PBufIndex
+pbuf_next(PBufIndex pi)
+{
+	return pbufNext[pi];
+}
+
+/// Free a pbuf
+///
+static inline void
+pbuf_free(PBufIndex pi)
+{
+	pbuf_queue_add_head(PBUF_QUEUE_FREE, pi);
+}
+
+/// Get a pbuf
+///
+static inline PBufIndex
+pbuf_alloc(void)
+{
+	return pbuf_queue_remove_head(PBUF_QUEUE_FREE);
+}
+
+extern void	pbuf_copy_to_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
+extern void	pbuf_copy_from_pbuf(PBufIndex idx, uint8_t ofs, __xdata uint8_t *ptr, PBufDataCount cnt);
 
 #endif // PTK_BUF_H_
