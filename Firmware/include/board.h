@@ -63,12 +63,16 @@
 /// BUTTON_ACTIVE	[required]
 ///	The value that BUTTON will have when the bootloader should stop.
 ///
-/// HW_INIT		[required
-///	A code fragment called at early startup time that configures
+/// HW_INIT		[required]
+///	A code fragment called at early bootloader startup that configures
 ///	the SoC for board-specific operation.
 ///	- configures LED GPIO(s)
 ///	- configures button GPIO(s)
 ///	- configures INT0 for the radio interrupt
+///
+/// HW_INIT_APPLICATION	[optional]
+///	A code fragment called at application startup time to adjust any
+///	settings that vary between the bootloader and application.
 ///
 /// EZRADIOPRO_OSC_CAP_VALUE	[required]
 ///     Radio oscillator load capacitor value.

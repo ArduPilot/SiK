@@ -76,6 +76,16 @@
 ///       10 <-> 5V to 3.3V converter <-> VDD_MCU
 ///
 ///
+/// @page hm_trp_hookup Connecting the HM-TRP Board
+///
+/// If you are making your own adapter board for the HM-TRP, note that
+/// whilst the stock firmware requires the ENABLE pin be tied low,
+/// it is a flow control input to the SiK radio firmware.
+///
+/// Also, the CONFIG pin is a flow control output, and a series resistor
+/// of at least 33 ohms must be placed in series with it to avoid damage
+/// to the Si1000 when it is jumpered low to force bootloader entry.
+///
 
 #ifndef _BOARD_HM_TRP_H_
 #define _BOARD_HM_TRP_H_
@@ -103,8 +113,12 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 #define LED_ACTIVITY	LED_RED
 #define BUTTON_BOOTLOAD	PIN_CONFIG
 
+// Serial flow control
+#define SERIAL_RTS	PIN_ENABLE	// always an input
+#define SERIAL_CTS	PIN_CONFIG	// input in bootloader, output in app
+
 // board-specific hardware config
-#define HW_INIT						\
+#define HW_INIT							\
 	do {							\
 		/* GPIO config */				\
 		P0SKIP	|=  0x0c;		/* pins */	\
@@ -117,6 +131,13 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 		IT0	 = 0;	/* INT0 level triggered */	\
 	} while(0)
 
+// application/board-specific hardware config
+#define HW_INIT_APPLICATION					\
+	do {							\
+		SFRPAGE	 =  CONFIG_PAGE;			\
+		P0DRV	|=  0x04;		/* CTS */	\
+		SFRPAGE	 =  LEGACY_PAGE;			\
+	} while(0)
 
 // EzRadio / rtPhy definitions
 // Note that the HM-TRP deviates from SiLabs' appnotes in the wiring of the RF switch
