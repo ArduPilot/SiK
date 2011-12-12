@@ -23,7 +23,8 @@ In the short term, the radio firmware will be expanded to do simple transparent 
  - A [SiLabs USB debug adapter](http://www.silabs.com/products/mcu/Pages/USBDebug.aspx).
  - [SDCC](http://sdcc.sourceforge.net/), version 3.1.0 or later.
  - [EC2Tools](http://github.com/MikeSmith/ec2-new)
- - [Mono](http://www.mono-project.com/) to build and run the firmware updater.
+ - [Mono](http://www.mono-project.com/) to build and run the GUI firmware updater.
+ - Python to run the command-line firmware updater.
 
 Note that at this time, building on Windows systems is not supported.  If someone wants to contribute and maintain the necessary pieces that would be wonderful.
 
@@ -39,7 +40,7 @@ Building the SiK firmware generates bootloaders and firmware for each of the sup
 
 The SiLabs debug adapter can be used to flash both the bootloader and the firmware. Alternatively, once the bootloader has been flashed the updater application can be used to update the firmware (it's faster than flashing, too).
 
-The `Firmware/tools/upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.  Further details on the connections required to flash a specific board should be found in the `Firmware/include/board_*.h` header for the board in question.
+The `Firmware/tools/ec2upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.  Further details on the connections required to flash a specific board should be found in the `Firmware/include/board_*.h` header for the board in question.
 
 To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.  You will need to get the board into the bootloader; how you do this varies from board to board, but it will normally involve either holding down a button or pulling a pin high or low when the board is reset or powered on. 
 
@@ -49,6 +50,8 @@ For the supported boards:
  - RF50-DEMO: hold the ENTER button down and press RST.
 
 The uploader application contains a bidirectional serial console that can be used for interacting with the radio firmware.
+
+As an alternative to the Mono uploader, there is a Python-based command-line upload tool in `Firmware/tools/uploader.py`.
 
 ## Supporting New Boards
 
