@@ -94,10 +94,10 @@ class uploader(object):
 	def __getSync(self):
 		c = self.__recv()
 		if (c != self.INSYNC):
-			raise RuntimeError("unexpected 0x%x instead of INSYNC" % ord(c))
+			raise RuntimeError("unexpected 0x%x instead of INSYNC (0x%x)" % (ord(c), ord(self.INSYNC)))
 		c = self.__recv()
 		if (c != self.OK):
-			raise RuntimeError("unexpected 0x%x instead of OK" % ord(c))
+			raise RuntimeError("unexpected 0x%x instead of OK (0x%x)" % (ord(c), ord(self.OK)))
 
 	# attempt to get back into sync with the bootloader
 	def __sync(self):
