@@ -77,8 +77,9 @@ class uploader(object):
 	PROG_MULTI_MAX	= 32 # 64 causes serial hangs with some USB-serial adapters
 	READ_MULTI_MAX	= 255
 
-	def __init__(self, portname):
+	def __init__(self, portname, atbaudrate=115200):
 		self.port = serial.Serial(portname, 115200, timeout=5)
+		self.atbaudrate = atbaudrate
 
 	def __send(self, c):
 		#print("send " + binascii.hexlify(c))
@@ -193,21 +194,26 @@ class uploader(object):
 		'''use AT&UPDATE to put modem in update mode'''
 		import fdpexpect, time
 		ser = fdpexpect.fdspawn(self.port.fileno(), logfile=sys.stdout)
+		if self.atbaudrate != 115200:
+			self.port.setBaudrate(self.atbaudrate)
 		ser.send('\r\n')
 		time.sleep(1)
 		ser.send('+++')
-		time.sleep(1)
+		try:
+			ser.expect('OK', timeout=2)
+		except fdpexpect.TIMEOUT:
+			# may already be in AT mode
+			pass
 		ser.send('\r\nATI\r\n')
 		try:
-			ser.expect(['OK','SiK .* on HM-TRP'], timeout=2)
+			ser.expect('SiK .* on HM-TRP', timeout=2)
 		except fdpexpect.TIMEOUT:
 			return
-		ser.send('AT&UPDATE\r\n')
-		# swallow any remaininig characters
-		try:
-			ser.expect('B!', timeout=2)
-		except fdpexpect.TIMEOUT:
-			return
+		ser.send('\r\nAT&UPDATE\r\n')
+		time.sleep(2)
+		if self.atbaudrate != 115200:
+			self.port.setBaudrate(115200)
+
 
 	# verify whether the bootloader is present and responding
 	def check(self):
@@ -241,6 +247,7 @@ class uploader(object):
 parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
 parser.add_argument('--port', action="store", required=True, help="Serial port to which the SiK radio is attached.")
 parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
+parser.add_argument("--baudrate", type=int, default=115200, help='baud rate')
 parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
 args = parser.parse_args()
 
@@ -248,7 +255,7 @@ args = parser.parse_args()
 fw = firmware(args.firmware)
 
 # Connect to the device and identify it
-up = uploader(args.port)
+up = uploader(args.port, atbaudrate=args.baudrate)
 up.check()
 id, freq = up.identify()
 print("board %x  freq %x" % (id, freq))
