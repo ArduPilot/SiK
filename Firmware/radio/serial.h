@@ -41,9 +41,6 @@
 
 /// Supported serial speeds
 ///
-/// Note that this list is missing 19200, which is difficult to generate
-/// from the 24.5MHz oscillator clock.
-///
 enum SerialSpeed {
         B9600,
         B19200,
