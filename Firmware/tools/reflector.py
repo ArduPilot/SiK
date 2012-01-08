@@ -20,10 +20,12 @@ port = serial.Serial(device, opts.baudrate, timeout=0,
 
 while True:
     try:
-        buf = port.read()
+        buf = port.read(100)
         if opts.echo:
             sys.stdout.write(buf)
+            sys.stdout.flush()
         port.write(buf)
+        port.flush()
     except KeyboardInterrupt:
         sys.exit(0)
         

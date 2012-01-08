@@ -32,10 +32,13 @@ while True:
         if opts.crlf:
             buf += '\r\n'
         port.write(buf)
+        port.flush()
         if opts.echo:
             try:
-                buf = port.read()
-                sys.stdout.write(buf)
+                buf = port.read(100)
+                if len(buf) > 0:
+                    sys.stdout.write(buf)
+                    sys.stdout.flush()
             except Exception:
                 pass
         if opts.delay > 0.0:
