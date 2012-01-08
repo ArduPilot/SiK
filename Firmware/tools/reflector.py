@@ -21,6 +21,8 @@ port = serial.Serial(device, opts.baudrate, timeout=0,
 while True:
     try:
         buf = port.read(100)
+        if len(buf) == 0:
+            continue
         if opts.echo:
             sys.stdout.write(buf)
             sys.stdout.flush()
