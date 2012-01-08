@@ -105,11 +105,10 @@ PHY_STATUS    rtPhyIdle (void);
 PHY_STATUS    rtPhyShutDown (void);
 PHY_STATUS    rtPhyReStart (void);
 PHY_STATUS    rtPhyTx (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
-void 	      rtPhyTxStart (U8);
+void 	      rtPhyTxStart (U8, U8);
 PHY_STATUS    rtPhyRxOn (void);
 PHY_STATUS    rtPhyRxOff (void);
-PHY_STATUS    rtPhyGetRxPacket (U8*, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
-void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
+PHY_STATUS    rtPhyGetRxPacket (U8*, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE), U8*);
 //------------------------------------------------------------------------------------------------
 // Public primitive phy function prototypes
 //------------------------------------------------------------------------------------------------

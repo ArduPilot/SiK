@@ -48,6 +48,8 @@ SEGMENT_VARIABLE (RxErrors, U8, BUFFER_MSPACE);
 //
 //-----------------------------------------------------------------------------
 SEGMENT_VARIABLE (RxIntBuffer[64], U8, BUFFER_MSPACE);
+static uint8_t RxHeader;
+
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -465,14 +467,17 @@ PHY_STATUS rtPhyInitRadio (void)
    phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_2, 0x0);
    phyWrite(EZRADIOPRO_RX_FIFO_CONTROL, 0x3F);
 
-   // 2 sync bytes
-   phyWrite(EZRADIOPRO_HEADER_CONTROL_2, 2<<1);
+   // 2 sync bytes and 1 header bytes
+   phyWrite(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_1BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
    phyWrite(EZRADIOPRO_SYNC_WORD_3, 0x2D);
    phyWrite(EZRADIOPRO_SYNC_WORD_2, 0xD4);
 
    // use GFSK and FIFO
    phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 
 	    EZRADIOPRO_FIFO_MODE | EZRADIOPRO_MODTYP_GFSK);
+
+   // no header checking
+   phyWrite(EZRADIOPRO_HEADER_CONTROL_1, EZRADIOPRO_DISABLE_HFILTERS);
 
    PhyInitialized = 1;
 
@@ -933,10 +938,11 @@ S8 PhySetTxPower (S8 power)
   start transmitting bytes from the TX FIFO
  */
 #ifndef RECEIVER_ONLY
-void rtPhyTxStart (U8 length)
+void rtPhyTxStart (U8 length, U8 txheader)
 {
    U8 status;
 
+   phyWrite(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
    phyWrite(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
    // enable just the packet sent IRQ
@@ -950,9 +956,8 @@ void rtPhyTxStart (U8 length)
    // start TX
    phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
 
-   // wait on IRQ with 70 MS timeout
-   // time out based on longest message and lowest data rate
-   delay_set(70);
+   // wait on IRQ with 20 MS timeout
+   delay_set(20);
    while (true) {
 	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
@@ -1168,7 +1173,7 @@ void phyWriteFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
 //
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
-PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8, BUFFER_MSPACE))
+PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8, BUFFER_MSPACE), U8 *rxheader)
 {
    __bit restoreEX0;
    U8 i;
@@ -1184,6 +1189,7 @@ PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8,
          rxBuffer[i]=RxIntBuffer[i];
       }
 
+      *rxheader = RxHeader;
       RxPacketReceived = 0;
 
       EX0 = restoreEX0;
@@ -1224,6 +1230,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
       {
 	      RxPacketReceived = 1;
 	      RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
+	      RxHeader       = RxIntPhyRead(EZRADIOPRO_RECEIVED_HEADER_3);
 	      if (RxPacketLength != 0) {
 		      RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
 	      }
