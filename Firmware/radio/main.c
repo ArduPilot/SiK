@@ -70,7 +70,10 @@ __pdata uint8_t			g_board_bl_version;	///< from the bootloader
 
 /// Counter used by delay_msec
 ///
-uint8_t		delay_counter;
+static volatile uint8_t delay_counter;
+
+// used to force partial packet tx
+static volatile uint8_t	tick_counter;
 
 /// Configure the Si1000 for operation.
 ///
@@ -79,6 +82,50 @@ static void hardware_init(void);
 /// Initialise the radio and bring it online.
 ///
 static void radio_init(void);
+
+/*
+  send some bytes out the radio, coalescing into uniformly sized
+  chunks when possible
+ */
+static void send_bytes(uint8_t len, __xdata uint8_t *buf)
+{
+	static uint8_t tx_fifo_bytes;
+	static uint8_t tx_last_tick;
+	uint8_t ofs = 0;
+
+	// send in 64 byte chunks
+#define TX_CHUNK_SIZE 64
+
+	// try to send as TX_CHUNK_SIZE packets. This keeps the
+	// overhead down, as every chunk also gets 2 sync bytes
+	// and a CRC
+	while (len + tx_fifo_bytes >= TX_CHUNK_SIZE) {
+		uint8_t chunk = TX_CHUNK_SIZE - tx_fifo_bytes;
+		phyWriteFIFO(chunk, &buf[ofs]);
+		rtPhyTxStart(TX_CHUNK_SIZE);
+		rtPhyRxOn();
+		
+		len -= chunk;
+		ofs += chunk;
+		tx_fifo_bytes = 0;
+	}
+	if (len > 0) {
+		phyWriteFIFO(len, &buf[ofs]);
+		if (tx_fifo_bytes == 0) {
+			tx_last_tick = tick_counter;
+		}
+		tx_fifo_bytes += len;
+	}
+
+	// don't let stray bytes sit around for more than 0.05 seconds
+	if (tx_fifo_bytes != 0 && 
+	    ((uint8_t)(tick_counter - tx_last_tick) > 5)) {
+		rtPhyTxStart(tx_fifo_bytes);			
+		rtPhyRxOn();
+		tx_fifo_bytes = 0;
+	}
+}
+
 
 // a simple transparent serial implementation
 static void transparent_serial_loop(void)
@@ -91,8 +138,12 @@ static void transparent_serial_loop(void)
 		//
 		if (RxPacketReceived) {
 			LED_ACTIVITY = LED_ON;
-			rtPhyGetRxPacket(&rlen, rbuf);
-			serial_write_buf(rbuf, rlen);
+			rlen = RxPacketLength;
+			if (rlen != 0) {
+				if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+					serial_write_buf(rbuf, rlen);
+				}
+			}
 			LED_ACTIVITY = LED_OFF;
 		}
 
@@ -102,16 +153,19 @@ static void transparent_serial_loop(void)
 			LED_ACTIVITY = LED_ON;
 			if (rlen > sizeof(rbuf))
 				rlen = sizeof(rbuf);
-			serial_read_buf(rbuf, rlen);
-			rtPhyTx(rlen, rbuf);
-			rtPhyRxOn();
+			if (serial_read_buf(rbuf, rlen)) {
+				send_bytes(rlen, rbuf);
+			}
 			LED_ACTIVITY = LED_OFF;
+		} else {
+			send_bytes(0, rbuf);			
 		}
 
 		// give the AT command processor a chance to handle a command
 		at_command();
 	}
 }
+
 
 void
 main(void)
@@ -251,7 +305,7 @@ radio_init(void)
 	// Set PHY parameters for the initial operational state
 	rtPhySet(TRX_FREQUENCY,		freq);
 	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
-	rtPhySet(TRX_DATA_RATE,		 40000UL);	// air data rate (baud)
+	rtPhySet(TRX_DATA_RATE,		 80000UL);	// air data rate (baud)
 	rtPhySet(TRX_DEVIATION,		 param_get(PARAM_DEVIATION) * 1000UL);
 	rtPhySet(RX_BAND_WIDTH,		 param_get(PARAM_BANDWIDTH) * 1000UL);
 
@@ -292,6 +346,8 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 
 	// call the AT parser tick
 	at_timer();
+
+	tick_counter++;
 
 	// update the delay counter
 	if (delay_counter > 0)

@@ -452,6 +452,22 @@ PHY_STATUS rtPhyInitRadio (void)
    // RX Modem Settings
    UpdateRxModemSettings();
 
+   // enable automatic packet handling and CRC
+   phyWrite(EZRADIOPRO_DATA_ACCESS_CONTROL, 
+	    EZRADIOPRO_ENPACTX | 
+	    EZRADIOPRO_ENCRC | 
+	    EZRADIOPRO_CRC_16 |
+	    EZRADIOPRO_ENPACRX);
+
+   phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_1, 0x3F);
+   phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_2, 0x0);
+   phyWrite(EZRADIOPRO_RX_FIFO_CONTROL, 0x3F);
+
+   // 2 sync bytes
+   phyWrite(EZRADIOPRO_HEADER_CONTROL_2, 2<<1);
+   phyWrite(EZRADIOPRO_SYNC_WORD_3, 0x2D);
+   phyWrite(EZRADIOPRO_SYNC_WORD_2, 0xD4);
+
    PhyInitialized = 1;
 
    return PHY_STATUS_SUCCESS;
@@ -907,65 +923,47 @@ S8 PhySetTxPower (S8 power)
    return power;
 }
 
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-// PHY_STATUS rtPhyHopChannel (U8 channel)
-// {
-//    phyWrite(EZRADIOPRO_FREQUENCY_HOPPING_CHANNEL_SELECT, channel);
-//    return PHY_STATUS_SUCCESS;
-// }
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
+/*
+  start transmitting bytes from the TX FIFO
+ */
 #ifndef RECEIVER_ONLY
-U8 rtPhyTx (U8 length, VARIABLE_SEGMENT_POINTER(txBuffer, U8, BUFFER_MSPACE))
+void rtPhyTxStart (U8 length)
 {
    U8 status;
 
    phyWrite(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
-
-   phyWriteFIFO(length, txBuffer);
 
    // enable just the packet sent IRQ
    phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
    phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
    // read Si4432 interrupts to clear
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
+   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
 
    // start TX
-   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_TXON|EZRADIOPRO_XTON));
+   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
 
    // wait on IRQ with 70 MS timeout
    // time out based on longest message and lowest data rate
    delay_set(70);
-   while(IRQ)
-   {
-      if(delay_expired())
-       return PHY_STATUS_ERROR_RADIO_XTAL;
+   while (true) {
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
+	   if (status & EZRADIOPRO_IPKSENT) {
+		   return;
+	   }
+	   if (delay_expired()) {
+		   return;
+	   }
    }
-
-   return 0;
+   
 }
 #endif
 
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
+/*
+  put us back in receive state
+ */
 #ifndef TRANSMITTER_ONLY
 PHY_STATUS rtPhyRxOn (void)
 {
@@ -982,13 +980,14 @@ PHY_STATUS rtPhyRxOn (void)
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 
    // enable RX
-   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
+   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_RXON);
 
    EX0 = 1;
 
    return PHY_STATUS_SUCCESS;
 }
 #endif
+
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -1217,10 +1216,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
    {
       if(RxPacketReceived==0)
       {
-         RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
+	      RxPacketReceived = 1;
+	      RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
 	      if (RxPacketLength != 0) {
-            RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
-		      RxPacketReceived = 1;
+		      RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
 	      }
       }
       else
