@@ -51,7 +51,7 @@ __code const struct parameter_info {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
 	{"NODEID",		0},
 	{"PEERID",		0},
-	{"SERIAL_SPEED",	B115200},
+	{"SERIAL_SPEED",	B57600}, // match APM default
 	{"DEVIATION",		20},
 	{"BANDWIDTH",		80},
 };
