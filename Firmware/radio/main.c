@@ -74,6 +74,7 @@ static volatile uint8_t delay_counter;
 
 // used to force partial packet tx
 static volatile uint8_t	tick_counter;
+static bool am_odd_transmitter;
 
 /// Configure the Si1000 for operation.
 ///
@@ -82,6 +83,67 @@ static void hardware_init(void);
 /// Initialise the radio and bring it online.
 ///
 static void radio_init(void);
+
+/*
+  synchronise tx windows
+
+  we receive a 8 bit header with each packet. The lower 7 bits are the 
+  senders tick_counter modulo 128. The top bit is set if the sender
+  thinks he is the 'odd' sender
+
+  This gives us a very simple TDM system
+ */
+static void sync_tx_windows(uint8_t rxheader)
+{
+	uint8_t other_tick_counter;
+
+	// update if we are the odd transmitter
+	am_odd_transmitter = ((rxheader & 0x80) == 0);
+
+	// extract out the senders tick count
+	rxheader &= 0x7F;
+
+	// work out the other ends tick counter. Assume the packet
+	// took about 1 tick to arrive
+	other_tick_counter = (rxheader + 1) & 0x7F;
+
+	// possibly update our tick_counter
+	if ((tick_counter & 0x7F) != other_tick_counter) {
+		EA = 0;
+		tick_counter = (tick_counter & 0x80) | other_tick_counter;
+		EA = 1;
+	}
+}
+
+/*
+  see if its our turn to transmit
+
+  We have 16 transmit slots. The first 7 are for the odd
+  transmitter. The 8th one is a sync slot (no transmitter).  The next
+  7 are for the even transmitter, and the final one is another sync
+  slot
+ */
+static bool tx_window_open(void)
+{
+	uint8_t tick = tick_counter & 0xF;
+	if (am_odd_transmitter) {
+		return (tick < 7);
+	}
+	// even transmitter
+	return (tick > 7 && tick < 15);
+}
+
+/*
+  calculate the 8 bit transmit header
+ */
+static uint8_t tx_header(void)
+{
+	uint8_t txheader = tick_counter&0x7F;
+	if (am_odd_transmitter) {
+		txheader |= 0x80;
+	}
+	return txheader;
+}
 
 /*
   send some bytes out the radio, coalescing into uniformly sized
@@ -102,7 +164,7 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	while (len + tx_fifo_bytes >= TX_CHUNK_SIZE) {
 		uint8_t chunk = TX_CHUNK_SIZE - tx_fifo_bytes;
 		phyWriteFIFO(chunk, &buf[ofs]);
-		rtPhyTxStart(TX_CHUNK_SIZE);
+		rtPhyTxStart(TX_CHUNK_SIZE, tx_header());
 		rtPhyRxOn();
 		
 		len -= chunk;
@@ -117,10 +179,10 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 		tx_fifo_bytes += len;
 	}
 
-	// don't let stray bytes sit around for more than 0.05 seconds
+	// don't let stray bytes sit around for more than 0.01 seconds
 	if (tx_fifo_bytes != 0 && 
-	    ((uint8_t)(tick_counter - tx_last_tick) > 5)) {
-		rtPhyTxStart(tx_fifo_bytes);			
+	    ((uint8_t)(tick_counter - tx_last_tick) > 0)) {
+		rtPhyTxStart(tx_fifo_bytes, tx_header());
 		rtPhyRxOn();
 		tx_fifo_bytes = 0;
 	}
@@ -137,14 +199,27 @@ static void transparent_serial_loop(void)
 		// if we received something via the radio, turn around and send it out the serial port
 		//
 		if (RxPacketReceived) {
+			uint8_t rxheader;
 			LED_ACTIVITY = LED_ON;
 			rlen = RxPacketLength;
 			if (rlen != 0) {
-				if (rtPhyGetRxPacket(&rlen, rbuf) == PHY_STATUS_SUCCESS) {
+				if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
 					serial_write_buf(rbuf, rlen);
+					sync_tx_windows(rxheader);
 				}
 			}
 			LED_ACTIVITY = LED_OFF;
+		}
+
+		// give the AT command processor a chance to handle a command
+		at_command();
+
+
+		if (!tx_window_open()) {
+			// our transmit window isn't open, don't check
+			// for serial bytes as we wouldn't have
+			// anywhere to put them			
+			continue;
 		}
 
 		// if we have received something via serial, transmit it
@@ -160,9 +235,6 @@ static void transparent_serial_loop(void)
 		} else {
 			send_bytes(0, rbuf);			
 		}
-
-		// give the AT command processor a chance to handle a command
-		at_command();
 	}
 }
 
