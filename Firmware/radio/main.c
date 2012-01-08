@@ -95,7 +95,7 @@ static void radio_init(void);
  */
 static void sync_tx_windows(uint8_t rxheader)
 {
-	uint8_t other_tick_counter;
+	uint8_t other_tick_counter, my_tick_counter;
 
 	// update if we are the odd transmitter
 	am_odd_transmitter = ((rxheader & 0x80) == 0);
@@ -105,10 +105,12 @@ static void sync_tx_windows(uint8_t rxheader)
 
 	// work out the other ends tick counter. Assume the packet
 	// took about 1 tick to arrive
-	other_tick_counter = (rxheader + 1) & 0x7F;
+	other_tick_counter = rxheader & 0x7F;
+	my_tick_counter = tick_counter & 0x7F;
 
 	// possibly update our tick_counter
-	if ((tick_counter & 0x7F) != other_tick_counter) {
+	if (my_tick_counter != other_tick_counter &&
+	    my_tick_counter != (other_tick_counter+1)&0x7F) {
 		EA = 0;
 		tick_counter = (tick_counter & 0x80) | other_tick_counter;
 		EA = 1;
