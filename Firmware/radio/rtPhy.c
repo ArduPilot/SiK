@@ -459,6 +459,8 @@ PHY_STATUS rtPhyInitRadio (void)
 	    EZRADIOPRO_CRC_16 |
 	    EZRADIOPRO_ENPACRX);
 
+   // set FIFO limits to max (we are not using FIFO
+   // overflow/underflow interrupts)
    phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_1, 0x3F);
    phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_2, 0x0);
    phyWrite(EZRADIOPRO_RX_FIFO_CONTROL, 0x3F);
@@ -467,6 +469,10 @@ PHY_STATUS rtPhyInitRadio (void)
    phyWrite(EZRADIOPRO_HEADER_CONTROL_2, 2<<1);
    phyWrite(EZRADIOPRO_SYNC_WORD_3, 0x2D);
    phyWrite(EZRADIOPRO_SYNC_WORD_2, 0xD4);
+
+   // use GFSK and FIFO
+   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 
+	    EZRADIOPRO_FIFO_MODE | EZRADIOPRO_MODTYP_GFSK);
 
    PhyInitialized = 1;
 
