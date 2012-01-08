@@ -78,7 +78,8 @@ class uploader(object):
 	READ_MULTI_MAX	= 255
 
 	def __init__(self, portname, atbaudrate=115200):
-		self.port = serial.Serial(portname, 115200, timeout=5)
+		print("Connecting to %s" % portname)
+		self.port = serial.Serial(portname, 115200, timeout=2)
 		self.atbaudrate = atbaudrate
 
 	def __send(self, c):
@@ -99,6 +100,7 @@ class uploader(object):
 		c = self.__recv()
 		if (c != self.OK):
 			raise RuntimeError("unexpected 0x%x instead of OK (0x%x)" % (ord(c), ord(self.OK)))
+		return True
 
 	# attempt to get back into sync with the bootloader
 	def __sync(self):
@@ -108,7 +110,7 @@ class uploader(object):
 		self.port.flushInput()
 		self.__send(uploader.GET_SYNC 
 				+ uploader.EOC)
-		self.__getSync()
+		return self.__getSync()
 
 	# send the CHIP_ERASE command and wait for the bootloader to become ready
 	def __erase(self, erase_params = False):
@@ -196,33 +198,44 @@ class uploader(object):
 		ser = fdpexpect.fdspawn(self.port.fileno(), logfile=sys.stdout)
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(self.atbaudrate)
+		print("Trying autosync")
 		ser.send('\r\n')
-		time.sleep(1)
+		time.sleep(1.0)
 		ser.send('+++')
 		try:
-			ser.expect('OK', timeout=2)
+			ser.expect('OK', timeout=1.1)
 		except fdpexpect.TIMEOUT:
 			# may already be in AT mode
 			pass
-		ser.send('\r\nATI\r\n')
-		try:
-			ser.expect('SiK .* on HM-TRP', timeout=2)
-		except fdpexpect.TIMEOUT:
-			return
-		ser.send('\r\nAT&UPDATE\r\n')
-		time.sleep(2)
+		for i in range(5):
+			ser.send('\r\nATI\r\n')
+			try:
+				ser.expect('SiK .* on HM-TRP', timeout=0.5)
+				ser.send('\r\n')
+				time.sleep(0.2)
+				ser.send('AT&UPDATE\r\n')
+				time.sleep(0.7)
+				if self.atbaudrate != 115200:
+					self.port.setBaudrate(115200)
+				return True
+			except fdpexpect.TIMEOUT:
+				continue
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(115200)
+		return False
 
 
 	# verify whether the bootloader is present and responding
 	def check(self):
-		try:
-			self.__sync()
-			return
-		except RuntimeError:
-			self.autosync()
-		self.__sync()
+		for i in range(3):
+			try:
+				if self.__sync():
+					print("Got sync")
+					return True
+				self.autosync()
+			except RuntimeError:
+				self.autosync()
+		return False
 
 	def identify(self):
 		self.__send(uploader.GET_DEVICE
@@ -256,7 +269,9 @@ fw = firmware(args.firmware)
 
 # Connect to the device and identify it
 up = uploader(args.port, atbaudrate=args.baudrate)
-up.check()
+if not up.check():
+	print("Failed to contact bootloader")
+	sys.exit(1)
 id, freq = up.identify()
 print("board %x  freq %x" % (id, freq))
 
