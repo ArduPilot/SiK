@@ -18,6 +18,7 @@ port = serial.Serial(device, opts.baudrate, timeout=0,
                      dsrdtr=False, rtscts=False, xonxoff=False)
 
 ser = fdpexpect.fdspawn(port.fileno(), maxread=1)
+ser.delaybeforesend = 0
 print("Connecting (use ^] to exit)")
 ser.interact()
 
