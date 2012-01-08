@@ -324,10 +324,10 @@ hardware_init(void)
 	// Clear the radio interrupt state
 	IE0	 = 0;
 
-	// 100Hz timer tick using timer3
+	// 200Hz timer tick using timer3
 	// Derive timer values from SYSCLK, just for laughs.
-	TMR3RLL	 = (65536UL - ((SYSCLK / 12) / 100)) & 0xff;
-	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 100)) >> 8) & 0xff;
+	TMR3RLL	 = (65536UL - ((SYSCLK / 12) / 200)) & 0xff;
+	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 200)) >> 8) & 0xff;
 	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
 	EIE1	|= 0x80;
 
@@ -429,8 +429,11 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 void
 delay_set(uint16_t msec)
 {
-	// note that this limits the delay to ~2550ms.
-	delay_counter = (msec + 9) / 10;
+	if (msec >= 1250) {
+		delay_counter = 255;
+	} else {
+		delay_counter = (msec + 4) / 5;
+	}
 }
 
 bool
