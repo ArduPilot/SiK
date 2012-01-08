@@ -120,19 +120,19 @@ static void sync_tx_windows(uint8_t rxheader)
 /*
   see if its our turn to transmit
 
-  We have 16 transmit slots. The first 7 are for the odd
-  transmitter. The 8th one is a sync slot (no transmitter).  The next
-  7 are for the even transmitter, and the final one is another sync
+  We have 8 transmit slots. The first 3 are for the odd
+  transmitter. The 4th one is a sync slot (no transmitter).  The next
+  3 are for the even transmitter, and the final one is another sync
   slot
  */
 static bool tx_window_open(void)
 {
-	uint8_t tick = tick_counter & 0xF;
+	uint8_t tick = tick_counter % 8;
 	if (am_odd_transmitter) {
-		return (tick < 7);
+		return (tick < 3);
 	}
 	// even transmitter
-	return (tick > 7 && tick < 15);
+	return (tick > 3 && tick < 7);
 }
 
 /*
@@ -157,8 +157,8 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	static uint8_t tx_last_tick;
 	uint8_t ofs = 0;
 
-	// send in 64 byte chunks
-#define TX_CHUNK_SIZE 64
+	// send in TX_CHUNK_SIZE byte chunks
+#define TX_CHUNK_SIZE 32
 
 	// try to send as TX_CHUNK_SIZE packets. This keeps the
 	// overhead down, as every chunk also gets 2 sync bytes
@@ -180,10 +180,9 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 		}
 		tx_fifo_bytes += len;
 	}
-
 	// don't let stray bytes sit around for more than 0.01 seconds
 	if (tx_fifo_bytes != 0 && 
-	    ((uint8_t)(tick_counter - tx_last_tick) > 0)) {
+	    ((uint8_t)(tick_counter - tx_last_tick) > 1)) {
 		rtPhyTxStart(tx_fifo_bytes, tx_header());
 		rtPhyRxOn();
 		tx_fifo_bytes = 0;
@@ -206,8 +205,8 @@ static void transparent_serial_loop(void)
 			rlen = RxPacketLength;
 			if (rlen != 0) {
 				if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
-					serial_write_buf(rbuf, rlen);
 					sync_tx_windows(rxheader);
+					serial_write_buf(rbuf, rlen);
 				}
 			}
 			LED_ACTIVITY = LED_OFF;
