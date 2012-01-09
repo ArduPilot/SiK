@@ -1006,6 +1006,7 @@ void rtPhyTxStart (U8 length, U8 txheader)
 		   return;
 	   }
 	   if (delay_expired()) {
+		   rtPhyClearTxFIFO();
 		   return;
 	   }
    }
@@ -1302,6 +1303,22 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
    RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
 }
 #endif
+
+
+/*
+  clear the send FIFO
+ */
+void rtPhyClearTxFIFO(void)
+{
+	uint8_t status;
+	status = RxIntPhyRead(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
+	status |= EZRADIOPRO_FFCLRTX;
+	RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
+	status &= ~EZRADIOPRO_FFCLRTX;
+	RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
+}
+
+
 //=============================================================================
 //
 // spi Functions for Rx Receiver interrupt

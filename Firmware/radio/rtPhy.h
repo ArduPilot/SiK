@@ -109,6 +109,7 @@ void 	      rtPhyTxStart (U8, U8);
 PHY_STATUS    rtPhyRxOn (void);
 PHY_STATUS    rtPhyRxOff (void);
 PHY_STATUS    rtPhyGetRxPacket (U8*, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE), U8*);
+void          rtPhyClearTxFIFO(void);
 //------------------------------------------------------------------------------------------------
 // Public primitive phy function prototypes
 //------------------------------------------------------------------------------------------------
