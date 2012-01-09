@@ -461,6 +461,9 @@ radio_init(void)
 	s = rtPhyInitRadio(param_get(PARAM_AIR_SPEED)*1000UL);
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInitRadio failed: %u", s);
+
+	// setup network ID
+	rtPhySetNetId(param_get(PARAM_NETID));
 }
 
 ///
