@@ -49,11 +49,9 @@ __code const struct parameter_info {
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
-	{"NODEID",		0},
-	{"PEERID",		0},
 	{"SERIAL_SPEED",	B57600}, // match APM default
-	{"DEVIATION",		20},
-	{"BANDWIDTH",		80},
+	{"AIR_SPEED",		128},
+	{"NETID",		0},
 };
 
 /// In-RAM parameter store.

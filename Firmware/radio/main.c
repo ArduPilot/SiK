@@ -456,10 +456,7 @@ radio_init(void)
 	// Set PHY parameters for the initial operational state
 	rtPhySet(TRX_FREQUENCY,		freq);
 	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
-	rtPhySet(TRX_DATA_RATE,		 80000UL);	// air data rate (baud)
-	rtPhySet(TRX_DEVIATION,		 param_get(PARAM_DEVIATION) * 1000UL);
-	rtPhySet(RX_BAND_WIDTH,		 param_get(PARAM_BANDWIDTH) * 1000UL);
-
+	
 	// And intilise the radio with them.
 	s = rtPhyInitRadio();
 	if (s != PHY_STATUS_SUCCESS)

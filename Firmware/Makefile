@@ -177,7 +177,5 @@ FMT		+= --exclude=Si1000_defs.h
 FMT		+= --exclude=compiler_defs.h
 FMT		+= --exclude=rtPhy.c
 FMT		+= --exclude=rtPhy.h
-FMT		+= --exclude=rtPhy_const.c
-FMT		+= --exclude=rtPhy_const.h
 FMT		+= --exclude=rtPhy_defs.h
 FMT		+= --exclude=printfl.c

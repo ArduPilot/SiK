@@ -47,16 +47,13 @@
 ///
 enum ParamID {
         PARAM_FORMAT = 0,		// Must always be parameter 0
-        PARAM_NODE_ID,			// this node's ID
-        PARAM_PEER_ID,			// peer node's ID (if paired)
         PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-        PARAM_DEVIATION,                // TRX_DEVIATION
-        PARAM_BANDWIDTH,                // RX_BAND_WIDTH
-
+	PARAM_AIR_SPEED,		// over the air baud rate
+	PARAM_NETID,			// network ID
         PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x15UL				///< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x16UL				///< current parameter format ID
 
 /// Parameter type.
 ///
