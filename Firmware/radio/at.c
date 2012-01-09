@@ -277,7 +277,7 @@ at_i(void)
 		enum ParamID id;
 		// convenient way of showing all parameters
 		for (id = 0; id < PARAM_MAX; id++) {
-			printf("%s=%d\n", param_name(id), (unsigned)param_get(id));
+			printf("S%d: %s=%d\n", id, param_name(id), (unsigned)param_get(id));
 		}
 		return;
 	}
