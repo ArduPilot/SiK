@@ -54,9 +54,7 @@ enum
 {
  TRX_FREQUENCY = 0,
  TRX_CHANNEL_SPACING,
- TRX_DEVIATION,
- TRX_DATA_RATE,
- RX_BAND_WIDTH
+ TRX_DATA_RATE
 };
 //------------------------------------------------------------------------------------------------
 // phy data structure typedef - must match enum above
@@ -65,9 +63,7 @@ typedef struct rtPhySettingsStruct
 {
  U32 TRxFrequency;
  U32 TRxChannelSpacing;
- U32 TRxDeviation;
  U32 TRxDataRate;
- U32 RxBandWidth;
 } rtPhySettingsStruct;
 //------------------------------------------------------------------------------------------------
 // phy status values
@@ -100,22 +96,17 @@ PHY_STATUS    rtPhyInit (void);          // called once after MCU reset
 PHY_STATUS    rtPhySet (U8, U32);
 PHY_STATUS    rtPhyGet (U32 *);
 PHY_STATUS    rtPhyInitRadio (void);
-PHY_STATUS    rtPhyStandby (void);
-PHY_STATUS    rtPhyIdle (void);
-PHY_STATUS    rtPhyShutDown (void);
-PHY_STATUS    rtPhyReStart (void);
-PHY_STATUS    rtPhyTx (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
+void          phyWriteFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
 void 	      rtPhyTxStart (U8, U8);
+void          rtPhyClearTxFIFO(void);
 PHY_STATUS    rtPhyRxOn (void);
 PHY_STATUS    rtPhyRxOff (void);
 PHY_STATUS    rtPhyGetRxPacket (U8*, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE), U8*);
-void          rtPhyClearTxFIFO(void);
 //------------------------------------------------------------------------------------------------
 // Public primitive phy function prototypes
 //------------------------------------------------------------------------------------------------
 void  phyWrite (U8, U8);
 U8    phyRead (U8);
-void  phyWriteFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
 //=================================================================================================
 //=================================================================================================
 #endif //RT_PHY_H

@@ -36,7 +36,6 @@
 //-----------------------------------------------------------------------------
 #include "board.h"
 #include "rtPhy.h"
-#include "rtPhy_const.h"
 #include "radio.h"
 //-----------------------------------------------------------------------------
 //
@@ -61,34 +60,16 @@ void  RxIntphyReadFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
 // API Functions
 //
 //=============================================================================
-rtPhySettingsStruct SEG_XDATA rtPhySettings;
-__bit PhyInitialized = 0;
+static rtPhySettingsStruct SEG_XDATA rtPhySettings;
+static __bit PhyInitialized = 0;
 
 //=============================================================================
 // local functions
 //=============================================================================
 U8    InitSoftwareReset(void);
-void  SetTimeOut (U16);
-void  ClearTimeOut (void);
 
 void  SetTRxFrequency (U32);
 void  SetTRxChannelSpacing  (U32);
-
-void  SetTxFrequencyDeviation (U32);
-void  SetTxDataRate (U32);
-
-void  UpdateRxModemSettings(void);
-U8    LookUpFilterIndex (U32);
-U32   CalcAFC_PullInRange(U32);
-void  SetAFC_Limit (U32);
-U16   CalcRxOverSamplingRatio (U8, U32);
-void  SetRxOverSamplingRatio (U16);
-U32   CalcClockRecoveryOffset (U8, U32);
-void  SetClockRecoveryOffset (U32);
-U16   CalcClockRecoveryTimingLoopGain (U32, U16, U32);
-void  SetClockRecoveryTimingLoopGain (U16);
-
-void InitConfigSettings(void);
 
 //-----------------------------------------------------------------------------
 // Function Name
@@ -141,6 +122,8 @@ PHY_STATUS rtPhyInit(void)
    }
    return PHY_STATUS_SUCCESS; // success
 }
+
+
 //-----------------------------------------------------------------------------
 // Function Name
 //    RadioInitSWReset()
@@ -192,6 +175,8 @@ U8 InitSoftwareReset(void)
 
    return PHY_STATUS_SUCCESS; // success
 }
+
+
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -231,90 +216,7 @@ PHY_STATUS rtPhyIdle(void)
       return PHY_STATUS_SUCCESS;
    }
 }
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-PHY_STATUS rtPhyStandby (void)
-{
-   U8 status;
 
-   // disable interrupts
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
-
-   // read Si4432 interrupts to clear
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-   // stop XTAL
-   phyWrite (EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, 0);
-
-   return PHY_STATUS_SUCCESS; // success
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-PHY_STATUS rtPhyShutDown (void)
-{
-   P2MDOUT |= 0x40;                    // Enable SDN push pull
-   SDN = 1;
-   PhyInitialized = 0;
-
-   return PHY_STATUS_SUCCESS; // success
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-PHY_STATUS rtPhyReStart(void)
-{
-   U8 status;
-
-   SDN = 0;
-
-   delay_msec(2);
-
-   // wait on IRQ with 25 MS timeout
-   delay_set(2);
-   while(IRQ)
-   {
-      if(delay_expired())
-         return PHY_STATUS_ERROR_RADIO_XTAL;
-   }
-
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-   if((status & EZRADIOPRO_IPOR)==0)
-   {
-      // radio needs a software reset
-      return InitSoftwareReset();
-   }
-   else if((status & EZRADIOPRO_ICHIPRDY)==0)
-   {
-      // disable POR interrupt
-      phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
-
-      // wait on IRQ with 2 MS timeout
-      delay_set(2);
-      while(IRQ)
-      {
-         if(delay_expired())
-            return PHY_STATUS_ERROR_RADIO_XTAL;
-      }
-   }
-   return PHY_STATUS_SUCCESS; // success
-}
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -340,6 +242,7 @@ PHY_STATUS rtPhySet (U8 addr, U32 value)
 
             return PHY_STATUS_SUCCESS;
          }
+
       // case 0x01:
       case (TRX_CHANNEL_SPACING):
          if (value > 2550000L)
@@ -352,49 +255,9 @@ PHY_STATUS rtPhySet (U8 addr, U32 value)
 
             return PHY_STATUS_SUCCESS;
          }
-      // case 0x02:
-      case (TRX_DEVIATION):
-         if (value >= 320000L)
-            return PHY_STATUS_ERROR_INVALID_VALUE;
-         else
-         {
-            rtPhySettings.TRxDeviation = value;
-            if(PhyInitialized)
-            {
-               SetTxFrequencyDeviation(value);
-               UpdateRxModemSettings();
-            }
+
+      case TRX_DATA_RATE:
             return PHY_STATUS_SUCCESS;
-         }
-
-      // case 0x03:
-      case (TRX_DATA_RATE):
-         if (value > 125000L)
-            return PHY_STATUS_ERROR_INVALID_VALUE;
-         else
-         {
-            rtPhySettings.TRxDataRate = value;
-            if(PhyInitialized)
-            {
-               SetTxDataRate(value);
-               UpdateRxModemSettings();
-            }
-
-            return PHY_STATUS_SUCCESS;
-         }
-
-      // case 0x04:
-      case (RX_BAND_WIDTH):
-         if (value > 620700000L)
-            return PHY_STATUS_ERROR_INVALID_VALUE;
-         else
-         {
-            rtPhySettings.RxBandWidth = value;
-            if(PhyInitialized)
-               UpdateRxModemSettings();
-
-            return PHY_STATUS_SUCCESS;
-         }
 
       default:
             return PHY_STATUS_ERROR_INVALID_ADDRESS;
@@ -415,7 +278,7 @@ PHY_STATUS rtPhyInitRadio (void)
    phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
    phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
-      // read Si4432 interrupts to clear
+   // read Si4432 interrupts to clear
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
    status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 
@@ -442,17 +305,10 @@ PHY_STATUS rtPhyInitRadio (void)
    //status = phyRead(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE);
    phyWrite(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, EZRADIOPRO_OSC_CAP_VALUE);
 
-
-   InitConfigSettings();
-
    //Init Radio registers using current settings
    // TRX Frequency & Modem Settings
    SetTRxFrequency(rtPhySettings.TRxFrequency);
    SetTRxChannelSpacing(rtPhySettings.TRxChannelSpacing);
-   SetTxFrequencyDeviation(rtPhySettings.TRxDeviation);
-   SetTxDataRate(rtPhySettings.TRxDataRate);
-   // RX Modem Settings
-   UpdateRxModemSettings();
 
    // enable automatic packet handling and CRC
    phyWrite(EZRADIOPRO_DATA_ACCESS_CONTROL, 
@@ -467,14 +323,14 @@ PHY_STATUS rtPhyInitRadio (void)
    phyWrite(EZRADIOPRO_TX_FIFO_CONTROL_2, 0x0);
    phyWrite(EZRADIOPRO_RX_FIFO_CONTROL, 0x3F);
 
+   // preamble setup
+   phyWrite(EZRADIOPRO_PREAMBLE_LENGTH, 0x0A); // 10 nibbles, 40 bits
+   phyWrite(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 0x28); //  5 nibbles, 20 chips, 10 bits
+
    // 2 sync bytes and 1 header bytes
    phyWrite(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_1BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
    phyWrite(EZRADIOPRO_SYNC_WORD_3, 0x2D);
    phyWrite(EZRADIOPRO_SYNC_WORD_2, 0xD4);
-
-   // use GFSK and FIFO
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 
-	    EZRADIOPRO_FIFO_MODE | EZRADIOPRO_MODTYP_GFSK);
 
    // no header checking
    phyWrite(EZRADIOPRO_HEADER_CONTROL_1, EZRADIOPRO_DISABLE_HFILTERS);
@@ -524,27 +380,7 @@ PHY_STATUS rtPhyInitRadio (void)
 
    return PHY_STATUS_SUCCESS;
 }
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void InitConfigSettings (void)
-{
-   U8 i;
-   U8 addr;
-   U8 value;
 
-  //Set the Radio Parameters from rtPhy_const
-   for(i = 0; i < NUMBER_OF_INIT_REGISTERS; i++)
-   {
-      addr = rtPhyInitRegisters[i];
-      value = rtPhyInitSettings[i];
-      phyWrite(addr, value);
-   }
-}
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -558,6 +394,8 @@ U32   divideWithRounding (U32 value, U32 divisor)
    value /= divisor;
    return value;
 }
+
+
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -597,6 +435,7 @@ void SetTRxFrequency (U32 frequency)
    phyWrite(EZRADIOPRO_NOMINAL_CARRIER_FREQUENCY_0, nominalCarrierFrequency.U8[LSB]);
 
 }
+
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -609,370 +448,6 @@ void   SetTRxChannelSpacing  (U32 channelSpacing)
    channelSpacing = divideWithRounding(channelSpacing, 10000);
 
    phyWrite(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, channelSpacing);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetTxFrequencyDeviation (U32 deviation)
-{
-   U8 txFrequencyDeviation;
-   U8 modulationControl2Mask;
-
-   deviation = divideWithRounding (deviation, 625);
-
-   txFrequencyDeviation = (U8)deviation;
-
-   if (deviation > 255)
-      modulationControl2Mask = 0x04;
-   else
-      modulationControl2Mask = 0x00;
-
-   phyWrite(EZRADIOPRO_FREQUENCY_DEVIATION, txFrequencyDeviation);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2,
-      (phyRead(EZRADIOPRO_MODULATION_MODE_CONTROL_2)|modulationControl2Mask));
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetTxDataRate (U32 dataRate)
-{
-   UU16  txDataRate;
-   U8    modulationControl1Mask;
-
-  if (dataRate < 30000)
-   {
-      // dataRate = dataRate * 2^21 / 10^6  : exceeds 32-bits
-      // dataRate = dataRate * 2^17 / 62500 : OK for 32 bit math
-      dataRate <<= 17;
-      dataRate = divideWithRounding (dataRate, 62500L);
-      modulationControl1Mask = 0x20; //set txdtrtscale
-   }
-   else
-   {
-      // dataRate = dataRate * 2^16 / 10^6   : exceeds 32-bits
-      // dataRate = dataRate * 2^15 / 500000 : OK for 32 bit math
-     dataRate <<= 15;
-     dataRate = divideWithRounding (dataRate, 500000L);
-     modulationControl1Mask = 0x00; //don't set txdtrtscale
-   }
-
-   txDataRate.U16 = (U16)dataRate;
-
-   // TX Modem Settings
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_1, txDataRate.U8[MSB]);
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_0, txDataRate.U8[LSB]);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_1,
-      (phyRead(EZRADIOPRO_MODULATION_MODE_CONTROL_1)|modulationControl1Mask));
-
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void UpdateRxModemSettings()
-{
-   // local rX modem variables
-
-   U8    filterIndex;            // used with look-up table
-   U8    filterSetting;            // used with look-up table
-   U32   afcPullInRange;
-   U16   rxOverSamplingRatio;
-   U32   clockRecoveryOffset;
-   U16   loopGain;
-
-   // Use RX bandwidth to look-up filter index.
-   filterIndex = LookUpFilterIndex (rtPhySettings.RxBandWidth);
-   // use index to set filter setting register
-   filterSetting = rtPhyTableIF_FilterSetting[filterIndex];
-   phyWrite(EZRADIOPRO_IF_FILTER_BANDWIDTH, filterSetting);
-
-   // also use index to update Rxbandwidth
-   rtPhySettings.RxBandWidth = (rtPhyTableRxBandwidth[filterIndex]) * (100L);
-
-   // Use updated Rxbandwidth to calculate afc pull in and set afc limit.
-   afcPullInRange = CalcAFC_PullInRange(rtPhySettings.RxBandWidth);
-   SetAFC_Limit(afcPullInRange);
-
-   // Use Filter setting and RxDataRate to set RxoverSamplingRatio
-   rxOverSamplingRatio = CalcRxOverSamplingRatio (filterSetting, rtPhySettings.TRxDataRate);
-   SetRxOverSamplingRatio(rxOverSamplingRatio);
-
-   // Use Filter setting and RxDataRate to set ClockRecoveryOffset
-   clockRecoveryOffset = CalcClockRecoveryOffset (filterSetting, rtPhySettings.TRxDataRate);
-   SetClockRecoveryOffset (clockRecoveryOffset);
-
-   // Use RxDataRate, RxoverSamplingRatio, and RxDeviation to set Loop Gain
-   loopGain = CalcClockRecoveryTimingLoopGain (rtPhySettings.TRxDataRate, rxOverSamplingRatio, rtPhySettings.TRxDeviation);
-   SetClockRecoveryTimingLoopGain(loopGain);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-U8 LookUpFilterIndex (U32 RxBandwidth)
-{
-   U8 i;
-
-   RxBandwidth  = divideWithRounding (RxBandwidth, 100);
-
-   i=0;
-
-   // Find largest value in table smaller than target.
-   while (rtPhyTableRxBandwidth[i] <  RxBandwidth)
-   {
-      i++;
-   }
-
-   return i;
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-U32 CalcAFC_PullInRange (U32 rxBandwidth)
-{
-   U32 afcPullIn;
-
-   afcPullIn = rxBandwidth * 7;
-   afcPullIn = divideWithRounding (afcPullIn, 10);
-   return afcPullIn;
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetAFC_Limit (U32 afcLimit)
-{
-   U8 frequencyBandSelect;
-
-   //TRX frequency must be set first
-   frequencyBandSelect = phyRead(EZRADIOPRO_FREQUENCY_BAND_SELECT);
-
-   if((frequencyBandSelect&0x20)==0x20)
-   {
-      afcLimit>>=1;
-   }
-
-   afcLimit = divideWithRounding (afcLimit, 625);
-
-   if(afcLimit>0xFF)
-      afcLimit = 0xFF;
-
-   phyWrite(EZRADIOPRO_AFC_LIMITER, afcLimit);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-U16 CalcRxOverSamplingRatio (U8 filter, U32 rxDataRate)
-{
-   U32 rxOverSamplingRatio;
-   U8 ndec_exp, dwn3_bypass;
-
-   filter >>= 4;
-   ndec_exp = filter & 0x07;
-   filter >>= 3;
-   dwn3_bypass = filter & 0x01;
-
-   //calculate rxOverSamplingRatio
-   if(dwn3_bypass)
-      rxOverSamplingRatio = (500000L * 3 * 8);
-   else
-      rxOverSamplingRatio = (500000L * 8);
-
-   rxOverSamplingRatio >>= ndec_exp;
-   rxOverSamplingRatio = divideWithRounding(rxOverSamplingRatio, rxDataRate);
-
-   if (rxOverSamplingRatio > 0x07FF)    // limit to 11 bits
-      rxOverSamplingRatio = 0x07FF;
-
-   return (U16) rxOverSamplingRatio;
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetRxOverSamplingRatio (U16 rxOverSamplingRatio)
-{
-   U8 ClockRecoveryOffset2;
-
-   if (rxOverSamplingRatio > 0x07FF)    // limit to 11 bits
-      rxOverSamplingRatio = 0x07FF;
-
-   ClockRecoveryOffset2 = phyRead(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2);
-   ClockRecoveryOffset2 &= 0x1F; // clear rxOverSamplingRatio bits
-   ClockRecoveryOffset2 |= ((rxOverSamplingRatio>>3)&0xE0);
-
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2, ClockRecoveryOffset2);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OVERSAMPLING_RATIO, (U8)rxOverSamplingRatio);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-U32 CalcClockRecoveryOffset (U8 filter, U32 rxDataRate)
-{
-   U32 clockRecoveryOffset;
-
-   U8 filset, ndec_exp, dwn3_bypass;
-
-   filset = filter & 0x0F;
-   filter >>= 4;
-   ndec_exp = filter & 0x07;
-   filter >>= 3;
-   dwn3_bypass = filter & 0x01;
-
-   // calculate clockRecoveryOffset
-   clockRecoveryOffset = rxDataRate;
-   // limit operands to 32-bits
-   // clockRecoveryOffset = clockRecoveryOffset * 2^20 /500000 : exceeds 32-bit
-   // clockRecoveryOffset = clockRecoveryOffset * 2^15 /15625  : OK
-  
-   clockRecoveryOffset <<= 15;
- 
-#ifdef __RC51__
-   // bug fix for Raisonance compiler
-   // divide by 15625 does not work
-   // so divide by 125 twice
-   // 125 * 125 = 15625
-   clockRecoveryOffset = divideWithRounding (clockRecoveryOffset, 125);
-   clockRecoveryOffset = divideWithRounding (clockRecoveryOffset, 125);
-#else
-   clockRecoveryOffset = divideWithRounding (clockRecoveryOffset, 15625);
-#endif
-
-   clockRecoveryOffset <<= ndec_exp;
-   if(dwn3_bypass)
-   {
-     clockRecoveryOffset = divideWithRounding (clockRecoveryOffset, 3);
-   }
-
-   if (clockRecoveryOffset > 0x000FFFFF)    // limit to 20 bits
-      clockRecoveryOffset = 0x000FFFFF;
-
-   return clockRecoveryOffset;
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetClockRecoveryOffset (U32 clockRecoveryOffset)
-{
-   UU16 ncoff;
-   U8 ClockRecoveryOffset2;
-
-   if (clockRecoveryOffset > 0x000FFFFF)    // limit to 20 bits
-      clockRecoveryOffset = 0x000FFFFF;
-
-   ClockRecoveryOffset2 = phyRead(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2);
-   ClockRecoveryOffset2 &= 0xF0; // clear ncoff bits
-   ClockRecoveryOffset2 |= ((clockRecoveryOffset>>16)&0x0F);
-
-   ncoff.U16 = (U16) clockRecoveryOffset;
-
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2, ClockRecoveryOffset2);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_1, ncoff.U8[MSB]);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_0, ncoff.U8[LSB]);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-U16 CalcClockRecoveryTimingLoopGain (U32 rxDataRate, U16 RxOverSamplingRatio, U32 RxDeviation)
-{
-   U32 clockRecoveryTimingLoopGain;
-
-    // calulate clockRecoveryTimingLoopGain
-   clockRecoveryTimingLoopGain = rxDataRate;
-   clockRecoveryTimingLoopGain <<= 15;
-   clockRecoveryTimingLoopGain = divideWithRounding (clockRecoveryTimingLoopGain, RxOverSamplingRatio);
-   clockRecoveryTimingLoopGain = divideWithRounding (clockRecoveryTimingLoopGain, RxDeviation);
-   clockRecoveryTimingLoopGain += 2;
-
-   if (clockRecoveryTimingLoopGain > 0x07FF)    // limit to 11 bits
-      clockRecoveryTimingLoopGain = 0x07FF;
-
-   return (U16) clockRecoveryTimingLoopGain;
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-void SetClockRecoveryTimingLoopGain (U16 clockRecoveryTimingLoopGain)
-{
-   UU16 crgain;
-
-   if (clockRecoveryTimingLoopGain > 0x07FF)    // limit to 11 bits
-      clockRecoveryTimingLoopGain = 0x07FF;
-
-   crgain.U16 = clockRecoveryTimingLoopGain;
-
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_1, crgain.U8[MSB]);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_0, crgain.U8[LSB]);
-}
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-S8 PhySetTxPower (S8 power)
-{
-   if(power > 20)
-   {
-      power = 20;
-   }
-   else if (power < -1)
-   {
-      power = -1;
-   }
-
-   power = (power+1)/3;
-
-   phyWrite(EZRADIOPRO_TX_POWER, power);
-
-   power = power*3 - 1;
-
-   return power;
 }
 
 /*
@@ -1041,34 +516,6 @@ PHY_STATUS rtPhyRxOn (void)
 }
 #endif
 
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-#ifndef TRANSMITTER_ONLY
-PHY_STATUS rtPhyRxOff (void)
-{
-   U8 status;
-
-   EX0 = 0;
-
-   // clear interrupt enables
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
-
-   // read Si4432 interrupts to clear
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-   // disable RX
-   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_XTON));
-
-   return PHY_STATUS_SUCCESS;
-}
-#endif
 //=============================================================================
 //
 // spi Functions for rtPhy.c module
