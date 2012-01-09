@@ -458,7 +458,7 @@ radio_init(void)
 	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
 	
 	// And intilise the radio with them.
-	s = rtPhyInitRadio();
+	s = rtPhyInitRadio(param_get(PARAM_AIR_SPEED)*1000UL);
 	if (s != PHY_STATUS_SUCCESS)
 		panic("rtPhyInitRadio failed: %u", s);
 }

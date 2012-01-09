@@ -256,13 +256,45 @@ PHY_STATUS rtPhySet (U8 addr, U32 value)
             return PHY_STATUS_SUCCESS;
          }
 
-      case TRX_DATA_RATE:
-            return PHY_STATUS_SUCCESS;
-
       default:
             return PHY_STATUS_ERROR_INVALID_ADDRESS;
    }
 }
+
+/*
+  This table gives the register settings for the radio core indexed by
+  the desired air data rate.
+
+  the data for this table is based on the OpenPilot rfm22b driver
+ */
+#define NUM_DATA_RATES 13
+#define NUM_RADIO_REGISTERS 16
+__code static const uint32_t air_data_rates[NUM_DATA_RATES] = {   
+	         500,  1000,  2000,  4000,  8000,  9600, 16000, 19200, 24000,  32000,  64000, 128000, 192000
+};
+
+__code static const uint8_t reg_table[NUM_RADIO_REGISTERS][1+NUM_DATA_RATES] = {
+	// first column is the register number
+	// remaining columns are the values for the corresponding air data rate
+	{ 0x1C, 0x37,  0x37,  0x37,  0x37,  0x3A,  0x3B,  0x26,  0x28,  0x2E,   0x16,   0x07,   0x83,   0x8A},
+	{ 0x1D, 0x44,  0x44,  0x44,  0x44,  0x44,  0x44,  0x44,  0x44,  0x44,   0x44,   0x44,   0x44,   0x44},
+	{ 0x1E, 0x0A,  0x0A,  0x0A,  0x0A,  0x0A,  0x0A,  0x0A,  0x0A,  0x0A,   0x0A,   0x0A,   0x0A,   0x0A},
+	{ 0x1F, 0x03,  0x03,  0x03,  0x03,  0x03,  0x03,  0x03,  0x03,  0x03,   0x03,   0x03,   0x03,   0x03},
+	{ 0x20, 0xE8,  0xF4,  0xFA,  0x70,  0x3F,  0x34,  0x3F,  0x34,  0x2A,   0x3F,   0x3F,   0x5E,   0x3F},
+	{ 0x21, 0x60,  0x20,  0x00,  0x01,  0x02,  0x02,  0x02,  0x02,  0x03,   0x02,   0x02,   0x01,   0x02},
+	{ 0x22, 0x20,  0x41,  0x83,  0x06,  0x0C,  0x75,  0x0C,  0x75,  0x12,   0x0C,   0x0C,   0x5D,   0x0C},
+	{ 0x23, 0xC5,  0x89,  0x12,  0x25,  0x4A,  0x25,  0x4A,  0x25,  0x6F,   0x4A,   0x4A,   0x86,   0x4A},
+	{ 0x24, 0x00,  0x00,  0x00,  0x02,  0x07,  0x07,  0x07,  0x07,  0x07,   0x07,   0x07,   0x05,   0x07},
+	{ 0x25, 0x0A,  0x23,  0x85,  0x0E,  0xFF,  0xFF,  0xFF,  0xFF,  0xFF,   0xFF,   0xFF,   0x74,   0xFF},
+	{ 0x2A, 0x0E,  0x0E,  0x0E,  0x0E,  0x0E,  0x0D,  0x0D,  0x0E,  0x12,   0x17,   0x31,   0x50,   0x50},
+	{ 0x6E, 0x04,  0x08,  0x10,  0x20,  0x41,  0x4E,  0x83,  0x9D,  0xC4,   0x08,   0x10,   0x20,   0x31},
+	{ 0x6F, 0x19,  0x31,  0x62,  0xC5,  0x89,  0xA5,  0x12,  0x49,  0x9C,   0x31,   0x62,   0xC5,   0x27},
+	{ 0x70, 0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,   0x0D,   0x0D,   0x0D,   0x0D},
+	{ 0x71, 0x23,  0x23,  0x23,  0x23,  0x23,  0x23,  0x23,  0x23,  0x23,   0x23,   0x23,   0x23,   0x23},
+	{ 0x72, 0x06,  0x06,  0x06,  0x06,  0x06,  0x08,  0x0D,  0x0F,  0x13,   0x1A,   0x33,   0x66,   0x9A}
+};
+
+
 //-----------------------------------------------------------------------------
 // Function Name
 //
@@ -270,9 +302,9 @@ PHY_STATUS rtPhySet (U8 addr, U32 value)
 // Parameters   :
 //
 //-----------------------------------------------------------------------------
-PHY_STATUS rtPhyInitRadio (void)
+PHY_STATUS rtPhyInitRadio(uint32_t air_rate)
 {
-   U8 status;
+   U8 status, i, rate_selection;
 
    // disable interrupts
    phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
@@ -305,8 +337,7 @@ PHY_STATUS rtPhyInitRadio (void)
    //status = phyRead(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE);
    phyWrite(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, EZRADIOPRO_OSC_CAP_VALUE);
 
-   //Init Radio registers using current settings
-   // TRX Frequency & Modem Settings
+   // TRX Frequency & channel spacing
    SetTRxFrequency(rtPhySettings.TRxFrequency);
    SetTRxChannelSpacing(rtPhySettings.TRxChannelSpacing);
 
@@ -334,48 +365,22 @@ PHY_STATUS rtPhyInitRadio (void)
 
    // no header checking
    phyWrite(EZRADIOPRO_HEADER_CONTROL_1, EZRADIOPRO_DISABLE_HFILTERS);
-
    // max output power
    phyWrite(EZRADIOPRO_TX_POWER, 0x7);
 
-#if 1
-   // 128kbs 
-   phyWrite(EZRADIOPRO_IF_FILTER_BANDWIDTH, 0x83);
-   phyWrite(EZRADIOPRO_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x44);
-   phyWrite(EZRADIOPRO_AFC_TIMING_CONTROL, 0x0A);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_GEARSHIFT_OVERRIDE, 0x03);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OVERSAMPLING_RATIO, 0x5E);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2, 0x01);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_1, 0x5D);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_0, 0x86);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_1, 0x05);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_0, 0x74);
-   phyWrite(EZRADIOPRO_AFC_LIMITER, 0x50);
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_1, 0x20);
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_0, 0xC5);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_1, 0x0D);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 0x23);
-   phyWrite(EZRADIOPRO_FREQUENCY_DEVIATION, 0x66);
-#else
-   // 192kbs
-   phyWrite(EZRADIOPRO_IF_FILTER_BANDWIDTH, 0x8A);
-   phyWrite(EZRADIOPRO_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x44);
-   phyWrite(EZRADIOPRO_AFC_TIMING_CONTROL, 0x0A);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_GEARSHIFT_OVERRIDE, 0x03);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OVERSAMPLING_RATIO, 0x3F);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_2, 0x02);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_1, 0x0C);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_OFFSET_0, 0x4A);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_1, 0x07);
-   phyWrite(EZRADIOPRO_CLOCK_RECOVERY_TIMING_LOOP_GAIN_0, 0xFF);
-   phyWrite(EZRADIOPRO_AFC_LIMITER, 0x50);
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_1, 0x31);
-   phyWrite(EZRADIOPRO_TX_DATA_RATE_0, 0x27);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_1, 0x0D);
-   phyWrite(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 0x23);
-   phyWrite(EZRADIOPRO_FREQUENCY_DEVIATION, 0x9A);
-#endif
 
+   // work out which register table column we will use
+   for (i=0; i<NUM_DATA_RATES-1; i++) {
+	   if (air_data_rates[i] >= air_rate) break;
+   }
+   rate_selection = i;
+
+   // set the registers from the table
+   for (i=0; i<NUM_RADIO_REGISTERS; i++) {
+	   phyWrite(reg_table[i][0], 
+		    reg_table[i][rate_selection+1]);
+   }
+   
    PhyInitialized = 1;
 
    return PHY_STATUS_SUCCESS;
