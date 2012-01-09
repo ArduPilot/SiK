@@ -82,6 +82,11 @@ param_check(enum ParamID id, uint16_t val)
 			return false;
 		break;
 
+	case PARAM_AIR_SPEED:
+		if (val > 256)
+			return false;
+		break;
+
 	default:
 		// no sanity check for this value
 		break;
