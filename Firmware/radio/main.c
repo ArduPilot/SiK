@@ -71,10 +71,24 @@ __pdata uint8_t			g_board_bl_version;	///< from the bootloader
 /// Counter used by delay_msec
 ///
 static volatile uint8_t delay_counter;
+static volatile uint8_t tick_counter;
 
-// used to force partial packet tx
-static volatile uint8_t	tick_counter;
-static bool am_odd_transmitter;
+// state of the TDM system
+typedef union {
+	struct {
+		unsigned slice_counter:3;
+		unsigned unused:3;
+		unsigned yield_timeslice:1;
+		unsigned am_odd_transmitter:1;
+	} bits;
+	uint8_t v;
+} tdm_state_t;
+
+#define SLICE_COUNTER_MASK 0x7
+
+static tdm_state_t tdm_state, other_tdm_state;
+
+
 
 /// Configure the Si1000 for operation.
 ///
@@ -87,33 +101,27 @@ static void radio_init(void);
 /*
   synchronise tx windows
 
-  we receive a 8 bit header with each packet. The lower 7 bits are the 
-  senders tick_counter modulo 128. The top bit is set if the sender
-  thinks he is the 'odd' sender
-
-  This gives us a very simple TDM system
+  we receive a 8 bit header with each packet. See the tdm_state above
+  for the format
  */
 static void sync_tx_windows(uint8_t rxheader)
 {
-	uint8_t other_tick_counter, my_tick_counter;
+	other_tdm_state.v = rxheader;
 
 	// update if we are the odd transmitter
-	am_odd_transmitter = ((rxheader & 0x80) == 0);
+	if (tdm_state.bits.am_odd_transmitter == other_tdm_state.bits.am_odd_transmitter) {
+		tdm_state.bits.am_odd_transmitter = other_tdm_state.bits.am_odd_transmitter ^ 1;
+	}
 
-	// extract out the senders tick count
-	rxheader &= 0x7F;
-
-	// work out the other ends tick counter. Assume the packet
-	// took about 1 tick to arrive
-	other_tick_counter = rxheader & 0x7F;
-	my_tick_counter = tick_counter & 0x7F;
-
-	// possibly update our tick_counter
-	if (my_tick_counter != other_tick_counter &&
-	    my_tick_counter != (other_tick_counter+1)&0x7F) {
-		EA = 0;
-		tick_counter = (tick_counter & 0x80) | other_tick_counter;
-		EA = 1;
+	// possibly update our slice_counter to match the other end. We
+	// allow for us to be 1 ahead, as we could have had the timer
+	// interrupt since the packet was sent. This should keep the
+	// two tick counters within 1 tick of each other. The sync
+	// slices cope with that.
+	if (tdm_state.bits.slice_counter != other_tdm_state.bits.slice_counter &&
+	    tdm_state.bits.slice_counter != ((other_tdm_state.bits.slice_counter+1)&SLICE_COUNTER_MASK)) {
+		tdm_state.bits.slice_counter = other_tdm_state.bits.slice_counter;
+		tick_counter = (tick_counter & ~SLICE_COUNTER_MASK) | tdm_state.bits.slice_counter;
 	}
 }
 
@@ -127,12 +135,71 @@ static void sync_tx_windows(uint8_t rxheader)
  */
 static bool tx_window_open(void)
 {
-	uint8_t tick = tick_counter % 8;
-	if (am_odd_transmitter) {
-		return (tick < 3);
+	enum {OUR_SLICE, OUR_SYNC, THEIR_SLICE, THEIR_SYNC} slice;
+
+	switch (tdm_state.bits.slice_counter) {
+	case 0:
+	case 1:
+	case 2:
+		// odd slice
+		if (tdm_state.bits.am_odd_transmitter) {
+			slice = OUR_SLICE;
+		} else {
+			slice = THEIR_SLICE;
+		}
+		break;
+	case 3:
+		if (tdm_state.bits.am_odd_transmitter) {
+			slice = OUR_SYNC;
+		} else {
+			slice = THEIR_SYNC;
+		}		
+		break;
+	case 4:
+	case 5:
+	case 6:
+		if (tdm_state.bits.am_odd_transmitter) {
+			slice = THEIR_SLICE;
+		} else {
+			slice = OUR_SLICE;
+		}				
+		break;
+	case 7:
+		if (tdm_state.bits.am_odd_transmitter) {
+			slice = THEIR_SYNC;
+		} else {
+			slice = OUR_SYNC;
+		}		
+		break;
 	}
-	// even transmitter
-	return (tick > 3 && tick < 7);
+
+	// clean our yield flag if its not our slice
+	if (slice != OUR_SLICE && tdm_state.bits.yield_timeslice == 1) {
+		tdm_state.bits.yield_timeslice = 0;
+	}
+
+
+	if (slice == OUR_SYNC) {
+		// never transmit in our own sync slice
+		return false;
+	}
+	
+	if (slice == THEIR_SLICE || slice == THEIR_SYNC) {
+		// we can transmit in their slice or sync slot if they
+		// have set their yield bit
+		return (other_tdm_state.bits.yield_timeslice == 1);
+	}
+
+	// otherwise its our slice
+
+	// possibly clear their yield flag
+	if (other_tdm_state.bits.yield_timeslice == 1) {
+		other_tdm_state.bits.yield_timeslice = 0;
+	}
+
+	// we can transmit in our slice slot if we
+	// have not set our yield bit
+	return (tdm_state.bits.yield_timeslice == 0);
 }
 
 /*
@@ -140,11 +207,7 @@ static bool tx_window_open(void)
  */
 static uint8_t tx_header(void)
 {
-	uint8_t txheader = tick_counter&0x7F;
-	if (am_odd_transmitter) {
-		txheader |= 0x80;
-	}
-	return txheader;
+	return tdm_state.v;
 }
 
 /*
@@ -158,17 +221,30 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	uint8_t ofs = 0;
 
 	// send in TX_CHUNK_SIZE byte chunks
-#define TX_CHUNK_SIZE 32
+#define TX_CHUNK_SIZE 64
+
+	if (len == 0 && 
+	    tx_fifo_bytes == 0 && 
+	    tdm_state.bits.yield_timeslice == 0 &&
+	    other_tdm_state.bits.yield_timeslice == 0) {
+		// we have no use for our timeslice, give it up using
+		// a zero byte packet with the yield bit set
+		tdm_state.bits.yield_timeslice = 1;
+		rtPhyTxStart(0, tx_header());
+		rtPhyClearTxFIFO();
+		rtPhyRxOn();
+		return;
+	}
 
 	// try to send as TX_CHUNK_SIZE packets. This keeps the
 	// overhead down, as every chunk also gets 2 sync bytes
-	// and a CRC
+	// a header byte and 2 bytes of CRC
 	while (len + tx_fifo_bytes >= TX_CHUNK_SIZE) {
 		uint8_t chunk = TX_CHUNK_SIZE - tx_fifo_bytes;
 		phyWriteFIFO(chunk, &buf[ofs]);
 		rtPhyTxStart(TX_CHUNK_SIZE, tx_header());
+		rtPhyClearTxFIFO();
 		rtPhyRxOn();
-		
 		len -= chunk;
 		ofs += chunk;
 		tx_fifo_bytes = 0;
@@ -184,6 +260,7 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	if (tx_fifo_bytes != 0 && 
 	    ((uint8_t)(tick_counter - tx_last_tick) > 1)) {
 		rtPhyTxStart(tx_fifo_bytes, tx_header());
+		rtPhyClearTxFIFO();
 		rtPhyRxOn();
 		tx_fifo_bytes = 0;
 	}
@@ -197,24 +274,25 @@ static void transparent_serial_loop(void)
 		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
 
+		tdm_state.bits.slice_counter = tick_counter & SLICE_COUNTER_MASK;
+
 		// if we received something via the radio, turn around and send it out the serial port
 		//
 		if (RxPacketReceived) {
 			uint8_t rxheader;
 			LED_ACTIVITY = LED_ON;
-			rlen = RxPacketLength;
-			if (rlen != 0) {
-				if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
-					sync_tx_windows(rxheader);
+			if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
+				sync_tx_windows(rxheader);
+				if (rlen != 0) {
 					serial_write_buf(rbuf, rlen);
 				}
 			}
 			LED_ACTIVITY = LED_OFF;
+			continue;
 		}
 
 		// give the AT command processor a chance to handle a command
 		at_command();
-
 
 		if (!tx_window_open()) {
 			// our transmit window isn't open, don't check
