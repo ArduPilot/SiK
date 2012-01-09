@@ -375,12 +375,13 @@ PHY_STATUS rtPhyInitRadio(uint32_t air_rate)
    phyWrite(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 0x28); //  5 nibbles, 20 chips, 10 bits
 
    // 2 sync bytes and 1 header bytes
-   phyWrite(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_1BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
+   phyWrite(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_3BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
    phyWrite(EZRADIOPRO_SYNC_WORD_3, 0x2D);
    phyWrite(EZRADIOPRO_SYNC_WORD_2, 0xD4);
 
-   // no header checking
-   phyWrite(EZRADIOPRO_HEADER_CONTROL_1, EZRADIOPRO_DISABLE_HFILTERS);
+   // check 2 bytes of header (the network ID)
+   phyWrite(EZRADIOPRO_HEADER_CONTROL_1, 2);
+
    // max output power
    phyWrite(EZRADIOPRO_TX_POWER, 0x7);
 
@@ -784,6 +785,15 @@ void rtPhyClearTxFIFO(void)
 	RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
 	status &= ~EZRADIOPRO_FFCLRTX;
 	RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
+}
+
+/*
+  setup a 16 bit network ID
+ */
+void rtPhySetNetId(uint16_t id)
+{
+   phyWrite(EZRADIOPRO_TRANSMIT_HEADER_1, id>>8);
+   phyWrite(EZRADIOPRO_TRANSMIT_HEADER_2, id&0xFF);
 }
 
 

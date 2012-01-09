@@ -96,6 +96,7 @@ PHY_STATUS    rtPhyInit (void);          // called once after MCU reset
 PHY_STATUS    rtPhySet (U8, U32);
 PHY_STATUS    rtPhyGet (U32 *);
 PHY_STATUS    rtPhyInitRadio(U32 );
+void 	      rtPhySetNetId(U16 id);
 void          phyWriteFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
 void 	      rtPhyTxStart (U8, U8);
 void          rtPhyClearTxFIFO(void);
