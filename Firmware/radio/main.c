@@ -76,9 +76,9 @@ static volatile uint8_t tick_counter;
 // state of the TDM system
 typedef union {
 	struct {
-		unsigned slice_counter:6;
-		unsigned yield_timeslice:1;
-		unsigned am_odd_transmitter:1;
+		uint8_t slice_counter:6;
+		uint8_t yield_timeslice:1;
+		uint8_t am_odd_transmitter:1;
 	} bits;
 	uint8_t v;
 } tdm_state_t;
