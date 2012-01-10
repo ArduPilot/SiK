@@ -259,7 +259,7 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 
 	// try to send as TX_CHUNK_SIZE packets. This keeps the
 	// overhead down, as every chunk also gets 2 sync bytes
-	// a header byte and 2 bytes of CRC
+	// 3 header bytes and 2 bytes of CRC
 	while (len + tx_fifo_bytes >= TX_CHUNK_SIZE) {
 		uint8_t chunk = TX_CHUNK_SIZE - tx_fifo_bytes;
 		phyWriteFIFO(chunk, &buf[ofs]);
