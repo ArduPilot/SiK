@@ -575,13 +575,7 @@ PHY_STATUS rtPhyRxOn (void)
 //
 //-----------------------------------------------------------------------------
 void phyWrite (U8 reg, U8 value)
-{
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
-
+__critical {
    // Send SPI data using double buffered write
    NSS1 = 0;                           // drive NSS low
    SPIF1 = 0;                          // clear SPIF
@@ -593,9 +587,6 @@ void phyWrite (U8 reg, U8 value)
 
    SPIF1 = 0;                          // leave SPIF cleared
    NSS1 = 1;                           // drive NSS high
-
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
 }
 //-----------------------------------------------------------------------------
 // Function Name
@@ -613,14 +604,8 @@ void phyWrite (U8 reg, U8 value)
 //
 //-----------------------------------------------------------------------------
 U8 phyRead (U8 reg)
-{
+__critical {
    U8 value;
-
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
 
    // Send SPI data using double buffered write
    NSS1 = 0;                           // dsrive NSS low
@@ -634,9 +619,6 @@ U8 phyRead (U8 reg)
    SPIF1 = 0;                          // leave SPIF cleared
    NSS1 = 1;                           // drive NSS low
 
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
-
    return value;
 }
 //-----------------------------------------------------------------------------
@@ -648,13 +630,7 @@ U8 phyRead (U8 reg)
 //-----------------------------------------------------------------------------
 #ifndef RECEIVER_ONLY
 void phyWriteFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
-{
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
-
+__critical {
    NSS1 = 0;                            // drive NSS low
    SPIF1 = 0;                           // clear SPIF
    SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -670,9 +646,6 @@ void phyWriteFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
 
    SPIF1 = 0;                           // leave SPI  cleared
    NSS1 = 1;                            // drive NSS high
-
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
 }
 #endif
 //=============================================================================
@@ -818,13 +791,7 @@ void rtPhySetNetId(uint16_t id)
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
 void RxIntPhyWrite (U8 reg, U8 value)
-{
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
-
+__critical {
    // Send SPI data using double buffered write
    NSS1 = 0;                           // drive NSS low
    SPIF1 = 0;                          // clear SPIF
@@ -836,9 +803,6 @@ void RxIntPhyWrite (U8 reg, U8 value)
 
    SPIF1 = 0;                          // leave SPIF cleared
    NSS1 = 1;                           // drive NSS high
-
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
 }
 #endif
 //-----------------------------------------------------------------------------
@@ -851,14 +815,8 @@ void RxIntPhyWrite (U8 reg, U8 value)
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
 U8 RxIntPhyRead (U8 reg)
-{
+__critical {
    U8 value;
-
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
 
    // Send SPI data using double buffered write
    NSS1 = 0;                           // dsrive NSS low
@@ -871,10 +829,6 @@ U8 RxIntPhyRead (U8 reg)
    value = SPI1DAT;                    // read value
    SPIF1 = 0;                          // leave SPIF cleared
    NSS1 = 1;                           // drive NSS low
-
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
-
    return value;
 }
 #endif
@@ -891,13 +845,7 @@ U8 RxIntPhyRead (U8 reg)
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
 void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
-{
-   __bit restoreEA;
-
-   // disable interrupts during SPI transfer
-   restoreEA = EA;
-   EA = 0;
-
+__critical {
    NSS1 = 0;                            // drive NSS low
    SPIF1 = 0;                           // clear SPIF
    SPI1DAT = (EZRADIOPRO_FIFO_ACCESS);
@@ -914,9 +862,6 @@ void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE)
 
    SPIF1 = 0;                           // leave SPIF cleared
    NSS1 = 1;                            // drive NSS high
-
-   // Restore interrupts after SPI transfer
-   EA = restoreEA;
 }
 #endif
 
