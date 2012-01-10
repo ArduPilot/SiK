@@ -181,15 +181,12 @@ __critical {
 bool
 serial_write_buf(__xdata uint8_t *buf, uint16_t count)
 __critical {
-	EA = 0;
 	if (serial_write_space() < count) {
-		EA = 1;
 		return false;
 	}
 
 	while (count--)
 		BUF_INSERT(tx, *buf++);
-	EA = 1;
 
 	// if the transmitter is idle, restart it
 	if (tx_idle)
@@ -241,26 +238,19 @@ __critical {
 bool
 serial_read_buf(__xdata uint8_t *buf, uint16_t count)
 __critical {
-	EA = 0;
 	if (BUF_USED(rx) < count) {
-		EA = 1;
 		return false;
 	}
 	while (count--)
 		BUF_REMOVE(rx, *buf++);
-	EA = 1;
 
 	return true;
 }
 
 uint16_t
 serial_read_available(void)
-{
-	uint16_t ret;
-	EA = 0;
-	ret = BUF_USED(rx);
-	EA = 1;
-	return ret;
+__critical {
+	return BUF_USED(rx);
 }
 
 void
