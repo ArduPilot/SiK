@@ -86,7 +86,20 @@ typedef union {
 #define SLICE_COUNTER_MASK 0x3F
 
 static tdm_state_t tdm_state, other_tdm_state;
-static uint8_t slice_counter_shift = 1;
+static uint8_t slice_counter_shift = 0;
+
+// activity indication. When tick_counter wraps we 
+// check if we have received a packet in the last 1.25seconds. If we
+// have the radio light is solid. Otherwise it blinks
+static __bit blink_state;
+static volatile __bit received_packet;
+
+// prefer to send packets in TX_CHUNK_SIZE byte chunks when 
+#define TX_CHUNK_SIZE 32
+
+// at startup we calculate how many milliticks a byte is expected
+// to take to transmit with the configured air data rate
+static uint16_t milliticks_per_byte;
 
 
 /// Configure the Si1000 for operation.
@@ -103,8 +116,10 @@ static void radio_init(void);
   we receive a 8 bit header with each packet. See the tdm_state above
   for the format
  */
-static void sync_tx_windows(uint8_t rxheader)
+static void sync_tx_windows(uint8_t rxheader, uint8_t packet_length)
 {
+	uint8_t flight_time, other_tick_counter;
+
 	other_tdm_state.v = rxheader;
 
 	// update if we are the odd transmitter
@@ -112,14 +127,21 @@ static void sync_tx_windows(uint8_t rxheader)
 		tdm_state.bits.am_odd_transmitter = other_tdm_state.bits.am_odd_transmitter ^ 1;
 	}
 
+	// 5 preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
+	packet_length += (5 + 2 + 3 + 2);
+
+	// work out how long this packet took to deliver to us
+	flight_time = (packet_length * milliticks_per_byte) >> 10;
+	other_tick_counter = (other_tdm_state.bits.slice_counter + flight_time) & SLICE_COUNTER_MASK;
+
 	// possibly update our slice_counter to match the other end. We
 	// allow for us to be 1 ahead, as we could have had the timer
 	// interrupt since the packet was sent. This should keep the
 	// two tick counters within 1 tick of each other. The sync
 	// slices cope with that.
-	if (tdm_state.bits.slice_counter != other_tdm_state.bits.slice_counter &&
-	    tdm_state.bits.slice_counter != ((other_tdm_state.bits.slice_counter+1)&SLICE_COUNTER_MASK)) {
-		tdm_state.bits.slice_counter = other_tdm_state.bits.slice_counter;
+	if (tdm_state.bits.slice_counter != other_tick_counter &&
+	    tdm_state.bits.slice_counter != ((other_tick_counter+1)&SLICE_COUNTER_MASK)) {
+		tdm_state.bits.slice_counter = other_tick_counter;
 		EA = 0;
 		tick_counter = (uint8_t)tdm_state.bits.slice_counter;
 		EA = 1;	
@@ -222,14 +244,10 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	uint8_t ofs = 0;
 	bool done_send = false;
 
-	// send in TX_CHUNK_SIZE byte chunks
-#define TX_CHUNK_SIZE 64
-
 	if (len == 0 && 
 	    tx_fifo_bytes == 0 && 
 	    tdm_state.bits.yield_timeslice == 0 &&
-	    other_tdm_state.bits.yield_timeslice == 0 &&
-	    ((uint8_t)(tick_counter - tx_last_tick)) > 1) {
+	    other_tdm_state.bits.yield_timeslice == 0) {
 		// we have no use for our timeslice, give it up using
 		// a zero byte packet with the yield bit set
 		tdm_state.bits.yield_timeslice = 1;
@@ -290,7 +308,8 @@ static void transparent_serial_loop(void)
 			uint8_t rxheader;
 			LED_ACTIVITY = LED_ON;
 			if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
-				sync_tx_windows(rxheader);
+				sync_tx_windows(rxheader, rlen);
+				received_packet = true;
 				if (rlen != 0) {
 					//printf("rcv(%d,[", rlen);
 					serial_write_buf(rbuf, rlen);
@@ -474,6 +493,9 @@ radio_init(void)
 
 	// setup network ID
 	rtPhySetNetId(param_get(PARAM_NETID));
+
+	// work out how many milliticks a byte takes to come over the air
+	milliticks_per_byte = 204800UL / (param_get(PARAM_AIR_SPEED)*125UL);
 }
 
 ///
@@ -498,6 +520,18 @@ serial_device_set_speed(uint8_t speed)
 	}
 }
 
+// blink the radio LED if we have not received any packets
+static void link_update(void)
+{
+	if (received_packet) {
+		LED_RADIO = LED_ON;
+		received_packet = false;
+	} else {
+		LED_RADIO = blink_state;
+		blink_state = !blink_state;
+	}
+}
+
 static void
 T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 {
@@ -509,6 +543,10 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 	at_timer();
 
 	tick_counter++;
+
+	if (tick_counter == 0) {
+		link_update();
+	}
 
 	// update the delay counter
 	if (delay_counter > 0)
