@@ -142,9 +142,9 @@ static void sync_tx_windows(uint8_t rxheader, uint8_t packet_length)
 	if (tdm_state.bits.slice_counter != other_tick_counter &&
 	    tdm_state.bits.slice_counter != ((other_tick_counter+1)&SLICE_COUNTER_MASK)) {
 		tdm_state.bits.slice_counter = other_tick_counter;
-		EA = 0;
-		tick_counter = (uint8_t)tdm_state.bits.slice_counter;
-		EA = 1;	
+		__critical {
+			tick_counter = (uint8_t)tdm_state.bits.slice_counter;
+		}
 	}
 }
 
