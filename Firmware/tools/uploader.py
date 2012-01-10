@@ -87,7 +87,7 @@ class uploader(object):
 		self.port.write(str(c))
 
 	def __recv(self):
-		c = self.port.read()
+		c = self.port.read(1)
 		if (len(c) < 1):
 			raise RuntimeError("timeout waiting for data")
 		#print("recv " + binascii.hexlify(c))

@@ -20,7 +20,10 @@ port = serial.Serial(device, opts.baudrate, timeout=0,
 
 while True:
     try:
-        buf = port.read(100)
+        count = port.inWaiting()
+        if count == 0:
+            count = 1
+        buf = port.read(count)
         if len(buf) == 0:
             continue
         if opts.echo:
