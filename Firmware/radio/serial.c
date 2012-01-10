@@ -37,29 +37,33 @@
 
 // Serial rx/tx buffers.
 //
-// Buffer pointer handling depends on these being 256 bytes in size.
+// Note that the rx buffer is much larger than you might expect
+// as we need the receive buffer to be many times larger than the
+// largest possible air packet size for efficient TDM. Ideally it
+// would be about 16x larger than the largest air packet if we have 
+// 8 TDM time slots
 //
-// Note that the __at() clauses here are not very portable; they presume
-// 4K of __xram space, but using absolute addresses for the buffers lets
-// the compiler optimise the array indexing code.
-//
-__xdata __at(0x0e00) uint8_t	rx_buf[256] = {0};
-__xdata __at(0x0f00) uint8_t	tx_buf[256] = {0};
+__xdata static uint8_t rx_buf[2048] = {0};
+__xdata static uint8_t tx_buf[512] = {0};
+static const uint16_t  rx_mask = sizeof(rx_buf)-1;
+static const uint16_t  tx_mask = sizeof(tx_buf)-1;
 
 // FIFO insert/remove pointers
-uint8_t				rx_insert, rx_remove;
-uint8_t				tx_insert, tx_remove;
+static uint16_t				rx_insert, rx_remove;
+static uint16_t				tx_insert, tx_remove;
+
+
 
 // flag indicating the transmitter is idle
-volatile bool			tx_idle;
+static volatile bool			tx_idle;
 
 // FIFO status
-#define BUF_FULL(_which)	((_which##_insert + 1) == (_which##_remove))
-#define BUF_NOT_FULL(_which)	((_which##_insert + 1) != (_which##_remove))
+#define BUF_FULL(_which)	(((_which##_insert + 1) & _which##_mask) == (_which##_remove))
+#define BUF_NOT_FULL(_which)	(((_which##_insert + 1) & _which##_mask) != (_which##_remove))
 #define BUF_EMPTY(_which)	(_which##_insert == _which##_remove)
 #define BUF_NOT_EMPTY(_which)	(_which##_insert != _which##_remove)
-#define BUF_USED(_which)	(_which##_insert - _which##_remove)
-#define BUF_FREE(_which)	(_which##_remove - _which##_insert - 1)
+#define BUF_USED(_which)	((_which##_insert - _which##_remove) & _which##_mask)
+#define BUF_FREE(_which)	((_which##_remove - _which##_insert - 1) & _which##_mask)
 
 // FIFO insert/remove operations
 //
@@ -68,8 +72,10 @@ volatile bool			tx_idle;
 // mode code.  This is violated if printing from interrupt context,
 // which should generally be avoided when possible.
 //
-#define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert++] = (_c); } while(0)
-#define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove++]; } while(0)
+#define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert] = (_c); \
+		_which##_insert = ((_which##_insert+1) & _which##_mask); } while(0)
+#define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove]; \
+		_which##_remove = ((_which##_remove+1) & _which##_mask); } while(0)
 
 static void			_serial_write(uint8_t c);
 static void			serial_restart(void);
@@ -173,13 +179,17 @@ __critical {
 }
 
 bool
-serial_write_buf(__xdata uint8_t *buf, uint8_t count)
+serial_write_buf(__xdata uint8_t *buf, uint16_t count)
 __critical {
-	if (serial_write_space() < count)
+	EA = 0;
+	if (serial_write_space() < count) {
+		EA = 1;
 		return false;
+	}
 
 	while (count--)
 		BUF_INSERT(tx, *buf++);
+	EA = 1;
 
 	// if the transmitter is idle, restart it
 	if (tx_idle)
@@ -188,7 +198,7 @@ __critical {
 	return true;
 }
 
-uint8_t
+uint16_t
 serial_write_space(void)
 {
 	// If we are in AT mode, discourage anyone from sending bytes.
@@ -229,21 +239,28 @@ __critical {
 }
 
 bool
-serial_read_buf(__xdata uint8_t *buf, uint8_t count)
+serial_read_buf(__xdata uint8_t *buf, uint16_t count)
 __critical {
-	if (serial_read_available() < count)
+	EA = 0;
+	if (BUF_USED(rx) < count) {
+		EA = 1;
 		return false;
-
+	}
 	while (count--)
 		BUF_REMOVE(rx, *buf++);
+	EA = 1;
 
 	return true;
 }
 
-uint8_t
+uint16_t
 serial_read_available(void)
 {
-	return BUF_USED(rx);
+	uint16_t ret;
+	EA = 0;
+	ret = BUF_USED(rx);
+	EA = 1;
+	return ret;
 }
 
 void

@@ -86,13 +86,13 @@ extern bool	serial_write(uint8_t c);
 ///				buffer for @a count bytes (no bytes are
 ///				written in this case).
 ///
-extern bool	serial_write_buf(__xdata uint8_t *buf, uint8_t count);
+extern bool	serial_write_buf(__xdata uint8_t *buf, uint16_t count);
 
 /// Check for space in the write FIFO
 ///
 /// @return			The number of bytes that can be written.
 ///
-extern uint8_t	serial_write_space(void);
+extern uint16_t	serial_write_space(void);
 
 /// Read a byte from the serial port.
 ///
@@ -110,13 +110,13 @@ extern uint8_t	serial_read(void);
 ///				to satisfy the request (no bytes are read
 ///				in this case).
 ///
-extern bool	serial_read_buf(__xdata uint8_t *buf, uint8_t count);
+extern bool	serial_read_buf(__xdata uint8_t *buf, uint16_t count);
 
 /// Check for bytes in the read FIFO
 ///
 /// @return			The number of bytes available to be read
 ///				from the FIFO.
 ///
-extern uint8_t	serial_read_available(void);
+extern uint16_t	serial_read_available(void);
 
 #endif // _SERIAL_H_
