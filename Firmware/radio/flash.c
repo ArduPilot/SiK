@@ -58,7 +58,7 @@ flash_load_keys(void)
 
 void
 flash_erase_scratch(void)
-{
+__critical {
 	// erase the scratch page
 	flash_load_keys();		// unlock flash for one operation
 	PSCTL = 0x07;			// enable flash erase of the scratch page
@@ -68,7 +68,7 @@ flash_erase_scratch(void)
 
 uint8_t
 flash_read_scratch(uint16_t address)
-{
+__critical {
 	uint8_t	d;
 
 	PSCTL = 0x04;
@@ -79,7 +79,7 @@ flash_read_scratch(uint16_t address)
 
 void
 flash_write_scratch(uint16_t address, uint8_t c)
-{
+__critical {
 	flash_load_keys();
 	PSCTL = 0x05;
 	*(uint8_t __xdata *)address = c;
