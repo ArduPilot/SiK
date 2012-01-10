@@ -87,6 +87,10 @@ param_check(enum ParamID id, uint16_t val)
 			return false;
 		break;
 
+	case PARAM_NETID:
+		// all values are OK
+		return true;
+
 	default:
 		// no sanity check for this value
 		break;
