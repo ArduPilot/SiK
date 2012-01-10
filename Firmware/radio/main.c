@@ -95,7 +95,7 @@ static __bit blink_state;
 static volatile __bit received_packet;
 
 // prefer to send packets in TX_CHUNK_SIZE byte chunks when 
-#define TX_CHUNK_SIZE 32
+#define TX_CHUNK_SIZE 64
 
 // at startup we calculate how many milliticks a byte is expected
 // to take to transmit with the configured air data rate
