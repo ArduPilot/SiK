@@ -76,18 +76,17 @@ static volatile uint8_t tick_counter;
 // state of the TDM system
 typedef union {
 	struct {
-		unsigned slice_counter:3;
-		unsigned unused:3;
+		unsigned slice_counter:6;
 		unsigned yield_timeslice:1;
 		unsigned am_odd_transmitter:1;
 	} bits;
 	uint8_t v;
 } tdm_state_t;
 
-#define SLICE_COUNTER_MASK 0x7
+#define SLICE_COUNTER_MASK 0x3F
 
 static tdm_state_t tdm_state, other_tdm_state;
-
+static uint8_t slice_counter_shift = 1;
 
 
 /// Configure the Si1000 for operation.
@@ -121,7 +120,9 @@ static void sync_tx_windows(uint8_t rxheader)
 	if (tdm_state.bits.slice_counter != other_tdm_state.bits.slice_counter &&
 	    tdm_state.bits.slice_counter != ((other_tdm_state.bits.slice_counter+1)&SLICE_COUNTER_MASK)) {
 		tdm_state.bits.slice_counter = other_tdm_state.bits.slice_counter;
-		tick_counter = (tick_counter & ~SLICE_COUNTER_MASK) | tdm_state.bits.slice_counter;
+		EA = 0;
+		tick_counter = (uint8_t)tdm_state.bits.slice_counter;
+		EA = 1;	
 	}
 }
 
@@ -137,7 +138,7 @@ static bool tx_window_open(void)
 {
 	enum {OUR_SLICE, OUR_SYNC, THEIR_SLICE, THEIR_SYNC} slice;
 
-	switch (tdm_state.bits.slice_counter) {
+	switch ((tdm_state.bits.slice_counter >> slice_counter_shift) & 0x7) {
 	case 0:
 	case 1:
 	case 2:
@@ -164,7 +165,7 @@ static bool tx_window_open(void)
 			slice = OUR_SLICE;
 		}				
 		break;
-	case 7:
+	default:
 		if (tdm_state.bits.am_odd_transmitter) {
 			slice = THEIR_SYNC;
 		} else {
@@ -219,6 +220,7 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	static uint8_t tx_fifo_bytes;
 	static uint8_t tx_last_tick;
 	uint8_t ofs = 0;
+	bool done_send = false;
 
 	// send in TX_CHUNK_SIZE byte chunks
 #define TX_CHUNK_SIZE 64
@@ -226,7 +228,8 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 	if (len == 0 && 
 	    tx_fifo_bytes == 0 && 
 	    tdm_state.bits.yield_timeslice == 0 &&
-	    other_tdm_state.bits.yield_timeslice == 0) {
+	    other_tdm_state.bits.yield_timeslice == 0 &&
+	    ((uint8_t)(tick_counter - tx_last_tick)) > 1) {
 		// we have no use for our timeslice, give it up using
 		// a zero byte packet with the yield bit set
 		tdm_state.bits.yield_timeslice = 1;
@@ -244,25 +247,29 @@ static void send_bytes(uint8_t len, __xdata uint8_t *buf)
 		phyWriteFIFO(chunk, &buf[ofs]);
 		rtPhyTxStart(TX_CHUNK_SIZE, tx_header());
 		rtPhyClearTxFIFO();
-		rtPhyRxOn();
+		tx_last_tick = tick_counter;
+		done_send = true;
 		len -= chunk;
 		ofs += chunk;
 		tx_fifo_bytes = 0;
 	}
 	if (len > 0) {
 		phyWriteFIFO(len, &buf[ofs]);
-		if (tx_fifo_bytes == 0) {
-			tx_last_tick = tick_counter;
-		}
+		tx_last_tick = tick_counter;
 		tx_fifo_bytes += len;
 	}
+
 	// don't let stray bytes sit around for more than 0.01 seconds
 	if (tx_fifo_bytes != 0 && 
 	    ((uint8_t)(tick_counter - tx_last_tick) > 1)) {
 		rtPhyTxStart(tx_fifo_bytes, tx_header());
 		rtPhyClearTxFIFO();
-		rtPhyRxOn();
+		done_send = true;
 		tx_fifo_bytes = 0;
+	}
+
+	if (done_send) {
+		rtPhyRxOn();
 	}
 }
 
@@ -273,6 +280,7 @@ static void transparent_serial_loop(void)
 	for (;;) {
 		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
+		uint16_t slen;
 
 		tdm_state.bits.slice_counter = tick_counter & SLICE_COUNTER_MASK;
 
@@ -284,7 +292,9 @@ static void transparent_serial_loop(void)
 			if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
 				sync_tx_windows(rxheader);
 				if (rlen != 0) {
+					//printf("rcv(%d,[", rlen);
 					serial_write_buf(rbuf, rlen);
+					//printf("]\n");
 				}
 			}
 			LED_ACTIVITY = LED_OFF;
@@ -302,13 +312,13 @@ static void transparent_serial_loop(void)
 		}
 
 		// if we have received something via serial, transmit it
-		rlen = serial_read_available();
-		if (rlen > 0) {
+		slen = serial_read_available();
+		if (slen > 0) {
 			LED_ACTIVITY = LED_ON;
-			if (rlen > sizeof(rbuf))
-				rlen = sizeof(rbuf);
-			if (serial_read_buf(rbuf, rlen)) {
-				send_bytes(rlen, rbuf);
+			if (slen > sizeof(rbuf))
+				slen = sizeof(rbuf);
+			if (serial_read_buf(rbuf, slen)) {
+				send_bytes(slen, rbuf);
 			}
 			LED_ACTIVITY = LED_OFF;
 		} else {
