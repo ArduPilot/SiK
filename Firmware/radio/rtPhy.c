@@ -35,8 +35,8 @@
 // These includes must be in a specific order. Dependencies listed in comments.
 //-----------------------------------------------------------------------------
 #include "board.h"
-#include "rtPhy.h"
 #include "radio.h"
+#include "rtPhy.h"
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -48,13 +48,16 @@ SEGMENT_VARIABLE (RxErrors, U8, BUFFER_MSPACE);
 //-----------------------------------------------------------------------------
 SEGMENT_VARIABLE (RxIntBuffer[64], U8, BUFFER_MSPACE);
 static uint8_t RxHeader;
+static __bit preamble_detected;
 
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-U8    RxIntPhyRead (U8);
-void  RxIntPhyWrite (U8, U8);
-void  RxIntphyReadFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
+static U8 phyRead (U8 reg);
+static void phyWrite (U8 reg, U8 value);
+static U8    RxIntPhyRead (U8);
+static void  RxIntPhyWrite (U8, U8);
+static void  RxIntphyReadFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
 //=============================================================================
 //
 // API Functions
@@ -66,7 +69,7 @@ static __bit PhyInitialized = 0;
 //=============================================================================
 // local functions
 //=============================================================================
-U8    InitSoftwareReset(void);
+static U8    InitSoftwareReset(void);
 
 void  SetTRxFrequency (U32);
 void  SetTRxChannelSpacing  (U32);
@@ -135,7 +138,7 @@ PHY_STATUS rtPhyInit(void)
 // to reset the radio when a radio POR has not occured.
 // A T0 interrupt timeout is used to minimize start-up time.
 //-----------------------------------------------------------------------------
-U8 InitSoftwareReset(void)
+static U8 InitSoftwareReset(void)
 {
    U8 status;
 
@@ -174,47 +177,6 @@ U8 InitSoftwareReset(void)
    }
 
    return PHY_STATUS_SUCCESS; // success
-}
-
-
-//-----------------------------------------------------------------------------
-// Function Name
-//
-// Return Value : None
-// Parameters   :
-//
-//-----------------------------------------------------------------------------
-PHY_STATUS rtPhyIdle(void)
-{
-   U8 status;
-
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-   if((status & EZRADIOPRO_ICHIPRDY)==EZRADIOPRO_ICHIPRDY)
-      return PHY_STATUS_SUCCESS;
-   else
-   {
-      // enable just the chip ready IRQ
-      phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
-      phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
-
-      // read Si4432 interrupts to clear
-      status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
-      status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-      // enable XTON
-      phyWrite (EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_XTON);
-
-      // wait on IRQ with 2 MS timeout
-      delay_set(2);
-      while(IRQ)
-      {
-         if(delay_expired())
-            return PHY_STATUS_ERROR_RADIO_XTAL;
-      }
-
-      return PHY_STATUS_SUCCESS;
-   }
 }
 
 //-----------------------------------------------------------------------------
@@ -476,34 +438,40 @@ void   SetTRxChannelSpacing  (U32 channelSpacing)
   start transmitting bytes from the TX FIFO
  */
 #ifndef RECEIVER_ONLY
-void rtPhyTxStart (U8 length, U8 txheader)
+void rtPhyTxStart (U8 length, U8 txheader, U8 timeout_ticks)
 {
    U8 status;
 
-   phyWrite(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
-   phyWrite(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
+   __critical {
+	   phyWrite(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
+	   phyWrite(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
-   // enable just the packet sent IRQ
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
+	   // enable just the packet sent IRQ
+	   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
+	   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
-   // read Si4432 interrupts to clear
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
+	   // read Si4432 interrupts to clear
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
 
-   // start TX
-   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
+	   // start TX
+	   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
 
-   // wait on IRQ with 20 MS timeout
-   delay_set(20);
+	   preamble_detected = false;
+   }
+
+   // wait on IRQ
+   delay_set_ticks(timeout_ticks);
    while (true) {
 	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
 	   if (status & EZRADIOPRO_IPKSENT) {
+		   rtPhyRxOn();
 		   return;
 	   }
 	   if (delay_expired()) {
 		   rtPhyClearTxFIFO();
+		   rtPhyRxOn();
 		   return;
 	   }
    }
@@ -519,21 +487,24 @@ PHY_STATUS rtPhyRxOn (void)
 {
    U8 status;
 
-   RxPacketReceived = 0;
+   __critical {
+	   RxPacketReceived = 0;
+	   preamble_detected = 0;
 
-   // enable packet valid and CRC error IRQ
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
-   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
+	   // enable packet valid, CRC error and preamble detection IRQs
+	   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
+	   phyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
 
-   // read Si4432 interrupts to clear
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
-   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
+	   // read Si4432 interrupts to clear
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
+	   status = phyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
 
-   // enable RX
-   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_RXON);
+	   // enable RX
+	   phyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_RXON);
+   }
 
    EX0 = 1;
-
+   
    return PHY_STATUS_SUCCESS;
 }
 #endif
@@ -574,8 +545,8 @@ PHY_STATUS rtPhyRxOn (void)
 //    Write uses a Double buffered transfer.
 //
 //-----------------------------------------------------------------------------
-void phyWrite (U8 reg, U8 value)
-__critical {
+static void phyWrite (U8 reg, U8 value)
+{
    // Send SPI data using double buffered write
    NSS1 = 0;                           // drive NSS low
    SPIF1 = 0;                          // clear SPIF
@@ -603,8 +574,8 @@ __critical {
 // Return Value : U8 value - value returned from the si4432 register
 //
 //-----------------------------------------------------------------------------
-U8 phyRead (U8 reg)
-__critical {
+static U8 phyRead (U8 reg)
+{
    U8 value;
 
    // Send SPI data using double buffered write
@@ -630,7 +601,7 @@ __critical {
 //-----------------------------------------------------------------------------
 #ifndef RECEIVER_ONLY
 void phyWriteFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
-__critical {
+{
    NSS1 = 0;                            // drive NSS low
    SPIF1 = 0;                           // clear SPIF
    SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -658,37 +629,29 @@ __critical {
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
 PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8, BUFFER_MSPACE), U8 *rxheader)
-{
-   __bit restoreEX0;
+__critical {
    U8 i;
 
-   if(RxPacketReceived)
-   {
-      // disable interrupts during copy
-      restoreEX0 = EX0;
-      EX0 = 0;
-
-      for(i=0;i<RxPacketLength;i++)
-      {
-         rxBuffer[i]=RxIntBuffer[i];
+   if (RxPacketReceived) {
+      for(i=0;i<RxPacketLength;i++) {
+	      rxBuffer[i] = RxIntBuffer[i];
       }
 
       *rxheader = RxHeader;
       RxPacketReceived = 0;
 
-      EX0 = restoreEX0;
-
       *pLength = i;
 
       return PHY_STATUS_SUCCESS;
    }
-   else
-   {
-      return PHY_STATUS_ERROR_NO_PACKET;
-   }
+   return PHY_STATUS_ERROR_NO_PACKET;
 }
-
 #endif
+
+uint8_t rtPhySignalStrength(void)
+{
+	return phyRead(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -701,48 +664,52 @@ PHY_STATUS  rtPhyGetRxPacket(U8 *pLength, VARIABLE_SEGMENT_POINTER(rxBuffer, U8,
 #ifndef TRANSMITTER_ONLY
 INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
-   U8 status;
+   U8 status, status2;
 
-   IE0 = 0;
-
-   status = RxIntPhyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
-   status = RxIntPhyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
-
-   if((status & EZRADIOPRO_IPKVALID)==EZRADIOPRO_IPKVALID)
-   {
-      if(RxPacketReceived==0)
-      {
-	      RxPacketReceived = 1;
-	      RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
-	      RxHeader       = RxIntPhyRead(EZRADIOPRO_RECEIVED_HEADER_3);
-	      if (RxPacketLength != 0) {
-		      RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
-	      }
-      }
-      else
-      {
-         // Clear RX FIFO
-         status = RxIntPhyRead(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
-         status |= EZRADIOPRO_FFCLRRX;
-         RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
-         status &= ~EZRADIOPRO_FFCLRRX;
-         RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
-      }
+   __critical {
+	   status2 = RxIntPhyRead(EZRADIOPRO_INTERRUPT_STATUS_2);
+	   status  = RxIntPhyRead(EZRADIOPRO_INTERRUPT_STATUS_1);
+	   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
+	   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
    }
-   else if((status & EZRADIOPRO_ICRCERROR)==EZRADIOPRO_ICRCERROR)
-   {
-      RxErrors++;
-   }
-   else
-   {
+
+   if(status & EZRADIOPRO_IPKVALID) {
+	   preamble_detected = 0;
+
+	   if (RxPacketReceived==0) {
+		   RxPacketReceived = 1;
+		   RxPacketLength = RxIntPhyRead(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
+		   RxHeader       = RxIntPhyRead(EZRADIOPRO_RECEIVED_HEADER_3);
+		   if (RxPacketLength != 0) {
+			   RxIntphyReadFIFO(RxPacketLength, RxIntBuffer);
+		   }
+	   }
+
+	   // Clear RX FIFO
+	   status = RxIntPhyRead(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
+	   status |= EZRADIOPRO_FFCLRRX;
+	   RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
+	   status &= ~EZRADIOPRO_FFCLRRX;
+	   RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, status);
+   } else if (status & EZRADIOPRO_ICRCERROR) {
+	   RxErrors++;
+   } else if (status2 & EZRADIOPRO_IPREAVAL) {
+	   preamble_detected = 1;
+	   // enable packet valid and CRC error IRQ
+	   __critical {
+		   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
+		   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
+	   }
+	   return;
    }
 
    // enable packet valid and CRC error IRQ
-   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
-   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
-
-   // enable RX again
-   RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
+   __critical {
+	   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
+	   RxIntPhyWrite(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
+	   // enable RX again
+	   RxIntPhyWrite(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
+   }
 }
 #endif
 
@@ -751,7 +718,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
   clear the send FIFO
  */
 void rtPhyClearTxFIFO(void)
-{
+__critical {
 	uint8_t status;
 	status = RxIntPhyRead(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
 	status |= EZRADIOPRO_FFCLRTX;
@@ -767,6 +734,18 @@ void rtPhySetNetId(uint16_t id)
 {
    phyWrite(EZRADIOPRO_TRANSMIT_HEADER_1, id>>8);
    phyWrite(EZRADIOPRO_TRANSMIT_HEADER_2, id&0xFF);
+}
+
+/*
+  return true if a packet preamble has been detected. This means that
+  a packet may be coming in
+ */
+bool rtPhyPreambleDetected(void)
+__critical {
+	bool ret;
+	ret = preamble_detected;
+	preamble_detected = false;
+	return ret;
 }
 
 
@@ -790,8 +769,8 @@ void rtPhySetNetId(uint16_t id)
 //
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
-void RxIntPhyWrite (U8 reg, U8 value)
-__critical {
+static void RxIntPhyWrite (U8 reg, U8 value)
+{
    // Send SPI data using double buffered write
    NSS1 = 0;                           // drive NSS low
    SPIF1 = 0;                          // clear SPIF
@@ -814,8 +793,8 @@ __critical {
 //
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
-U8 RxIntPhyRead (U8 reg)
-__critical {
+static U8 RxIntPhyRead (U8 reg)
+{
    U8 value;
 
    // Send SPI data using double buffered write
@@ -844,8 +823,8 @@ __critical {
 //
 //-----------------------------------------------------------------------------
 #ifndef TRANSMITTER_ONLY
-void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
-__critical {
+static void RxIntphyReadFIFO (U8 n, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE))
+{
    NSS1 = 0;                            // drive NSS low
    SPIF1 = 0;                           // clear SPIF
    SPI1DAT = (EZRADIOPRO_FIFO_ACCESS);

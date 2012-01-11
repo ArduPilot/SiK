@@ -98,16 +98,13 @@ PHY_STATUS    rtPhyGet (U32 *);
 PHY_STATUS    rtPhyInitRadio(U32 );
 void 	      rtPhySetNetId(U16 id);
 void          phyWriteFIFO (U8, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE));
-void 	      rtPhyTxStart (U8, U8);
+void 	      rtPhyTxStart (U8, U8, U8);
 void          rtPhyClearTxFIFO(void);
 PHY_STATUS    rtPhyRxOn (void);
 PHY_STATUS    rtPhyRxOff (void);
 PHY_STATUS    rtPhyGetRxPacket (U8*, VARIABLE_SEGMENT_POINTER(buffer, U8, BUFFER_MSPACE), U8*);
-//------------------------------------------------------------------------------------------------
-// Public primitive phy function prototypes
-//------------------------------------------------------------------------------------------------
-void  phyWrite (U8, U8);
-U8    phyRead (U8);
+U8            rtPhySignalStrength(void);
+bool 	      rtPhyPreambleDetected(void);
 //=================================================================================================
 //=================================================================================================
 #endif //RT_PHY_H
