@@ -86,6 +86,11 @@ extern void	panic(char *fmt, ...);
 ///
 extern void	delay_set(uint16_t msec);
 
+/// Set the delay timer in 200Hz ticks
+///
+///
+void delay_set_ticks(uint8_t ticks);
+
 /// Check the delay timer.
 ///
 /// @return			True if the timer has expired.

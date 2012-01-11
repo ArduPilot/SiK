@@ -71,36 +71,61 @@ __pdata uint8_t			g_board_bl_version;	///< from the bootloader
 /// Counter used by delay_msec
 ///
 static volatile uint8_t delay_counter;
+
+// base tick counter. All of the TDM window calculations
+// are based on this. It runs at 200Hz
 static volatile uint8_t tick_counter;
 
-// state of the TDM system
-typedef union {
-	struct {
-		uint8_t slice_counter:6;
-		uint8_t yield_timeslice:1;
-		uint8_t am_odd_transmitter:1;
-	} bits;
-	uint8_t v;
-} tdm_state_t;
+// how many ticks are remaining in our transmit window
+// this will be zero when we are receiving. We send this value in
+// header byte 3 of every packet
+static volatile uint8_t tx_window_remaining;
 
-#define SLICE_COUNTER_MASK 0x3F
+// the tick value of the start of our next transmit window. This is
+// adjusted based on the header of any incoming packet, to keep the
+// two radios in sync
+static volatile uint8_t next_tx_window;
 
-static tdm_state_t tdm_state, other_tdm_state;
-static uint8_t slice_counter_shift = 0;
+// the number of ticks we grab for each transmit window
+// this is enough to hold at least 3 packets and is based 
+// on the configured air data rate
+static uint8_t tx_window_width;
+
+// the silence period between transmit windows. This is calculated as
+// the number of ticks it would take to transmit a full sized packet
+static uint8_t silence_period;
 
 // activity indication. When tick_counter wraps we 
 // check if we have received a packet in the last 1.25seconds. If we
-// have the radio light is solid. Otherwise it blinks
+// have the green radio LED is held on. Otherwise it blinks every 1.25
+// seconds. The received_packet flag is set for any received packet,
+// whether it contains user data or not
 static __bit blink_state;
 static volatile __bit received_packet;
 
-// prefer to send packets in TX_CHUNK_SIZE byte chunks when 
+// we prefer to send packets in TX_CHUNK_SIZE byte chunks when 
+// possible
 #define TX_CHUNK_SIZE 64
 
 // at startup we calculate how many milliticks a byte is expected
-// to take to transmit with the configured air data rate
+// to take to transmit with the configured air data rate. This is used
+// to calculate the flight time of an incoming packet
 static uint16_t milliticks_per_byte;
 
+// how many bytes can we safely transmit in a single tick?
+static uint8_t bytes_per_tick;
+
+// number of ticks to wait for a preamble to turn into a packet. This
+// is set when we get a preamble interrupt, and causes us to delay
+// sending for the silence_period. This is used to make it more likely
+// that two radios that happen to be exactly in sync in their sends
+// will eventually get a packet through and get their transmit windows
+// sorted out
+static uint8_t preamble_wait;
+
+// the overhead in bytes of a packet. It consists of 2 settle bytes, 5
+// preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
+#define PACKET_OVERHEAD 14
 
 /// Configure the Si1000 for operation.
 ///
@@ -113,236 +138,173 @@ static void radio_init(void);
 /*
   synchronise tx windows
 
-  we receive a 8 bit header with each packet. See the tdm_state above
-  for the format
+  we receive a 8 bit header with each packet which indicates how many
+  more ticks the sender has in their transmit window
+
+  The job of this function is to adjust our own transmit window to
+  match the other radio
  */
 static void sync_tx_windows(uint8_t rxheader, uint8_t packet_length)
-{
-	uint8_t flight_time, other_tick_counter;
+__critical {
+	uint8_t flight_time = (512 + ((packet_length + PACKET_OVERHEAD) * milliticks_per_byte))>>10;
+	uint8_t old_tx_window = next_tx_window;
 
-	other_tdm_state.v = rxheader;
-
-	// update if we are the odd transmitter
-	if (tdm_state.bits.am_odd_transmitter == other_tdm_state.bits.am_odd_transmitter) {
-		tdm_state.bits.am_odd_transmitter = other_tdm_state.bits.am_odd_transmitter ^ 1;
-	}
-
-	// 5 preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
-	packet_length += (5 + 2 + 3 + 2);
-
-	// work out how long this packet took to deliver to us
-	flight_time = (packet_length * milliticks_per_byte) >> 10;
-	other_tick_counter = (other_tdm_state.bits.slice_counter + flight_time) & SLICE_COUNTER_MASK;
-
-	// possibly update our slice_counter to match the other end. We
-	// allow for us to be 1 ahead, as we could have had the timer
-	// interrupt since the packet was sent. This should keep the
-	// two tick counters within 1 tick of each other. The sync
-	// slices cope with that.
-	if (tdm_state.bits.slice_counter != other_tick_counter &&
-	    tdm_state.bits.slice_counter != ((other_tick_counter+1)&SLICE_COUNTER_MASK)) {
-		tdm_state.bits.slice_counter = other_tick_counter;
-		__critical {
-			tick_counter = (uint8_t)tdm_state.bits.slice_counter;
-		}
-	}
-}
-
-/*
-  see if its our turn to transmit
-
-  We have 8 transmit slots. The first 3 are for the odd
-  transmitter. The 4th one is a sync slot (no transmitter).  The next
-  3 are for the even transmitter, and the final one is another sync
-  slot
- */
-static bool tx_window_open(void)
-{
-	enum {OUR_SLICE, OUR_SYNC, THEIR_SLICE, THEIR_SYNC} slice;
-
-	switch ((tdm_state.bits.slice_counter >> slice_counter_shift) & 0x7) {
-	case 0:
-	case 1:
-	case 2:
-		// odd slice
-		if (tdm_state.bits.am_odd_transmitter) {
-			slice = OUR_SLICE;
-		} else {
-			slice = THEIR_SLICE;
-		}
-		break;
-	case 3:
-		if (tdm_state.bits.am_odd_transmitter) {
-			slice = OUR_SYNC;
-		} else {
-			slice = THEIR_SYNC;
-		}		
-		break;
-	case 4:
-	case 5:
-	case 6:
-		if (tdm_state.bits.am_odd_transmitter) {
-			slice = THEIR_SLICE;
-		} else {
-			slice = OUR_SLICE;
-		}				
-		break;
-	default:
-		if (tdm_state.bits.am_odd_transmitter) {
-			slice = THEIR_SYNC;
-		} else {
-			slice = OUR_SYNC;
-		}		
-		break;
-	}
-
-	// clean our yield flag if its not our slice
-	if (slice != OUR_SLICE && tdm_state.bits.yield_timeslice == 1) {
-		tdm_state.bits.yield_timeslice = 0;
-	}
-
-
-	if (slice == OUR_SYNC) {
-		// never transmit in our own sync slice
-		return false;
-	}
-	
-	if (slice == THEIR_SLICE || slice == THEIR_SYNC) {
-		// we can transmit in their slice or sync slot if they
-		// have set their yield bit
-		return (other_tdm_state.bits.yield_timeslice == 1);
-	}
-
-	// otherwise its our slice
-
-	// possibly clear their yield flag
-	if (other_tdm_state.bits.yield_timeslice == 1) {
-		other_tdm_state.bits.yield_timeslice = 0;
-	}
-
-	// we can transmit in our slice slot if we
-	// have not set our yield bit
-	return (tdm_state.bits.yield_timeslice == 0);
-}
-
-/*
-  calculate the 8 bit transmit header
- */
-static uint8_t tx_header(void)
-{
-	return tdm_state.v;
-}
-
-/*
-  send some bytes out the radio, coalescing into uniformly sized
-  chunks when possible
- */
-static void send_bytes(uint8_t len, __xdata uint8_t *buf)
-{
-	static uint8_t tx_fifo_bytes;
-	static uint8_t tx_last_tick;
-	uint8_t ofs = 0;
-	bool done_send = false;
-
-	if (len == 0 && 
-	    tx_fifo_bytes == 0 && 
-	    tdm_state.bits.yield_timeslice == 0 &&
-	    other_tdm_state.bits.yield_timeslice == 0) {
-		// we have no use for our timeslice, give it up using
-		// a zero byte packet with the yield bit set
-		tdm_state.bits.yield_timeslice = 1;
-		rtPhyTxStart(0, tx_header());
-		rtPhyClearTxFIFO();
-		rtPhyRxOn();
+	if (rxheader > tx_window_width) {
+		// the other radio has more ticks than is usually
+		// allowed, so must be using yielded ticks from us. To
+		// prevent a storm of yields we just return now
 		return;
+	} else if (rxheader >= flight_time) {
+		// we are still in the other radios transmit
+		// window. We can adjust our transmit window
+		next_tx_window = tick_counter + (rxheader - flight_time) + silence_period;
+		tx_window_remaining = 0;
+	} else if (flight_time - rxheader < silence_period) {
+		// we're in the silence period between windows. Adjust
+		// the transmit window, but don't start transmitting
+		// just yet
+		next_tx_window = tick_counter + silence_period - (flight_time - rxheader);
+		tx_window_remaining = 0;
+	} else {
+		// we are in our transmit window. 
+		tx_window_remaining = tx_window_width - (flight_time - rxheader);
+		next_tx_window = tick_counter + tx_window_remaining + tx_window_width + silence_period*2;
 	}
 
-	// try to send as TX_CHUNK_SIZE packets. This keeps the
-	// overhead down, as every chunk also gets 2 sync bytes
-	// 3 header bytes and 2 bytes of CRC
-	while (len + tx_fifo_bytes >= TX_CHUNK_SIZE) {
-		uint8_t chunk = TX_CHUNK_SIZE - tx_fifo_bytes;
-		phyWriteFIFO(chunk, &buf[ofs]);
-		rtPhyTxStart(TX_CHUNK_SIZE, tx_header());
-		rtPhyClearTxFIFO();
-		tx_last_tick = tick_counter;
-		done_send = true;
-		len -= chunk;
-		ofs += chunk;
-		tx_fifo_bytes = 0;
+#if 0
+	{
+	uint8_t window_change;
+	window_change = old_tx_window - next_tx_window;
+	if (window_change > 1 && window_change != 255) {
+		printf("otx=%d ntx=%d rx=%d ft=%d pl=%d\n",
+		       (int)old_tx_window,
+		       (int)next_tx_window,
+		       (int)rxheader,
+		       (int)flight_time,
+		       (int)packet_length);
 	}
-	if (len > 0) {
-		phyWriteFIFO(len, &buf[ofs]);
-		tx_last_tick = tick_counter;
-		tx_fifo_bytes += len;
 	}
+#endif
 
-	// don't let stray bytes sit around for more than 0.01 seconds
-	if (tx_fifo_bytes != 0 && 
-	    ((uint8_t)(tick_counter - tx_last_tick) > 1)) {
-		rtPhyTxStart(tx_fifo_bytes, tx_header());
-		rtPhyClearTxFIFO();
-		done_send = true;
-		tx_fifo_bytes = 0;
-	}
-
-	if (done_send) {
-		rtPhyRxOn();
+	// if the other end has sent a zero length packet and we don't
+	// currently have any transmit window remaining then they are
+	// yielding some ticks to us. 
+	if (packet_length == 0 && tx_window_remaining == 0) {
+		tx_window_remaining = (next_tx_window - tick_counter) + tx_window_width;
 	}
 }
 
 
-// a simple transparent serial implementation
+// the main loop for the TDM based 
+// transparent serial implementation
 static void transparent_serial_loop(void)
 {
+	// the number of bytes currently in the send fifo
+	uint8_t tx_fifo_bytes = 0;
+	// a tick count when we will send a short packet
+	uint8_t force_send_time = 0;
+
 	for (;;) {
 		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
 		uint16_t slen;
 
-		tdm_state.bits.slice_counter = tick_counter & SLICE_COUNTER_MASK;
-
 		// if we received something via the radio, turn around and send it out the serial port
 		//
 		if (RxPacketReceived) {
 			uint8_t rxheader;
-			LED_ACTIVITY = LED_ON;
 			if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
+				// sync our transmit windows based on
+				// received header
 				sync_tx_windows(rxheader, rlen);
-				received_packet = true;
+
+				// updte the activity indication
+				received_packet = 1;
+
+				// we're not waiting for a preamble
+				// any more
+				preamble_wait = 0;
+
 				if (rlen != 0) {
 					//printf("rcv(%d,[", rlen);
+					LED_ACTIVITY = LED_ON;
 					serial_write_buf(rbuf, rlen);
+					LED_ACTIVITY = LED_OFF;
 					//printf("]\n");
 				}
 			}
-			LED_ACTIVITY = LED_OFF;
 			continue;
 		}
 
 		// give the AT command processor a chance to handle a command
 		at_command();
 
-		if (!tx_window_open()) {
-			// our transmit window isn't open, don't check
-			// for serial bytes as we wouldn't have
-			// anywhere to put them			
+		// if we have received something via serial see how
+		// much of it we could fit in the transmit FIFO
+		slen = serial_read_available();
+		if (slen + tx_fifo_bytes > 64) {
+			slen = 64 - tx_fifo_bytes;
+		}
+		if (slen > 0 && serial_read_buf(rbuf, slen)) {
+			// put it in the send FIFO
+			phyWriteFIFO(slen, rbuf);
+			tx_fifo_bytes += slen;
+		}
+
+		if (tx_window_remaining * (uint16_t)bytes_per_tick < tx_fifo_bytes+PACKET_OVERHEAD) {
+			// we can't fit the whole fifo in our remaining
+			// window, so start receiving instead
 			continue;
 		}
 
-		// if we have received something via serial, transmit it
-		slen = serial_read_available();
-		if (slen > 0) {
-			LED_ACTIVITY = LED_ON;
-			if (slen > sizeof(rbuf))
-				slen = sizeof(rbuf);
-			if (serial_read_buf(rbuf, slen)) {
-				send_bytes(slen, rbuf);
-			}
-			LED_ACTIVITY = LED_OFF;
-		} else {
-			send_bytes(0, rbuf);			
+		if (preamble_wait > 0) {
+			// we saw a preamble previously and are now
+			// waiting for a possible packet
+			continue;
 		}
+
+		if (rtPhyPreambleDetected()) {
+			// a preamble has been detected. Don't
+			// transmit for a while
+			preamble_wait = silence_period;
+			continue;
+		}
+
+		if (tx_fifo_bytes >= TX_CHUNK_SIZE || 
+		    tick_counter >= force_send_time) {
+			// we're at least half full or we have not
+			// received any more serial bytes for at least
+			// 1 tick, send now
+			if (tx_fifo_bytes != 0) {
+				// show the user that we're sending data
+				LED_ACTIVITY = LED_ON;
+			}
+
+			// start transmitting the packet
+			rtPhyTxStart(tx_fifo_bytes, tx_window_remaining, tx_window_remaining+silence_period);
+			if (tx_fifo_bytes == 0) {
+				// sending a zero byte packet gives up
+				// our window, but doesn't change the
+				// start of the next window
+				tx_window_remaining = 0;
+			}
+
+			// clear the transmit FIFO. This shouldn't
+			// actually be needed, but I have seen some
+			// strange situations where the FIFO gets out
+			// of sync
+			rtPhyClearTxFIFO();
+			if (tx_fifo_bytes != 0) {
+				LED_ACTIVITY = LED_OFF;
+			}
+			tx_fifo_bytes = 0;
+			force_send_time = tick_counter+1;
+			continue;
+		}
+
+		// mark a time when we will send regardless of how
+		// many bytes we have in the FIFO
+		force_send_time = tick_counter+1;
 	}
 }
 
@@ -496,6 +458,24 @@ radio_init(void)
 
 	// work out how many milliticks a byte takes to come over the air
 	milliticks_per_byte = 204800UL / (param_get(PARAM_AIR_SPEED)*125UL);
+
+	// work out how many bytes we can safely transmit in one tick
+	bytes_per_tick = 1024 / milliticks_per_byte;
+	if (bytes_per_tick == 0) {
+		bytes_per_tick = 1;
+	}
+
+	// work out the default transmit window in ticks
+	tx_window_width = (3 * (TX_CHUNK_SIZE + PACKET_OVERHEAD)) / bytes_per_tick;
+	if (tx_window_width < 3) {
+		tx_window_width = 3;
+	}
+
+	// work out how long neither end will transmit for between windows
+	silence_period = (TX_CHUNK_SIZE + PACKET_OVERHEAD) / bytes_per_tick;
+	if (silence_period < 1) {
+		silence_period = 1;
+	}
 }
 
 ///
@@ -525,10 +505,13 @@ static void link_update(void)
 {
 	if (received_packet) {
 		LED_RADIO = LED_ON;
-		received_packet = false;
+		received_packet = 0;
 	} else {
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
+
+		// randomise the next transmit window using the signal strength
+		next_tx_window += rtPhySignalStrength() & 0x1F;
 	}
 }
 
@@ -551,6 +534,20 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 	// update the delay counter
 	if (delay_counter > 0)
 		delay_counter--;
+
+	if (preamble_wait > 0)
+		preamble_wait--;
+
+	// update transmit windows
+	if (tx_window_remaining > 0) {
+		tx_window_remaining--;
+	}
+	if (tick_counter == next_tx_window) {
+		if (tx_window_remaining < tx_window_width) {
+			tx_window_remaining = tx_window_width;
+		}
+		next_tx_window += 2*(tx_window_width + silence_period);
+	}
 }
 
 void
@@ -561,6 +558,11 @@ delay_set(uint16_t msec)
 	} else {
 		delay_counter = (msec + 4) / 5;
 	}
+}
+
+void delay_set_ticks(uint8_t ticks)
+{
+	delay_counter = ticks;
 }
 
 bool
