@@ -51,7 +51,7 @@ __code const struct parameter_info {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		128},
-	{"NETID",		0},
+	{"NETID",		25},
 };
 
 /// In-RAM parameter store.

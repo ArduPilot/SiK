@@ -282,6 +282,14 @@ bool radio_set_channel_spacing(uint32_t value)
 	return true;
 }
 
+/*
+  set the tx/rx frequency channel
+ */
+void radio_set_channel(uint8_t value)
+{
+	register_write(EZRADIOPRO_FREQUENCY_HOPPING_CHANNEL_SELECT, value);
+}
+
 
 /*
   This table gives the register settings for the radio core indexed by

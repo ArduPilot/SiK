@@ -128,6 +128,9 @@ static uint8_t preamble_wait;
 // preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
 #define PACKET_OVERHEAD 14
 
+// how many frequency channels we have in our allowed ISM band
+static uint8_t num_freq_channels;
+
 /// Configure the Si1000 for operation.
 ///
 static void hardware_init(void);
@@ -442,9 +445,17 @@ radio_init(void)
 		break;
 	}
 
+	// use 50 channels to fit with the US regulations
+	num_freq_channels = 50;
+
 	// set the frequency and channel spacing
 	radio_set_frequency(freq);
-	radio_set_channel_spacing(100000UL);
+
+	// set channel spacing to use 12.5MHz total frequency width
+	radio_set_channel_spacing(250000UL);
+
+	// start on a channel chosen by network ID
+	radio_set_channel(param_get(PARAM_NETID) % num_freq_channels);
 	
 	// And intilise the radio with them.
 	if (!radio_configure(param_get(PARAM_AIR_SPEED)*1000UL)) {

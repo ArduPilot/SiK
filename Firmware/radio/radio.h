@@ -142,6 +142,7 @@ bool radio_receiver_on(void);
 bool radio_initialise(void);
 bool radio_set_frequency(uint32_t value);
 bool radio_set_channel_spacing(uint32_t value);
+void radio_set_channel(uint8_t value);
 bool radio_configure(uint32_t air_rate);
 void radio_set_network_id(uint16_t id);
 uint8_t radio_last_rssi(void);
