@@ -232,6 +232,15 @@ bool radio_initialise(void)
 		return software_reset();
 	}
 
+	if (status & EZRADIOPRO_ICHIPRDY) {
+		// already ready
+		return true;
+	}
+
+	// enable chip ready interrupt
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
+
 	// wait for the chip ready bit for 10ms
 	delay_set(10);
 	while (!delay_expired()) {
@@ -527,8 +536,9 @@ static bool software_reset(void)
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
 
-	delay_set(2);
+	delay_set(20);
 	while (!delay_expired()) {
+		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 		if (status & EZRADIOPRO_ICHIPRDY) {
 			return true;
