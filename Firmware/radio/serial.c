@@ -198,7 +198,7 @@ __critical {
 
 uint16_t
 serial_write_space(void)
-{
+__critical {
 	// If we are in AT mode, discourage anyone from sending bytes.
 	// We don't necessarily want to stall serial_write callers, or
 	// to block AT commands while their response bytes trickle out,
