@@ -507,8 +507,17 @@ static void link_update(void)
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
 
-		// randomise the next transmit window using the signal strength
-		next_tx_window += radio_last_rssi() & 0x1F;
+		// randomise the next transmit window using some
+		// entropy from the radio
+		if (radio_entropy() & 1) {
+			next_tx_window += silence_period;
+		}
+#if 0
+		printf("NTX=%d PW=%d TW=%d\n",
+		       (int)next_tx_window,
+		       (int)preamble_wait,
+		       (int)tx_window_remaining);
+#endif
 	}
 }
 
