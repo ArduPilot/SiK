@@ -79,6 +79,7 @@ static volatile bool			tx_idle;
 
 static void			_serial_write(uint8_t c);
 static void			serial_restart(void);
+static void serial_device_set_speed(uint8_t speed);
 
 void
 serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
@@ -260,3 +261,59 @@ putchar(char c)
 		_serial_write('\r');
 	_serial_write(c);
 }
+
+
+///
+/// Table of supported serial speed settings.
+/// the table is looked up based on the 'one byte'
+/// serial rate scheme that APM uses. If an unsupported
+/// rate is chosen then 57600 is used
+///
+static const __code struct {
+	uint8_t rate;
+	uint8_t th1;
+	uint8_t ckcon;
+} serial_rates[] = {
+	{9,   0x96, 0x00}, // 9600
+	{19,  0x60, 0x01}, // 19200
+	{38,  0xb0, 0x01}, // 38400
+	{57,  0x2b, 0x08}, // 57600 - default
+	{115, 0x96, 0x08}, // 115200
+	{230, 0xcb, 0x08}, // 230400
+};
+
+//
+// check if a serial speed is valid
+//
+bool serial_device_valid_speed(uint8_t speed)
+{
+	uint8_t i;
+	uint8_t num_rates = sizeof(serial_rates)/sizeof(serial_rates[0]);
+
+	for (i=0; i<num_rates; i++) {
+		if (speed == serial_rates[i].rate) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static void serial_device_set_speed(uint8_t speed)
+{
+	uint8_t i;
+	uint8_t num_rates = sizeof(serial_rates)/sizeof(serial_rates[0]);
+
+	for (i=0; i<num_rates; i++) {
+		if (speed == serial_rates[i].rate) {
+			break;
+		}
+	}
+	if (i == num_rates) {
+		i = 3; // 57600 default
+	}
+
+	// set the rates in the UART
+	TH1 = serial_rates[i].th1;
+	CKCON = (CKCON & ~0x0b) | serial_rates[i].ckcon;
+}
+

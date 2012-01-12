@@ -39,35 +39,19 @@
 #include <stdint.h>
 #include "radio.h"
 
-/// Supported serial speeds
-///
-enum SerialSpeed {
-        B9600,
-        B19200,
-        B38400,
-        B57600,
-        B115200,
-        B230400,
-        BMAX,
-        BNOCHANGE
-};
-
-/// Set the serial device speed.
-///
-/// Since this typically depends on chip-specific register tweaking,
-/// this function must be supplied by external code.
-///
-/// @param	speed		The serial speed to configure.
-///
-extern void	serial_device_set_speed(enum SerialSpeed speed);
-
 /// Initialise the serial port.
 ///
 /// @param	speed		The serial speed to configure, passed
 ///				to serial_device_set_speed at the appropriate
 ///				point during initialisation.
 ///
-extern void	serial_init(enum SerialSpeed speed);
+extern void	serial_init(uint8_t speed);
+
+/// check if a serial speed is valid
+///
+/// @param	speed		The serial speed to configure
+///
+bool serial_device_valid_speed(uint8_t speed);
 
 /// Write a byte to the serial port.
 ///

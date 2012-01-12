@@ -476,28 +476,6 @@ radio_init(void)
 	}
 }
 
-///
-/// Table of supported serial speed settings.
-///
-const __code U8 serial_baud_rates[][2] = {
-	// TH1, CKCON
-	{0x96, 0x00},	// B9600
-	{0x60, 0x01},	// B19200
-	{0xb0, 0x01},	// B38400
-	{0x2b, 0x08},	// B57600
-	{0x96, 0x08},	// B115200
-	{0xcb, 0x08},	// B230400
-};
-
-void
-serial_device_set_speed(uint8_t speed)
-{
-	if (speed < BMAX) {
-		TH1 = serial_baud_rates[speed][0];
-		CKCON = (CKCON & ~0x0b) | serial_baud_rates[speed][1];
-	}
-}
-
 // blink the radio LED if we have not received any packets
 static void link_update(void)
 {

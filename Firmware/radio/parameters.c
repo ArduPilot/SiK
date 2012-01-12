@@ -49,7 +49,7 @@ __code const struct parameter_info {
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
-	{"SERIAL_SPEED",	B57600}, // match APM default
+	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		128},
 	{"NETID",		0},
 };
@@ -78,9 +78,7 @@ param_check(enum ParamID id, uint16_t val)
 		return false;
 
 	case PARAM_SERIAL_SPEED:
-		if (val > BMAX)
-			return false;
-		break;
+		return serial_device_valid_speed(val);
 
 	case PARAM_AIR_SPEED:
 		if (val > 256)
@@ -144,6 +142,13 @@ param_load()
 		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
+
+	for (i = 0; i < sizeof(parameter_values); i ++) {
+		if (!param_check(i, parameter_values[i].val)) {
+			parameter_values[i].val = parameter_info[i].default_value;
+		}
+	}
+
 	return true;
 }
 
