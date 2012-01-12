@@ -209,30 +209,27 @@ static void transparent_serial_loop(void)
 		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
 		uint16_t slen;
+		uint8_t rxheader;
 
-		// if we received something via the radio, turn around and send it out the serial port
-		//
-		if (RxPacketReceived) {
-			uint8_t rxheader;
-			if (rtPhyGetRxPacket(&rlen, rbuf, &rxheader) == PHY_STATUS_SUCCESS) {
-				// sync our transmit windows based on
-				// received header
-				sync_tx_windows(rxheader, rlen);
+		// see if we have received a packet
+		if (radio_receive_packet(&rlen, rbuf, &rxheader)) {
+			// sync our transmit windows based on
+			// received header
+			sync_tx_windows(rxheader, rlen);
 
-				// updte the activity indication
-				received_packet = 1;
+			// updte the activity indication
+			received_packet = 1;
 
-				// we're not waiting for a preamble
-				// any more
-				preamble_wait = 0;
+			// we're not waiting for a preamble
+			// any more
+			preamble_wait = 0;
 
-				if (rlen != 0) {
-					//printf("rcv(%d,[", rlen);
-					LED_ACTIVITY = LED_ON;
-					serial_write_buf(rbuf, rlen);
-					LED_ACTIVITY = LED_OFF;
-					//printf("]\n");
-				}
+			if (rlen != 0) {
+				//printf("rcv(%d,[", rlen);
+				LED_ACTIVITY = LED_ON;
+				serial_write_buf(rbuf, rlen);
+				LED_ACTIVITY = LED_OFF;
+				//printf("]\n");
 			}
 			continue;
 		}
@@ -248,7 +245,7 @@ static void transparent_serial_loop(void)
 		}
 		if (slen > 0 && serial_read_buf(rbuf, slen)) {
 			// put it in the send FIFO
-			phyWriteFIFO(slen, rbuf);
+			radio_write_transmit_fifo(slen, rbuf);
 			tx_fifo_bytes += slen;
 		}
 
@@ -264,7 +261,7 @@ static void transparent_serial_loop(void)
 			continue;
 		}
 
-		if (rtPhyPreambleDetected()) {
+		if (radio_preamble_detected()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
 			preamble_wait = silence_period;
@@ -282,7 +279,7 @@ static void transparent_serial_loop(void)
 			}
 
 			// start transmitting the packet
-			rtPhyTxStart(tx_fifo_bytes, tx_window_remaining, tx_window_remaining+silence_period);
+			radio_transmit_start(tx_fifo_bytes, tx_window_remaining, tx_window_remaining+silence_period);
 			if (tx_fifo_bytes == 0) {
 				// sending a zero byte packet gives up
 				// our window, but doesn't change the
@@ -290,11 +287,14 @@ static void transparent_serial_loop(void)
 				tx_window_remaining = 0;
 			}
 
+			// re-enable the receiver
+			radio_receiver_on();
+
 			// clear the transmit FIFO. This shouldn't
 			// actually be needed, but I have seen some
 			// strange situations where the FIFO gets out
 			// of sync
-			rtPhyClearTxFIFO();
+			radio_clear_transmit_fifo();
 			if (tx_fifo_bytes != 0) {
 				LED_ACTIVITY = LED_OFF;
 			}
@@ -313,8 +313,6 @@ static void transparent_serial_loop(void)
 void
 main(void)
 {
-	__pdata PHY_STATUS	s;
-
 	// Stash board info from the bootloader before we let anything touch
 	// the SFRs.
 	//
@@ -335,9 +333,9 @@ main(void)
 	radio_init();
 
 	// turn on the receiver
-	s = rtPhyRxOn();
-	if (s != PHY_STATUS_SUCCESS)
-		panic("rtPhyRxOn failed: %u", s);
+	if (!radio_receiver_on()) {
+		panic("failed to enable receiver");
+	}
 
 	transparent_serial_loop();
 }
@@ -418,13 +416,12 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	__pdata PHY_STATUS	s;
 	__pdata uint32_t	freq;
 
 	// Do generic PHY initialisation
-	s = rtPhyInit();
-	if (s != PHY_STATUS_SUCCESS)
-		panic("rtPhyInit failed: %u", s);
+	if (!radio_initialise()) {
+		panic("radio_initialise failed");
+	}
 
 	switch (g_board_frequency) {
 	case FREQ_433:
@@ -445,17 +442,17 @@ radio_init(void)
 		break;
 	}
 
-	// Set PHY parameters for the initial operational state
-	rtPhySet(TRX_FREQUENCY,		freq);
-	rtPhySet(TRX_CHANNEL_SPACING,	100000UL);	// XXX
+	// set the frequency and channel spacing
+	radio_set_frequency(freq);
+	radio_set_channel_spacing(100000UL);
 	
 	// And intilise the radio with them.
-	s = rtPhyInitRadio(param_get(PARAM_AIR_SPEED)*1000UL);
-	if (s != PHY_STATUS_SUCCESS)
-		panic("rtPhyInitRadio failed: %u", s);
+	if (!radio_configure(param_get(PARAM_AIR_SPEED)*1000UL)) {
+		panic("radio_configure failed");
+	}
 
 	// setup network ID
-	rtPhySetNetId(param_get(PARAM_NETID));
+	radio_set_network_id(param_get(PARAM_NETID));
 
 	// work out how many milliticks a byte takes to come over the air
 	milliticks_per_byte = 204800UL / (param_get(PARAM_AIR_SPEED)*125UL);
@@ -512,7 +509,7 @@ static void link_update(void)
 		blink_state = !blink_state;
 
 		// randomise the next transmit window using the signal strength
-		next_tx_window += rtPhySignalStrength() & 0x1F;
+		next_tx_window += radio_last_rssi() & 0x1F;
 	}
 }
 

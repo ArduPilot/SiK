@@ -52,7 +52,6 @@
 
 #include "board.h"
 #include "serial.h"
-#include "rtPhy.h"
 #include "board_info.h"
 #include "parameters.h"
 #include "at.h"
@@ -126,5 +125,26 @@ extern __code const char g_banner_string[];			///< printable startup banner stri
 
 extern __pdata enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
 extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
+
+struct radio_statistics {
+	uint8_t rx_errors;
+};
+
+
+// low level radio control functions from radio.c
+bool radio_receive_packet(uint8_t *, __xdata uint8_t *, uint8_t *);
+void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer);
+bool radio_preamble_detected(void);
+void radio_transmit_start(uint8_t length, uint8_t txheader, uint8_t timeout_ticks);
+void radio_clear_transmit_fifo(void);
+void radio_clear_receive_fifo(void);
+bool radio_receiver_on(void);
+bool radio_initialise(void);
+bool radio_set_frequency(uint32_t value);
+bool radio_set_channel_spacing(uint32_t value);
+bool radio_configure(uint32_t air_rate);
+void radio_set_network_id(uint16_t id);
+uint8_t radio_last_rssi(void);
+
 
 #endif // _RADIO_H_
