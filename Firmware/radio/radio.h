@@ -146,6 +146,7 @@ void radio_set_channel(uint8_t value);
 bool radio_configure(uint32_t air_rate);
 void radio_set_network_id(uint16_t id);
 uint8_t radio_last_rssi(void);
-
+uint8_t radio_entropy();
+uint32_t radio_air_rate();
 
 #endif // _RADIO_H_

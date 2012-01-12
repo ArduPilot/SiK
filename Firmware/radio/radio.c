@@ -34,6 +34,7 @@ __xdata static uint8_t receive_buffer[64];
 __xdata static uint8_t receive_packet_length;
 __xdata static uint8_t receive_header;
 __xdata static uint8_t last_rssi;
+__xdata static uint8_t receive_entropy;
 
 static __bit packet_received;
 static __bit preamble_detected;
@@ -43,6 +44,7 @@ __xdata static struct radio_statistics statistics;
 __xdata static struct {
 	uint32_t frequency;
 	uint32_t channel_spacing;
+	uint32_t air_data_rate;
 } settings;
 
 /*
@@ -118,6 +120,22 @@ __critical {
 uint8_t radio_last_rssi(void)
 {
 	return last_rssi;
+}
+
+/*
+  return a few bits of entropy from the receive interrupt
+ */
+uint8_t radio_entropy(void)
+{
+	return receive_entropy;
+}
+
+/*
+  return the actual air data rate in BPS
+ */
+uint32_t radio_air_rate(void)
+{
+	return settings.air_data_rate;
 }
 
 /*
@@ -416,6 +434,8 @@ bool radio_configure(uint32_t air_rate)
 		if (air_data_rates[i] >= air_rate) break;
 	}
 	rate_selection = i;
+
+	settings.air_data_rate = air_data_rates[rate_selection];
 	
 	// set the registers from the table
 	for (i=0; i<NUM_RADIO_REGISTERS; i++) {
@@ -600,6 +620,8 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
 	uint8_t status, status2;
 
+	receive_entropy += register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
+
 	status2 = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
@@ -621,6 +643,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		radio_clear_receive_fifo();
 	} else if (status & EZRADIOPRO_ICRCERROR) {
 		// we got a crc error on the packet
+		preamble_detected = 0;
 		statistics.rx_errors++;
 	} else if (status2 & EZRADIOPRO_IPREAVAL) {
 		// a valid preamble has been detected

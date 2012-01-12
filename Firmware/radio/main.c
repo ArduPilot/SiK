@@ -104,9 +104,10 @@ static uint8_t silence_period;
 static __bit blink_state;
 static volatile __bit received_packet;
 
-// we prefer to send packets in TX_CHUNK_SIZE byte chunks when 
-// possible
-#define TX_CHUNK_SIZE 64
+// we prefer to send packets in tx_chunk_size byte chunks when 
+// possible. This may be adjusted based on the air data rate
+// to keep the TDM round time below 256
+static uint8_t tx_chunk_size = 64;
 
 // at startup we calculate how many milliticks a byte is expected
 // to take to transmit with the configured air data rate. This is used
@@ -122,7 +123,7 @@ static uint8_t bytes_per_tick;
 // that two radios that happen to be exactly in sync in their sends
 // will eventually get a packet through and get their transmit windows
 // sorted out
-static uint8_t preamble_wait;
+static volatile uint8_t preamble_wait;
 
 // the overhead in bytes of a packet. It consists of 2 settle bytes, 5
 // preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
@@ -220,8 +221,10 @@ static void transparent_serial_loop(void)
 			// received header
 			sync_tx_windows(rxheader, rlen);
 
-			// updte the activity indication
-			received_packet = 1;
+			// update the activity indication
+			__critical {
+				received_packet = 1;
+			}
 
 			// we're not waiting for a preamble
 			// any more
@@ -271,7 +274,7 @@ static void transparent_serial_loop(void)
 			continue;
 		}
 
-		if (tx_fifo_bytes >= TX_CHUNK_SIZE || 
+		if (tx_fifo_bytes >= tx_chunk_size || 
 		    tick_counter >= force_send_time) {
 			// we're at least half full or we have not
 			// received any more serial bytes for at least
@@ -465,8 +468,9 @@ radio_init(void)
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));
 
+try_again:
 	// work out how many milliticks a byte takes to come over the air
-	milliticks_per_byte = 204800UL / (param_get(PARAM_AIR_SPEED)*125UL);
+	milliticks_per_byte = 204800UL / (radio_air_rate() / 8);
 
 	// work out how many bytes we can safely transmit in one tick
 	bytes_per_tick = 1024 / milliticks_per_byte;
@@ -474,16 +478,22 @@ radio_init(void)
 		bytes_per_tick = 1;
 	}
 
-	// work out the default transmit window in ticks
-	tx_window_width = (3 * (TX_CHUNK_SIZE + PACKET_OVERHEAD)) / bytes_per_tick;
-	if (tx_window_width < 3) {
-		tx_window_width = 3;
-	}
-
 	// work out how long neither end will transmit for between windows
-	silence_period = (TX_CHUNK_SIZE + PACKET_OVERHEAD) / bytes_per_tick;
+	silence_period = (tx_chunk_size + PACKET_OVERHEAD + (bytes_per_tick/2)) / bytes_per_tick;
 	if (silence_period < 1) {
 		silence_period = 1;
+	}
+
+	// work out the default transmit window in ticks. This
+	// guarantees 3 full sized packets
+	tx_window_width = 3 * silence_period;
+
+	// at very low data rates we need to lower the packet size
+	// to prevent uint8_t overflows
+	if (tx_chunk_size > 1 &&
+	    2*(silence_period+(uint16_t)tx_window_width) >= 128) {
+		tx_chunk_size--;
+		goto try_again;
 	}
 }
 
