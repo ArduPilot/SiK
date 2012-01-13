@@ -117,7 +117,7 @@ param_get(enum ParamID param)
 
 bool
 param_load()
-{
+__critical {
 	__pdata uint8_t		d;
 	__pdata uint8_t		i;
 	__pdata uint8_t		sum;
@@ -154,7 +154,7 @@ param_load()
 
 void
 param_save()
-{
+__critical {
 	__pdata uint8_t		d;
 	__pdata uint8_t		i;
 	__pdata uint8_t		sum;
