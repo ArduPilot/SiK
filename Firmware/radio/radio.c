@@ -36,8 +36,8 @@ __xdata static uint8_t receive_header;
 __xdata static uint8_t last_rssi;
 __xdata static uint8_t receive_entropy;
 
-static __bit packet_received;
-static __bit preamble_detected;
+static volatile __bit packet_received;
+static volatile __bit preamble_detected;
 
 __xdata static struct radio_statistics statistics;
 
@@ -57,6 +57,13 @@ static void set_frequency_registers(uint32_t frequency);
 static uint32_t scale_uint32(uint32_t value, uint32_t scale);
 static void clear_status_registers(void);
 
+// save and restore radio interrupt. We use this rather than
+// __critical to ensure we don't disturb the timer interrupt at all.
+// minimal tick drift is critical for TDM
+// note that we don't use __bit here due to what appears to be a compiler bug
+#define EX0_SAVE_DISABLE uint8_t EX0_saved = EX0; EX0 = 0
+#define EX0_RESTORE EX0 = EX0_saved
+
 /*
   return a received packet
 
@@ -65,8 +72,11 @@ static void clear_status_registers(void);
   on success the header_3 byte from the packet is returned in rxheader
  */
 bool radio_receive_packet(uint8_t *length, __xdata uint8_t *buf, uint8_t *rxheader)
-__critical {
+{
+	EX0_SAVE_DISABLE;
+
 	if (!packet_received) {
+		EX0_RESTORE;
 		return false;
 	}
 
@@ -76,6 +86,7 @@ __critical {
 	*rxheader = receive_header;
 	packet_received = 0;
 	
+	EX0_RESTORE;
 	return true;
 }
 
@@ -84,7 +95,8 @@ __critical {
   write to the radios transmit FIFO
  */
 void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
-__critical {
+{
+	EX0_SAVE_DISABLE;
 	NSS1 = 0;
 	SPIF1 = 0;
 	SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -99,6 +111,7 @@ __critical {
 
 	SPIF1 = 0;
 	NSS1 = 1;
+	EX0_RESTORE;
 }
 
 
@@ -107,10 +120,15 @@ __critical {
   a packet may be coming in
  */
 bool radio_preamble_detected(void)
-__critical {
-	bool ret = (preamble_detected == 1);
-	preamble_detected = 0;
-	return ret;
+{
+	EX0_SAVE_DISABLE;
+	if (preamble_detected) {
+		preamble_detected = 0;
+		EX0_RESTORE;
+		return true;
+	} 
+	EX0_RESTORE;
+	return false;
 }
 
 
@@ -145,21 +163,21 @@ void radio_transmit_start(uint8_t length, uint8_t txheader, uint8_t timeout_tick
 {
 	uint8_t status;
 
-	__critical {
-		register_write(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
-		register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
+	EX0_SAVE_DISABLE;
+	register_write(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
+	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 		
-		// enable just the packet sent IRQ
-		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
-		register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
-		
-		clear_status_registers();
-		
-		// start TX
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
-		
-		preamble_detected = 0;
-	}
+	// enable just the packet sent IRQ
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
+	
+	clear_status_registers();
+	
+	// start TX
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,EZRADIOPRO_TXON|EZRADIOPRO_XTON);
+	
+	preamble_detected = 0;
+	EX0_RESTORE;
 
 	// wait for the IPKSENT interrupt to be raised
 	delay_set_ticks(timeout_ticks);
@@ -180,11 +198,15 @@ void radio_transmit_start(uint8_t length, uint8_t txheader, uint8_t timeout_tick
   clear the transmit FIFO
  */
 void radio_clear_transmit_fifo(void)
-__critical {
+{
 	uint8_t control;
+	EX0_SAVE_DISABLE;
+
 	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRTX);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRTX);
+
+	EX0_RESTORE;
 }
 
 
@@ -192,11 +214,13 @@ __critical {
   clear the receive FIFO
  */
 void radio_clear_receive_fifo(void)
-__critical {
+{
 	uint8_t control;
+	EX0_SAVE_DISABLE;
 	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRRX);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRRX);
+	EX0_RESTORE;
 }
 
 
@@ -205,19 +229,17 @@ __critical {
  */
 bool radio_receiver_on(void)
 {
-	__critical {
-		packet_received = 0;
-		preamble_detected = 0;
+	packet_received = 0;
+	preamble_detected = 0;
 		
-		// enable packet valid, CRC error and preamble detection interrupts
-		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
-		register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
-		
-		clear_status_registers();
-		
-		// put the radio in receive mode
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
-	}
+	// enable packet valid, CRC error and preamble detection interrupts
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
+	
+	clear_status_registers();
+	
+	// put the radio in receive mode
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1,(EZRADIOPRO_RXON|EZRADIOPRO_XTON));
 	
 	EX0 = 1;
 	
@@ -461,7 +483,9 @@ void radio_set_network_id(uint16_t id)
   write to a radio register
  */
 static void register_write(uint8_t reg, uint8_t value)
-__critical {
+{
+	EX0_SAVE_DISABLE;
+
 	NSS1 = 0;                           // drive NSS low
 	SPIF1 = 0;                          // clear SPIF
 	SPI1DAT = (reg | 0x80);             // write reg address
@@ -472,6 +496,8 @@ __critical {
 	
 	SPIF1 = 0;                          // leave SPIF cleared
 	NSS1 = 1;                           // drive NSS high
+
+	EX0_RESTORE;
 }
 
 
@@ -479,8 +505,9 @@ __critical {
   read from a radio register
  */
 static uint8_t register_read(uint8_t reg)
-__critical {
+{
 	uint8_t value;
+	EX0_SAVE_DISABLE;
 
 	NSS1 = 0;                           // dsrive NSS low
 	SPIF1 = 0;                          // cleat SPIF
@@ -493,6 +520,8 @@ __critical {
 	SPIF1 = 0;                          // leave SPIF cleared
 	NSS1 = 1;                           // drive NSS low
 	
+	EX0_RESTORE;
+
 	return value;
 }
 
@@ -500,7 +529,9 @@ __critical {
   read some bytes from the receive FIFO
  */
 static void read_receive_fifo(uint8_t n, __xdata uint8_t *buffer)
-__critical {
+{
+	EX0_SAVE_DISABLE;
+
 	NSS1 = 0;                            // drive NSS low
 	SPIF1 = 0;                           // clear SPIF
 	SPI1DAT = (EZRADIOPRO_FIFO_ACCESS);
@@ -516,6 +547,8 @@ __critical {
 
 	SPIF1 = 0;                           // leave SPIF cleared
 	NSS1 = 1;                            // drive NSS high
+
+	EX0_RESTORE;
 }
 
 /*

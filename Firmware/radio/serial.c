@@ -81,6 +81,12 @@ static void			_serial_write(uint8_t c);
 static void			serial_restart(void);
 static void serial_device_set_speed(uint8_t speed);
 
+// save and restore serial interrupt. We use this rather than
+// __critical to ensure we don't disturb the timer interrupt at all.
+// minimal tick drift is critical for TDM
+#define ES0_SAVE_DISABLE uint8_t ES_saved = ES0; ES0 = 0
+#define ES0_RESTORE ES0 = ES_saved
+
 void
 serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 {
@@ -165,7 +171,8 @@ serial_write(uint8_t c)
 
 static void
 _serial_write(uint8_t c)
-__critical {
+{
+	ES0_SAVE_DISABLE;
 
 	// if we have space to store the character
 	if (BUF_NOT_FULL(tx)) {
@@ -177,12 +184,17 @@ __critical {
 		if (tx_idle)
 			serial_restart();
 	}
+
+	ES0_RESTORE;
 }
 
 bool
 serial_write_buf(__xdata uint8_t *buf, uint16_t count)
-__critical {
+{
+	ES0_SAVE_DISABLE;
+
 	if (serial_write_space() < count) {
+		ES0_RESTORE;
 		return false;
 	}
 
@@ -193,12 +205,16 @@ __critical {
 	if (tx_idle)
 		serial_restart();
 
+	ES0_RESTORE;
 	return true;
 }
 
 uint16_t
 serial_write_space(void)
-__critical {
+{
+	uint16_t ret;
+	ES0_SAVE_DISABLE;
+
 	// If we are in AT mode, discourage anyone from sending bytes.
 	// We don't necessarily want to stall serial_write callers, or
 	// to block AT commands while their response bytes trickle out,
@@ -206,10 +222,13 @@ __critical {
 	// that the receiver will drain the stream while waiting for the
 	// OK response on AT mode entry.
 	//
-	if (at_mode_active)
+	if (at_mode_active) {
+		ES0_RESTORE;
 		return 0;
-
-	return BUF_FREE(tx);
+	}
+	ret = BUF_FREE(tx);
+	ES0_RESTORE;
+	return ret;
 }
 
 static void
@@ -224,8 +243,10 @@ serial_restart(void)
 
 uint8_t
 serial_read(void)
-__critical {
+{
 	register uint8_t	c;
+
+	ES0_SAVE_DISABLE;
 
 	if (BUF_NOT_EMPTY(rx)) {
 		BUF_REMOVE(rx, c);
@@ -233,25 +254,33 @@ __critical {
 		c = '\0';
 	}
 
+	ES0_RESTORE;
+
 	return c;
 }
 
 bool
 serial_read_buf(__xdata uint8_t *buf, uint16_t count)
-__critical {
+{
+	ES0_SAVE_DISABLE;
 	if (BUF_USED(rx) < count) {
+		ES0_RESTORE;
 		return false;
 	}
 	while (count--)
 		BUF_REMOVE(rx, *buf++);
-
+	ES0_RESTORE;
 	return true;
 }
 
 uint16_t
 serial_read_available(void)
-__critical {
-	return BUF_USED(rx);
+{
+	uint16_t ret;
+	ES0_SAVE_DISABLE;
+	ret = BUF_USED(rx);
+	ES0_RESTORE;
+	return ret;
 }
 
 void
