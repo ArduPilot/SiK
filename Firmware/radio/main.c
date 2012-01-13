@@ -125,9 +125,9 @@ static uint8_t bytes_per_tick;
 // sorted out
 static volatile uint8_t preamble_wait;
 
-// the overhead in bytes of a packet. It consists of 2 settle bytes, 5
+// the overhead in bytes of a packet. It consists of 5
 // preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
-#define PACKET_OVERHEAD 14
+#define PACKET_OVERHEAD 12
 
 // how many frequency channels we have in our allowed ISM band
 static uint8_t num_freq_channels;
@@ -158,6 +158,11 @@ __critical {
 		// the other radio has more ticks than is usually
 		// allowed, so must be using yielded ticks from us. To
 		// prevent a storm of yields we just return now
+#if 0
+		printf("RXHEADER %d tww=%d\n", 
+		       (int)rxheader,
+		       (int)tx_window_width);
+#endif
 		return;
 	} else if (rxheader >= flight_time) {
 		// we are still in the other radios transmit
@@ -181,22 +186,25 @@ __critical {
 	uint8_t window_change;
 	window_change = old_tx_window - next_tx_window;
 	if (window_change > 1 && window_change != 255) {
-		printf("otx=%d ntx=%d rx=%d ft=%d pl=%d\n",
+		printf("otx=%d ntx=%d rx=%d ft=%d pl=%d bpt=%d\n",
 		       (int)old_tx_window,
 		       (int)next_tx_window,
 		       (int)rxheader,
 		       (int)flight_time,
-		       (int)packet_length);
+		       (int)packet_length,
+		       (int)bytes_per_tick);
 	}
 	}
 #endif
 
+#if 1
 	// if the other end has sent a zero length packet and we don't
 	// currently have any transmit window remaining then they are
 	// yielding some ticks to us. 
 	if (packet_length == 0 && tx_window_remaining == 0) {
 		tx_window_remaining = (next_tx_window - tick_counter) + tx_window_width;
 	}
+#endif
 }
 
 
@@ -208,12 +216,14 @@ static void transparent_serial_loop(void)
 	uint8_t tx_fifo_bytes = 0;
 	// a tick count when we will send a short packet
 	uint8_t force_send_time = 0;
+	bool yielded_window = false;
 
 	for (;;) {
 		__pdata uint8_t	rlen;
 		__xdata uint8_t	rbuf[64];
 		uint16_t slen;
 		uint8_t rxheader;
+		uint8_t current_window;
 
 		// see if we have received a packet
 		if (radio_receive_packet(&rlen, rbuf, &rxheader)) {
@@ -254,8 +264,21 @@ static void transparent_serial_loop(void)
 			radio_write_transmit_fifo(slen, rbuf);
 			tx_fifo_bytes += slen;
 		}
+		
+		__critical {
+			current_window = tx_window_remaining;
+		}
 
-		if (tx_window_remaining * (uint16_t)bytes_per_tick < tx_fifo_bytes+PACKET_OVERHEAD) {
+		if (current_window == 0) {
+			yielded_window = false;
+			continue;
+		}
+
+		if (yielded_window) {
+			continue;
+		}
+
+		if (current_window * (uint16_t)bytes_per_tick < tx_fifo_bytes+PACKET_OVERHEAD) {
 			// we can't fit the whole fifo in our remaining
 			// window, so start receiving instead
 			continue;
@@ -271,6 +294,7 @@ static void transparent_serial_loop(void)
 			// a preamble has been detected. Don't
 			// transmit for a while
 			preamble_wait = silence_period;
+			//printf("PREAMBLE %d\n", (int)preamble_wait);
 			continue;
 		}
 
@@ -285,12 +309,13 @@ static void transparent_serial_loop(void)
 			}
 
 			// start transmitting the packet
-			radio_transmit_start(tx_fifo_bytes, tx_window_remaining, tx_window_remaining+silence_period);
+			radio_transmit_start(tx_fifo_bytes, current_window, current_window+silence_period);
 			if (tx_fifo_bytes == 0) {
+				//printf("YIELD %d\n", (int)current_window);
 				// sending a zero byte packet gives up
 				// our window, but doesn't change the
 				// start of the next window
-				tx_window_remaining = 0;
+				yielded_window = true;
 			}
 
 			// re-enable the receiver
