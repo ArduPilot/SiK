@@ -56,6 +56,7 @@
 #include "parameters.h"
 #include "at.h"
 #include "flash.h"
+#include "rtc.h"
 
 /// System clock frequency
 ///
