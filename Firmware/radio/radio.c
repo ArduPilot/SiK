@@ -32,7 +32,6 @@
 
 __xdata static uint8_t receive_buffer[64];
 __xdata static uint8_t receive_packet_length;
-__xdata static uint8_t receive_header;
 __xdata static uint8_t last_rssi;
 __xdata static uint8_t receive_entropy;
 
@@ -69,10 +68,8 @@ static void clear_status_registers(void);
   return a received packet
 
   returns true on success, false on no packet available
-
-  on success the header_3 byte from the packet is returned in rxheader
  */
-bool radio_receive_packet(uint8_t *length, __xdata uint8_t *buf, uint8_t *rxheader)
+bool radio_receive_packet(uint8_t *length, __xdata uint8_t *buf)
 {
 	EX0_SAVE_DISABLE;
 
@@ -84,7 +81,6 @@ bool radio_receive_packet(uint8_t *length, __xdata uint8_t *buf, uint8_t *rxhead
 	*length = receive_packet_length;
 	memcpy(buf, receive_buffer, *length);
 
-	*rxheader = receive_header;
 	packet_received = 0;
 	
 	EX0_RESTORE;
@@ -160,12 +156,11 @@ uint32_t radio_air_rate(void)
 /*
   start transmitting a packet from the transmit FIFO
  */
-void radio_transmit_start(uint8_t length, uint8_t txheader, uint8_t timeout_ticks)
+void radio_transmit_start(uint8_t length, uint8_t timeout_ticks)
 {
 	uint8_t status;
 
 	EX0_SAVE_DISABLE;
-	register_write(EZRADIOPRO_TRANSMIT_HEADER_3, txheader);
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 		
 	// enable just the packet sent IRQ
@@ -445,8 +440,8 @@ bool radio_configure(uint32_t air_rate)
 	register_write(EZRADIOPRO_PREAMBLE_LENGTH, 0x0A); // 40 bits
 	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 0x28); //  5 nibbles, 20 chips, 10 bits
 
-	// 2 sync bytes and 3 header bytes
-	register_write(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_3BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
+	// 2 sync bytes and 2 header bytes
+	register_write(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_2BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
 	register_write(EZRADIOPRO_SYNC_WORD_3, 0x2D);
 	register_write(EZRADIOPRO_SYNC_WORD_2, 0xD4);
 	
@@ -479,7 +474,7 @@ bool radio_configure(uint32_t air_rate)
  */
 void radio_set_network_id(uint16_t id)
 {
-	register_write(EZRADIOPRO_TRANSMIT_HEADER_1, id>>8);
+	register_write(EZRADIOPRO_TRANSMIT_HEADER_3, id>>8);
 	register_write(EZRADIOPRO_TRANSMIT_HEADER_2, id&0xFF);
 }
 
@@ -672,13 +667,11 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		if (packet_received==0) {
 			packet_received = 1;
 			receive_packet_length = register_read(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
-			receive_header        = register_read(EZRADIOPRO_RECEIVED_HEADER_3);
 			if (receive_packet_length != 0) {
 				read_receive_fifo(receive_packet_length, receive_buffer);
 			}
 		}
 
-		radio_clear_receive_fifo();
 	} else if (status & EZRADIOPRO_ICRCERROR) {
 		// we got a crc error on the packet
 		preamble_detected = 0;
@@ -696,6 +689,8 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		return;
 	}
 	
+	radio_clear_receive_fifo();
+
 	// enable packet valid and CRC error IRQ
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);

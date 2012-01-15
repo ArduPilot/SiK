@@ -75,7 +75,8 @@ static volatile __bit received_packet;
 // we prefer to send packets in tx_chunk_size byte chunks when 
 // possible. This may be adjusted based on the air data rate
 // to keep the TDM round time below 256
-static uint8_t tx_chunk_size = 64;
+// we start at 63 to allow for 1 control byte
+static uint8_t tx_chunk_size = 63;
 
 // at startup we calculate how many milliticks a byte is expected
 // to take to transmit with the configured air data rate. This is used
@@ -94,7 +95,8 @@ static uint8_t bytes_per_tick;
 static volatile uint8_t preamble_wait;
 
 // the overhead in bytes of a packet. It consists of 5
-// preamble bytes, 2 sync bytes, 3 header bytes, 2 CRC bytes
+// preamble bytes, 2 sync bytes, 2 header bytes, 2 CRC bytes and 1
+// control byte
 #define PACKET_OVERHEAD 12
 
 
@@ -212,7 +214,7 @@ void tdm_serial_loop(void)
 		radio_set_channel(fhop_receive_channel());
 
 		// see if we have received a packet
-		if (radio_receive_packet(&rlen, rbuf, &rxheader)) {
+		if (radio_receive_packet(&rlen, rbuf)) {
 			// update the activity indication
 			__critical {
 				received_packet = 1;
@@ -222,6 +224,16 @@ void tdm_serial_loop(void)
 			// we're not waiting for a preamble
 			// any more
 			preamble_wait = 0;
+
+			if (rlen == 0) {
+				// not a valid packet. We always send
+				// a control byte at the end of every packet
+				continue;
+			}
+
+			// extract control byte from end of packet
+			rxheader = rbuf[rlen-1];
+			rlen--;
 
 			if (rxheader == 0 && rlen != 0) {
 				// its a control packet for the
@@ -248,8 +260,8 @@ void tdm_serial_loop(void)
 		// if we have received something via serial see how
 		// much of it we could fit in the transmit FIFO
 		slen = serial_read_available();
-		if (slen + tx_fifo_bytes > 64) {
-			slen = 64 - tx_fifo_bytes;
+		if (slen + tx_fifo_bytes > tx_chunk_size) {
+			slen = tx_chunk_size - tx_fifo_bytes;
 		}
 		if (slen > 0 && serial_read_buf(rbuf, slen)) {
 			// put it in the send FIFO
@@ -276,7 +288,6 @@ void tdm_serial_loop(void)
 			continue;
 		}
 
-#if 1
 		if (preamble_wait > 0) {
 			// we saw a preamble previously and are now
 			// waiting for a possible packet
@@ -290,60 +301,50 @@ void tdm_serial_loop(void)
 			//printf("PREAMBLE %d\n", (int)preamble_wait);
 			continue;
 		}
-#endif
 
-		if (tx_fifo_bytes >= tx_chunk_size || 
-		    tick_counter >= force_send_time) {
-			// we're at least half full or we have not
-			// received any more serial bytes for at least
-			// 1 tick, send now
-			if (tx_fifo_bytes != 0) {
-				// show the user that we're sending data
-				LED_ACTIVITY = LED_ON;
-			}
-
-			// set right transmit channel
-			radio_set_channel(fhop_transmit_channel());
-
-			// start transmitting the packet
-			radio_transmit_start(tx_fifo_bytes, current_window, current_window+silence_period);
-			if (tx_fifo_bytes == 0) {
-				//printf("YIELD %d\n", (int)current_window);
-				// sending a zero byte packet gives up
-				// our window, but doesn't change the
-				// start of the next window
-				yielded_window = true;
-			}
-
-			// set right receive channel
-			radio_set_channel(fhop_receive_channel());
-
-			// re-enable the receiver
-			radio_receiver_on();
-
-			// clear the transmit FIFO. This shouldn't
-			// actually be needed, but I have seen some
-			// strange situations where the FIFO gets out
-			// of sync
-			radio_clear_transmit_fifo();
-			if (tx_fifo_bytes != 0) {
-				LED_ACTIVITY = LED_OFF;
-			}
-			tx_fifo_bytes = 0;
-			force_send_time = tick_counter+1;
-			continue;
+		if (tx_fifo_bytes != 0) {
+			// show the user that we're sending data
+			LED_ACTIVITY = LED_ON;
 		}
 
-		// mark a time when we will send regardless of how
-		// many bytes we have in the FIFO
-		force_send_time = tick_counter+1;
+		// add the control byte
+		rbuf[0] = current_window;
+		radio_write_transmit_fifo(1, rbuf);
+
+		// set right transmit channel
+		radio_set_channel(fhop_transmit_channel());
+
+		// start transmitting the packet
+		radio_transmit_start(tx_fifo_bytes+1, current_window+silence_period);
+		if (tx_fifo_bytes == 0) {
+			//printf("YIELD %d\n", (int)current_window);
+			// sending a zero byte packet gives up
+			// our window, but doesn't change the
+			// start of the next window
+			yielded_window = true;
+		}
+
+		// set right receive channel
+		radio_set_channel(fhop_receive_channel());
+
+		// re-enable the receiver
+		radio_receiver_on();
+
+		// clear the transmit FIFO. This shouldn't
+		// actually be needed, but I have seen some
+		// strange situations where the FIFO gets out
+		// of sync
+		radio_clear_transmit_fifo();
+		if (tx_fifo_bytes != 0) {
+			LED_ACTIVITY = LED_OFF;
+		}
+		tx_fifo_bytes = 0;
 	}
 }
 
-
-void tdm_init(void)
+// estimate packet sizes and TDM constants
+static void tdm_estimate(void)
 {
-try_again:
 	// work out how many milliticks a byte takes to come over the air
 	milliticks_per_byte = 204800UL / (radio_air_rate() / 8);
 
@@ -352,23 +353,38 @@ try_again:
 	if (bytes_per_tick == 0) {
 		bytes_per_tick = 1;
 	}
-
+	
 	// work out how long neither end will transmit for between windows
 	silence_period = (tx_chunk_size + PACKET_OVERHEAD + (bytes_per_tick/2)) / bytes_per_tick;
-	if (silence_period < 1) {
-		silence_period = 1;
+	if (silence_period < 2) {
+		silence_period = 2;
 	}
-
+	
 	// work out the default transmit window in ticks. This
 	// guarantees 3 full sized packets
 	tx_window_width = 3 * silence_period;
+}
 
+// initialise the TDM subsystem
+void tdm_init(void)
+{
 	// at very low data rates we need to lower the packet size
 	// to prevent uint8_t overflows
-	if (tx_chunk_size > 1 &&
-	    2*(silence_period+(uint16_t)tx_window_width) >= 128) {
+	while (true) {
+		// estimate the TDM packet timings
+		tdm_estimate();
+
+		if (2*(silence_period+(uint16_t)tx_window_width) < 128) {
+			// thats a reasonable time for a TDM round
+			break;
+		}
+
+		// try a smaller packet size
 		tx_chunk_size--;
-		goto try_again;
+		if (tx_chunk_size == 1) {
+			// we need at least 1 byte in a packet
+			break;
+		}
 	}
 }
 
