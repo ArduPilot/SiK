@@ -45,6 +45,7 @@ __xdata static struct {
 	uint32_t frequency;
 	uint32_t channel_spacing;
 	uint32_t air_data_rate;
+	uint8_t current_channel;
 } settings;
 
 /*
@@ -325,9 +326,13 @@ bool radio_set_channel_spacing(uint32_t value)
 /*
   set the tx/rx frequency channel
  */
-void radio_set_channel(uint8_t value)
+void radio_set_channel(uint8_t channel)
 {
-	register_write(EZRADIOPRO_FREQUENCY_HOPPING_CHANNEL_SELECT, value);
+	if (channel != settings.current_channel) {
+		settings.current_channel = channel;
+		register_write(EZRADIOPRO_FREQUENCY_HOPPING_CHANNEL_SELECT, channel);
+		preamble_detected = 0;
+	}
 }
 
 
