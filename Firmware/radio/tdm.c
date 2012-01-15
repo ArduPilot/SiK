@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
+#include "freq_hopping.h"
 
 // base tick counter. All of the TDM window calculations
 // are based on this. It runs at 200Hz
@@ -50,6 +51,9 @@ static volatile uint8_t tx_window_remaining;
 // adjusted based on the header of any incoming packet, to keep the
 // two radios in sync
 static volatile uint8_t next_tx_window;
+
+// the number of ticks to the other radios transmit window closing
+static volatile uint8_t other_window_remaining;
 
 // the number of ticks we grab for each transmit window
 // this is enough to hold at least 3 packets and is based 
@@ -122,17 +126,39 @@ __critical {
 		// we are still in the other radios transmit
 		// window. We can adjust our transmit window
 		next_tx_window = tick_counter + (rxheader - flight_time) + silence_period;
-		tx_window_remaining = 0;
+		if (tx_window_remaining > 0) {
+			tx_window_remaining = 0;
+			//printf("WC2\n");
+			fhop_window_change();
+		}
+		if (rxheader == flight_time) {
+			// the other radios window has closed
+			if (other_window_remaining > 0) {
+				other_window_remaining = 0;
+				//printf("WC3\n");
+				fhop_window_change();
+			}
+		}
 	} else if (flight_time - rxheader < silence_period) {
 		// we're in the silence period between windows. Adjust
 		// the transmit window, but don't start transmitting
 		// just yet
 		next_tx_window = tick_counter + silence_period - (flight_time - rxheader);
-		tx_window_remaining = 0;
+		if (tx_window_remaining > 0) {
+			tx_window_remaining = 0;
+			fhop_window_change();
+			//printf("WC4\n");
+		}
+		if (other_window_remaining > 0) {
+			other_window_remaining = 0;
+			fhop_window_change();
+			//printf("WC5\n");
+		}
 	} else {
 		// we are in our transmit window. 
 		tx_window_remaining = tx_window_width - (flight_time - rxheader);
 		next_tx_window = tick_counter + tx_window_remaining + tx_window_width + silence_period*2;
+		//printf("OTW\n");
 	}
 
 #if 0
@@ -179,33 +205,45 @@ void tdm_serial_loop(void)
 		uint8_t rxheader;
 		uint8_t current_window;
 
+		// give the AT command processor a chance to handle a command
+		at_command();
+
+		// set right receive channel
+		radio_set_channel(fhop_receive_channel());
+
 		// see if we have received a packet
 		if (radio_receive_packet(&rlen, rbuf, &rxheader)) {
-			// sync our transmit windows based on
-			// received header
-			sync_tx_windows(rxheader, rlen);
-
 			// update the activity indication
 			__critical {
 				received_packet = 1;
 			}
+			fhop_set_locked(true);
 
 			// we're not waiting for a preamble
 			// any more
 			preamble_wait = 0;
 
-			if (rlen != 0) {
-				//printf("rcv(%d,[", rlen);
-				LED_ACTIVITY = LED_ON;
-				serial_write_buf(rbuf, rlen);
-				LED_ACTIVITY = LED_OFF;
-				//printf("]\n");
+			if (rxheader == 0 && rlen != 0) {
+				// its a control packet for the
+				// frequency hopping system
+				//fhop_control_packet(rlen, rbuf);
+			} else {
+				// sync our transmit windows based on
+				// received header
+				sync_tx_windows(rxheader, rlen);
+
+				if (rlen != 0) {
+					// its user data - send it out
+					// the serial port
+					//printf("rcv(%d,[", rlen);
+					LED_ACTIVITY = LED_ON;
+					serial_write_buf(rbuf, rlen);
+					LED_ACTIVITY = LED_OFF;
+					//printf("]\n");
+				}
 			}
 			continue;
 		}
-
-		// give the AT command processor a chance to handle a command
-		at_command();
 
 		// if we have received something via serial see how
 		// much of it we could fit in the transmit FIFO
@@ -238,6 +276,7 @@ void tdm_serial_loop(void)
 			continue;
 		}
 
+#if 1
 		if (preamble_wait > 0) {
 			// we saw a preamble previously and are now
 			// waiting for a possible packet
@@ -251,6 +290,7 @@ void tdm_serial_loop(void)
 			//printf("PREAMBLE %d\n", (int)preamble_wait);
 			continue;
 		}
+#endif
 
 		if (tx_fifo_bytes >= tx_chunk_size || 
 		    tick_counter >= force_send_time) {
@@ -262,6 +302,9 @@ void tdm_serial_loop(void)
 				LED_ACTIVITY = LED_ON;
 			}
 
+			// set right transmit channel
+			radio_set_channel(fhop_transmit_channel());
+
 			// start transmitting the packet
 			radio_transmit_start(tx_fifo_bytes, current_window, current_window+silence_period);
 			if (tx_fifo_bytes == 0) {
@@ -271,6 +314,9 @@ void tdm_serial_loop(void)
 				// start of the next window
 				yielded_window = true;
 			}
+
+			// set right receive channel
+			radio_set_channel(fhop_receive_channel());
 
 			// re-enable the receiver
 			radio_receiver_on();
@@ -341,6 +387,7 @@ static void link_update(void)
 		if (radio_entropy() & 1) {
 			next_tx_window += silence_period;
 		}
+		fhop_set_locked(false);
 #if 0
 		printf("NTX=%d PW=%d TW=%d\n",
 		       (int)next_tx_window,
@@ -365,12 +412,27 @@ void tdm_tick(void)
 	// update transmit windows
 	if (tx_window_remaining > 0) {
 		tx_window_remaining--;
+		if (tx_window_remaining == 0) {
+			// tell the frequency hopping system that
+			// our transmit window has closed
+			fhop_window_change();
+			other_window_remaining = silence_period+tx_window_width;
+		}
 	}
 	if (tick_counter == next_tx_window) {
+		// tell the frequency hopping system that
+		// our transmit window has opened
 		if (tx_window_remaining < tx_window_width) {
 			tx_window_remaining = tx_window_width;
 		}
 		next_tx_window += 2*(tx_window_width + silence_period);
+	}
+	if (other_window_remaining > 0) {
+		other_window_remaining--;
+		if (other_window_remaining == 0) {
+			// the other radios transmit window should be closing
+			fhop_window_change();
+		}
 	}
 }
 
