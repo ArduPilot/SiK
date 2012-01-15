@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
+#include "freq_hopping.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
@@ -236,7 +237,11 @@ radio_init(void)
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));
 
+	// initialise TDM system
 	tdm_init();
+
+	// initialise frequency hopping system
+	fhop_init(num_freq_channels);
 }
 
 static void
