@@ -118,11 +118,9 @@ __critical {
 		// the other radio has more ticks than is usually
 		// allowed, so must be using yielded ticks from us. To
 		// prevent a storm of yields we just return now
-#if 0
-		printf("RXHEADER %d tww=%d\n", 
+		debug("RXHEADER %d tww=%d\n", 
 		       (int)rxheader,
 		       (int)tx_window_width);
-#endif
 		return;
 	} else if (rxheader >= flight_time) {
 		// we are still in the other radios transmit
@@ -130,14 +128,12 @@ __critical {
 		next_tx_window = tick_counter + (rxheader - flight_time) + silence_period;
 		if (tx_window_remaining > 0) {
 			tx_window_remaining = 0;
-			//printf("WC2\n");
 			fhop_window_change();
 		}
 		if (rxheader == flight_time) {
 			// the other radios window has closed
 			if (other_window_remaining > 0) {
 				other_window_remaining = 0;
-				//printf("WC3\n");
 				fhop_window_change();
 			}
 		}
@@ -149,18 +145,15 @@ __critical {
 		if (tx_window_remaining > 0) {
 			tx_window_remaining = 0;
 			fhop_window_change();
-			//printf("WC4\n");
 		}
 		if (other_window_remaining > 0) {
 			other_window_remaining = 0;
 			fhop_window_change();
-			//printf("WC5\n");
 		}
 	} else {
 		// we are in our transmit window. 
 		tx_window_remaining = tx_window_width - (flight_time - rxheader);
 		next_tx_window = tick_counter + tx_window_remaining + tx_window_width + silence_period*2;
-		//printf("OTW\n");
 	}
 
 #if 0
@@ -298,7 +291,7 @@ void tdm_serial_loop(void)
 			// a preamble has been detected. Don't
 			// transmit for a while
 			preamble_wait = silence_period;
-			//printf("PREAMBLE %d\n", (int)preamble_wait);
+			debug("PREAMBLE %d\n", (int)preamble_wait);
 			continue;
 		}
 
@@ -317,7 +310,7 @@ void tdm_serial_loop(void)
 		// start transmitting the packet
 		radio_transmit_start(tx_fifo_bytes+1, current_window+silence_period);
 		if (tx_fifo_bytes == 0) {
-			//printf("YIELD %d\n", (int)current_window);
+			debug("YIELD %d\n", (int)current_window);
 			// sending a zero byte packet gives up
 			// our window, but doesn't change the
 			// start of the next window
@@ -404,12 +397,6 @@ static void link_update(void)
 			next_tx_window += silence_period;
 		}
 		fhop_set_locked(false);
-#if 0
-		printf("NTX=%d PW=%d TW=%d\n",
-		       (int)next_tx_window,
-		       (int)preamble_wait,
-		       (int)tx_window_remaining);
-#endif
 	}
 }
 

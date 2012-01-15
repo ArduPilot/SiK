@@ -106,16 +106,18 @@ void fhop_window_change(void)
 		// when we don't have lock, the receive channel only
 		// changes when the transmit channel wraps
 		receive_channel = (receive_channel+1) % NUM_FREQ_CHANNELS;
-		printf("Trying RCV on channel %d\n", (int)receive_channel);
+		debug("Trying RCV on channel %d\n", (int)receive_channel);
 	}
 }
 
 // called when we get or lose radio lock
 void fhop_set_locked(bool locked)
 {
+#if DEBUG
 	if (locked && !have_radio_lock) {
-		printf("FH lock\n");		
+		debug("FH lock\n");		
 	}
+#endif
 	have_radio_lock = locked;
 	if (have_radio_lock) {
 		// we have just received a packet, so we know the
@@ -123,7 +125,7 @@ void fhop_set_locked(bool locked)
 		// channel
 		transmit_channel = receive_channel;
 	} else {
-		printf("FH unlock\n");
+		debug("FH unlock\n");
 	}
 }
 
