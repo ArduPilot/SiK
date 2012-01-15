@@ -133,10 +133,10 @@ struct radio_statistics {
 
 
 // low level radio control functions from radio.c
-bool radio_receive_packet(uint8_t *, __xdata uint8_t *, uint8_t *);
+bool radio_receive_packet(uint8_t *, __xdata uint8_t *);
 void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer);
 bool radio_preamble_detected(void);
-void radio_transmit_start(uint8_t length, uint8_t txheader, uint8_t timeout_ticks);
+void radio_transmit_start(uint8_t length, uint8_t timeout_ticks);
 void radio_clear_transmit_fifo(void);
 void radio_clear_receive_fifo(void);
 bool radio_receiver_on(void);

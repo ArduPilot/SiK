@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
+#include "freq_hopping.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
@@ -72,9 +73,6 @@ __pdata uint8_t			g_board_bl_version;	///< from the bootloader
 /// Counter used by delay_msec
 ///
 static volatile uint8_t delay_counter;
-
-// how many frequency channels we have in our allowed ISM band
-static uint8_t num_freq_channels;
 
 /// Configure the Si1000 for operation.
 ///
@@ -216,9 +214,6 @@ radio_init(void)
 		break;
 	}
 
-	// use 50 channels to fit with the US regulations
-	num_freq_channels = 50;
-
 	// set the frequency and channel spacing
 	radio_set_frequency(freq);
 
@@ -226,7 +221,7 @@ radio_init(void)
 	radio_set_channel_spacing(250000UL);
 
 	// start on a channel chosen by network ID
-	radio_set_channel(param_get(PARAM_NETID) % num_freq_channels);
+	radio_set_channel(param_get(PARAM_NETID) % NUM_FREQ_CHANNELS);
 	
 	// And intilise the radio with them.
 	if (!radio_configure(param_get(PARAM_AIR_SPEED)*1000UL)) {
@@ -236,7 +231,11 @@ radio_init(void)
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));
 
+	// initialise TDM system
 	tdm_init();
+
+	// initialise frequency hopping system
+	fhop_init(param_get(PARAM_NETID));
 }
 
 static void
