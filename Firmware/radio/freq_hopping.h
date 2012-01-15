@@ -24,9 +24,14 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
-//
+
+
+// how many channels to hop over
+#define NUM_FREQ_CHANNELS 50
+
+
 // initialise frequency hopping logic
-void fhop_init(uint8_t num_channels);
+void fhop_init(uint16_t netid);
 
 // tell the TDM code what channel to transmit on
 uint8_t fhop_transmit_channel(void);

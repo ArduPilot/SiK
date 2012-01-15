@@ -52,28 +52,52 @@ static volatile uint8_t transmit_channel;
 // very slowly - it moves only when the transmit channel wraps
 static volatile uint8_t receive_channel;
 
-// initialise frequency hopping logic
-void fhop_init(uint8_t num_channels)
+// map between hopping channel numbers and physical channel numbers
+static __xdata uint8_t channel_map[NUM_FREQ_CHANNELS];
+
+// a vary simple array shuffle
+// based on shuffle from
+// http://benpfaff.org/writings/clc/shuffle.html
+static void shuffle(__xdata uint8_t *array, uint8_t n)
 {
-	num_fh_channels = num_channels;
+        uint8_t i;
+	for (i = 0; i < n-1; i++) {
+		uint8_t j = ((uint8_t)rand()) % n;
+		uint8_t t = array[j];
+		array[j] = array[i];
+		array[i] = t;
+	}
+}
+
+// initialise frequency hopping logic
+void fhop_init(uint16_t netid)
+{
+	int i;
+	// create a random mapping between virtual and physical channel
+	// numbers, seeded by the network ID
+	for (i=0; i<NUM_FREQ_CHANNELS; i++) {
+		channel_map[i] = i;
+	}
+	srand(netid);
+	shuffle(channel_map, NUM_FREQ_CHANNELS);
 }
 
 // tell the TDM code what channel to transmit on
 uint8_t fhop_transmit_channel(void)
 {
-	return transmit_channel;
+	return channel_map[transmit_channel];
 }
 
 // tell the TDM code what channel to receive on
 uint8_t fhop_receive_channel(void)
 {
-	return receive_channel;
+	return channel_map[receive_channel];
 }
 
 // called when the transmit windows changes owner
 void fhop_window_change(void)
 {
-	transmit_channel = (transmit_channel+1) % num_fh_channels;
+	transmit_channel = (transmit_channel+1) % NUM_FREQ_CHANNELS;
 	if (have_radio_lock) {
 		// when we have lock, the receive channel follows the
 		// transmit channel
@@ -81,7 +105,7 @@ void fhop_window_change(void)
 	} else if (transmit_channel == 0) {
 		// when we don't have lock, the receive channel only
 		// changes when the transmit channel wraps
-		receive_channel = (receive_channel+1) % num_fh_channels;
+		receive_channel = (receive_channel+1) % NUM_FREQ_CHANNELS;
 		printf("Trying RCV on channel %d\n", (int)receive_channel);
 	}
 }
