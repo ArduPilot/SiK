@@ -45,6 +45,7 @@ __xdata static struct {
 	uint32_t channel_spacing;
 	uint32_t air_data_rate;
 	uint8_t current_channel;
+	uint8_t transmit_power;
 } settings;
 
 
@@ -481,8 +482,8 @@ radio_configure(uint32_t air_rate)
 	// check 2 bytes of header (the network ID)
 	register_write(EZRADIOPRO_HEADER_CONTROL_1, 2);
 
-	// setup maximum output power
-	register_write(EZRADIOPRO_TX_POWER, 0x7);
+	// setup minimum output power during startup
+	radio_set_transmit_power(0);
 
 	// work out which register table column we will use
 	for (i = 0; i < NUM_DATA_RATES - 1; i++) {
@@ -501,6 +502,30 @@ radio_configure(uint32_t air_rate)
 	return true;
 }
 
+#define NUM_POWER_LEVELS 8
+__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
+
+// set the radio transmit power (in dBm)
+//
+void radio_set_transmit_power(uint8_t power)
+{
+	uint8_t i;
+	for (i=0; i<NUM_POWER_LEVELS; i++) {
+		if (power <= power_levels[i]) break;
+	}
+	if (i == NUM_POWER_LEVELS) {
+		i = NUM_POWER_LEVELS-1;
+	}
+	settings.transmit_power = power_levels[i];
+	register_write(EZRADIOPRO_TX_POWER, i);
+}
+
+// get the currend transmit power (in dBm)
+//
+uint8_t radio_get_transmit_power(void)
+{
+	return settings.transmit_power;
+}
 
 // setup a 16 bit network ID
 //

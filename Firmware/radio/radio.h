@@ -240,4 +240,18 @@ extern uint8_t radio_entropy();
 ///
 extern uint32_t radio_air_rate();
 
+/// set the radio transmit power (in dBm)
+///
+/// @param power		The desired transmit power in dBm
+///				
+///
+void radio_set_transmit_power(uint8_t power);
+
+/// get the currend transmit power (in dBm)
+///
+/// @return			The actual transmit power in dBm
+///				
+///
+uint8_t radio_get_transmit_power(void);
+
 #endif // _RADIO_H_
