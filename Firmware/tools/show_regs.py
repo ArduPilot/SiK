@@ -27,8 +27,8 @@ def show_regs(device):
         print("timeout")
         return
     ser.send('ATI5\r\n')
-    time.sleep(0.2)
-    ser.read_nonblocking(100)
+    time.sleep(1)
+    ser.read_nonblocking(300)
     ser.send('ATO\r\n')
     print("")
     time.sleep(1)
