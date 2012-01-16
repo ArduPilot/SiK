@@ -228,8 +228,17 @@ radio_init(void)
 		panic("radio_configure failed");
 	}
 
+	// report the real air data rate in parameters
+	param_set(PARAM_AIR_SPEED, radio_air_rate()/1000);
+
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));
+
+	// setup transmit power
+	radio_set_transmit_power(param_get(PARAM_TXPOWER));
+	
+	// report the real transmit power in settings
+	param_set(PARAM_TXPOWER, radio_get_transmit_power());
 
 	// initialise TDM system
 	tdm_init();

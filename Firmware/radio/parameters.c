@@ -52,6 +52,7 @@ __code const struct parameter_info {
 	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		128},
 	{"NETID",		25},
+	{"TXPOWER",		20},
 };
 
 /// In-RAM parameter store.
@@ -88,6 +89,11 @@ param_check(enum ParamID id, uint16_t val)
 	case PARAM_NETID:
 		// all values are OK
 		return true;
+
+	case PARAM_TXPOWER:
+		if (val > 20)
+			return false;
+		break;
 
 	default:
 		// no sanity check for this value

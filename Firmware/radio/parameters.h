@@ -50,6 +50,7 @@ enum ParamID {
         PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
         PARAM_AIR_SPEED,		// over the air baud rate
         PARAM_NETID,			// network ID
+        PARAM_TXPOWER,			// transmit power (dBm)
         PARAM_MAX			// must be last
 };
 
