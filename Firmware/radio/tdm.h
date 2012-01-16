@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2011 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -26,11 +26,25 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-// initialise tdm subsystem
-void tdm_init(void);
+///
+/// @file	tdm.h
+///
+/// Interface to the time division multiplexing code
+///
+
+#ifndef _TDM_H_
+#define _TDM_H_
+
+/// initialise tdm subsystem
+///
+extern void tdm_init(void);
 
 // tdm main loop
-void tdm_serial_loop(void);
+///
+extern void tdm_serial_loop(void);
 
 // called every 5ms
-void tdm_tick(void);
+///
+extern void tdm_tick(void);
+
+#endif // _TDM_H_

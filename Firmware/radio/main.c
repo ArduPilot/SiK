@@ -222,9 +222,9 @@ radio_init(void)
 
 	// start on a channel chosen by network ID
 	radio_set_channel(param_get(PARAM_NETID) % NUM_FREQ_CHANNELS);
-	
+
 	// And intilise the radio with them.
-	if (!radio_configure(param_get(PARAM_AIR_SPEED)*1000UL)) {
+	if (!radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL)) {
 		panic("radio_configure failed");
 	}
 
@@ -242,7 +242,7 @@ static void
 T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 {
 
-	// re-arm the interrupt
+	// re-arm the interrupt by clearing TF3H
 	TMR3CN = 0x04;
 
 	// call the AT parser tick
@@ -251,7 +251,7 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 	// update the delay counter
 	if (delay_counter > 0)
 		delay_counter--;
-	
+
 	// tell the tdm system that another 5ms has passed
 	tdm_tick();
 }

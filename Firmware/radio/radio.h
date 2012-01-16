@@ -88,6 +88,7 @@ extern void	delay_set(uint16_t msec);
 
 /// Set the delay timer in 200Hz ticks
 ///
+/// @param ticks		Number of ticks before the timer expires.
 ///
 void delay_set_ticks(uint8_t ticks);
 
@@ -120,34 +121,123 @@ extern void	printfl(char *fmt, ...) __reentrant;
 #define __stringify(_x)		#_x
 #define stringify(_x)		__stringify(_x)
 
-
-extern __code const char g_version_string[];			///< printable version string
-extern __code const char g_banner_string[];			///< printable startup banner string
-
+// Board infop
+extern __code const char 		g_version_string[];	///< printable version string
+extern __code const char 		g_banner_string[];	///< printable startup banner string
 extern __pdata enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
 extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
 
+/// staticstics maintained by the radio code
 struct radio_statistics {
-	uint8_t rx_errors;
+	uint8_t rx_errors;		///< count of packet receive errors
 };
 
+/// receives a packet from the radio
+///
+/// @param len			Pointer to storage for the length of the packet
+/// @param buf			Pointer to storage for the packet
+/// @return			True if a packet was received
+///
+extern bool radio_receive_packet(uint8_t *len, __xdata uint8_t *buf);
 
-// low level radio control functions from radio.c
-bool radio_receive_packet(uint8_t *, __xdata uint8_t *);
-void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer);
-bool radio_preamble_detected(void);
-void radio_transmit_start(uint8_t length, uint8_t timeout_ticks);
-void radio_clear_transmit_fifo(void);
-void radio_clear_receive_fifo(void);
-bool radio_receiver_on(void);
-bool radio_initialise(void);
-bool radio_set_frequency(uint32_t value);
-bool radio_set_channel_spacing(uint32_t value);
-void radio_set_channel(uint8_t value);
-bool radio_configure(uint32_t air_rate);
-void radio_set_network_id(uint16_t id);
-uint8_t radio_last_rssi(void);
-uint8_t radio_entropy();
-uint32_t radio_air_rate();
+/// write data into the radio transmit fifo
+///
+/// @param n			The number of bytes to write
+/// @param buf			Pointer to the bytes to write
+///
+extern void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer);
+
+/// test whether the radio has detected a packet preamble
+///
+/// @return			True if a preamble has been detected
+///
+extern bool radio_preamble_detected(void);
+
+/// begin transmission of a packet
+///
+/// @param length		Packet length to be transmitted; assumes
+///				the data is already present in the FIFO.
+/// @param timeout_ticks	The number of ticks to wait before assiming
+///				that transmission has failed.
+///
+extern void radio_transmit_start(uint8_t length, uint8_t timeout_ticks);
+
+/// clear the radio transmit FIFO
+///
+extern void radio_clear_transmit_fifo(void);
+
+/// clear the radio receive FIFO
+///
+extern void radio_clear_receive_fifo(void);
+
+/// switch the radio to receive mode
+///
+/// @return			Always true.
+///
+extern bool radio_receiver_on(void);
+
+/// reset and intiialise the radio
+///
+/// @return			True if the initialisation completed successfully.
+///
+extern bool radio_initialise(void);
+
+/// set the nominal radio transmit/receive frequencies
+///
+/// This is the frequency of channel zero.
+///
+/// @param value		The frequency in Hz
+///
+extern bool radio_set_frequency(uint32_t value);
+
+/// set the channel spacing used by the channel offset control
+///
+/// @param value		The channel spacing in Hz
+///
+extern bool radio_set_channel_spacing(uint32_t value);
+
+/// set the channel for transmit/receive
+///
+/// @param value		The channel number to select
+///
+extern void radio_set_channel(uint8_t value);
+
+/// configure the radio for a given air data rate
+///
+/// @param air_rate		The air data rate, in bits per second
+///				Note that this value is rounded up to
+///				the next supported value
+/// @return			True if the radio was successfully configured.
+///
+extern bool radio_configure(uint32_t air_rate);
+
+/// configure the radio network ID
+///
+/// The network ID is programmed as header bytes, so that packets for
+/// other networks can be rejected at the hardware level.
+///
+/// @param id			The network ID to be sent, and to filter
+///				on reception
+///
+extern void radio_set_network_id(uint16_t id);
+
+/// fetch the signal strength recorded for the most recent preamble
+///
+/// @return			The RSSI register as reported by the radio
+///				the last time a valid preamble was detected.
+extern uint8_t radio_last_rssi(void);
+
+/// fetch some entropy bits that the radio code accumulates
+///
+/// @return			An unpredictable value
+///
+extern uint8_t radio_entropy();
+
+/// return the air data rate
+///
+/// @return			The value passed to the last successful call
+///				to radio_configure
+///
+extern uint32_t radio_air_rate();
 
 #endif // _RADIO_H_

@@ -48,8 +48,8 @@
 enum ParamID {
         PARAM_FORMAT = 0,		// Must always be parameter 0
         PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-	PARAM_AIR_SPEED,		// over the air baud rate
-	PARAM_NETID,			// network ID
+        PARAM_AIR_SPEED,		// over the air baud rate
+        PARAM_NETID,			// network ID
         PARAM_MAX			// must be last
 };
 

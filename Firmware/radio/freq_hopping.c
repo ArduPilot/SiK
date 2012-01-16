@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2011 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -27,41 +27,43 @@
 //
 
 ///
-/// @file	tdm.c
+/// @file	freq_hopping.c
 ///
-/// time division multiplexing code
+/// Frequency hop managerment
 ///
 
 #include <stdarg.h>
 #include "radio.h"
 #include "freq_hopping.h"
 
-// how many channels are we hopping over
-static uint8_t num_fh_channels;
+/// how many channels are we hopping over
+__pdata static uint8_t num_fh_channels;
 
-// whether we current have good lock with the other end
+/// whether we current have good lock with the other end
 static bool have_radio_lock;
 
-// our current transmit channel. This changes every time the TDM
-// transmit window opens or closes, regardless of our lock state
-static volatile uint8_t transmit_channel;
+/// current transmit channel
+/// This changes every time the TDM transmit window opens or closes,
+/// regardless of our lock state
+__pdata static volatile uint8_t transmit_channel;
 
-// our current receive channel. When we have good lock
-// with the other radio the receive channel follows the transmit
-// channel. When we don't have lock the receive channel only changes
-// very slowly - it moves only when the transmit channel wraps
-static volatile uint8_t receive_channel;
+/// current receive channel
+/// When we have good lock with the other radio the receive channel
+/// follows the transmit channel. When we don't have lock the receive
+/// channel only changes
+/// very slowly - it moves only when the transmit channel wraps
+__pdata static volatile uint8_t receive_channel;
 
-// map between hopping channel numbers and physical channel numbers
-static __xdata uint8_t channel_map[NUM_FREQ_CHANNELS];
+/// map between hopping channel numbers and physical channel numbers
+__xdata static uint8_t channel_map[NUM_FREQ_CHANNELS];
 
 // a vary simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
 static void shuffle(__xdata uint8_t *array, uint8_t n)
 {
-        uint8_t i;
-	for (i = 0; i < n-1; i++) {
+	uint8_t i;
+	for (i = 0; i < n - 1; i++) {
 		uint8_t j = ((uint8_t)rand()) % n;
 		uint8_t t = array[j];
 		array[j] = array[i];
@@ -75,7 +77,7 @@ void fhop_init(uint16_t netid)
 	int i;
 	// create a random mapping between virtual and physical channel
 	// numbers, seeded by the network ID
-	for (i=0; i<NUM_FREQ_CHANNELS; i++) {
+	for (i = 0; i < NUM_FREQ_CHANNELS; i++) {
 		channel_map[i] = i;
 	}
 	srand(netid);
@@ -97,7 +99,7 @@ uint8_t fhop_receive_channel(void)
 // called when the transmit windows changes owner
 void fhop_window_change(void)
 {
-	transmit_channel = (transmit_channel+1) % NUM_FREQ_CHANNELS;
+	transmit_channel = (transmit_channel + 1) % NUM_FREQ_CHANNELS;
 	if (have_radio_lock) {
 		// when we have lock, the receive channel follows the
 		// transmit channel
@@ -105,7 +107,7 @@ void fhop_window_change(void)
 	} else if (transmit_channel == 0) {
 		// when we don't have lock, the receive channel only
 		// changes when the transmit channel wraps
-		receive_channel = (receive_channel+1) % NUM_FREQ_CHANNELS;
+		receive_channel = (receive_channel + 1) % NUM_FREQ_CHANNELS;
 		debug("Trying RCV on channel %d\n", (int)receive_channel);
 	}
 }
@@ -115,13 +117,13 @@ void fhop_set_locked(bool locked)
 {
 #if DEBUG
 	if (locked && !have_radio_lock) {
-		debug("FH lock\n");		
+		debug("FH lock\n");
 	}
 #endif
 	have_radio_lock = locked;
 	if (have_radio_lock) {
 		// we have just received a packet, so we know the
-		// other radios transmit channel must be our receive 
+		// other radios transmit channel must be our receive
 		// channel
 		transmit_channel = receive_channel;
 	} else {

@@ -40,13 +40,13 @@
 // Note that the rx buffer is much larger than you might expect
 // as we need the receive buffer to be many times larger than the
 // largest possible air packet size for efficient TDM. Ideally it
-// would be about 16x larger than the largest air packet if we have 
+// would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
 __xdata static uint8_t rx_buf[2048] = {0};
 __xdata static uint8_t tx_buf[512] = {0};
-static const uint16_t  rx_mask = sizeof(rx_buf)-1;
-static const uint16_t  tx_mask = sizeof(tx_buf)-1;
+static const uint16_t  rx_mask = sizeof(rx_buf) - 1;
+static const uint16_t  tx_mask = sizeof(tx_buf) - 1;
 
 // FIFO insert/remove pointers
 static uint16_t				rx_insert, rx_remove;
@@ -317,9 +317,9 @@ static const __code struct {
 bool serial_device_valid_speed(uint8_t speed)
 {
 	uint8_t i;
-	uint8_t num_rates = sizeof(serial_rates)/sizeof(serial_rates[0]);
+	uint8_t num_rates = sizeof(serial_rates) / sizeof(serial_rates[0]);
 
-	for (i=0; i<num_rates; i++) {
+	for (i = 0; i < num_rates; i++) {
 		if (speed == serial_rates[i].rate) {
 			return true;
 		}
@@ -330,9 +330,9 @@ bool serial_device_valid_speed(uint8_t speed)
 static void serial_device_set_speed(uint8_t speed)
 {
 	uint8_t i;
-	uint8_t num_rates = sizeof(serial_rates)/sizeof(serial_rates[0]);
+	uint8_t num_rates = sizeof(serial_rates) / sizeof(serial_rates[0]);
 
-	for (i=0; i<num_rates; i++) {
+	for (i = 0; i < num_rates; i++) {
 		if (speed == serial_rates[i].rate) {
 			break;
 		}

@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2011 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -25,29 +25,50 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
+///
+/// @file	freq_hopping.h
+///
+/// Prototypes for the frequency hopping manager
+///
 
-// how many channels to hop over
+#ifndef _FREQ_HOPPING_H_
+#define _FREQ_HOPPING_H_
+
+/// how many channels to hop over
 #define NUM_FREQ_CHANNELS 50
 
+/// initialise frequency hopping logic
+///
+/// @param netid	Our assigned network ID.
+extern void fhop_init(uint16_t netid);
 
-// initialise frequency hopping logic
-void fhop_init(uint16_t netid);
+/// tell the TDM code what channel to transmit on
+///
+/// @return		The channel that we should be transmitting on.
+///
+extern uint8_t fhop_transmit_channel(void);
 
-// tell the TDM code what channel to transmit on
-uint8_t fhop_transmit_channel(void);
-
-// tell the TDM code what channel to receive on
+/// tell the TDM code what channel to receive on
+///
+/// @return		The channel that we should be receiving on.
+//
 uint8_t fhop_receive_channel(void);
 
-// called when the transmit window flips
-void fhop_window_change(void);
+/// called when the transmit window flips
+///
+extern void fhop_window_change(void);
 
-// called when we get or lose radio lock
-void fhop_set_locked(bool locked);
+/// called when we get or lose radio lock
+///
+/// @param locked	True if we have gained lock, false if we have lost it.
+///
+extern void fhop_set_locked(bool locked);
 
-// called when a frequency hopping control packet comes in.
-void fhop_control_packet(uint8_t len, __xdata uint8_t *rbuf);
+/// called when a frequency hopping control packet comes in.
+///
+/// @param len		Length of the packet as received
+/// @param rbuf		Pointer to the packet data
+///
+extern void fhop_control_packet(uint8_t len, __xdata uint8_t *rbuf);
 
-// called when we get or lose radio lock
-void fhop_set_locked(bool locked);
-
+#endif // _FREQ_HOPPING_H_
