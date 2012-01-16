@@ -101,14 +101,16 @@ __pdata static volatile uint8_t preamble_wait;
 /// counter wraps, zeroed when display has happened
 __pdata static uint8_t test_display;
 
+/// set when we should send a statistics packet on the next round
+static __bit send_statistics;
 
 /// packet and RSSI statistics
-__pdata static struct {
+__pdata static struct statistics {
 	uint8_t average_rssi;
 	uint8_t remote_average_rssi;
 	uint8_t receive_count;
 	uint8_t round_count;
-} statistics;
+} statistics, remote_statistics;
 
 /// the overhead in bytes of a packet. It consists of 5
 /// preamble bytes, 2 sync bytes, 2 header bytes, 2 CRC bytes and 1
@@ -122,16 +124,22 @@ static void
 display_test_output(void)
 {
 	if (test_display & AT_TEST_RSSI) {
-		uint8_t pkt_pct;
+		uint8_t pkt_pct, remote_pkt_pct;
 		if (statistics.round_count == 0) {
 			pkt_pct = 0;
 		} else {
 			pkt_pct = (100*(uint16_t)statistics.receive_count)/statistics.round_count;
 		}
-		printf("RSSI: %d  pkts/round: %d%c\n",
+		if (remote_statistics.round_count == 0) {
+			remote_pkt_pct = 0;
+		} else {
+			remote_pkt_pct = (100*(uint16_t)remote_statistics.receive_count)/remote_statistics.round_count;
+		}
+		printf("LOCAL RSSI: %d  pkts/round: %d%c   REMOTE RSSI: %d pkts/round: %d%c\n",
 		       (int)statistics.average_rssi,
-		       (int)pkt_pct, 
-			'%');
+		       (int)pkt_pct, '%',
+		       (int)remote_statistics.average_rssi,
+		       (int)remote_pkt_pct, '%');
 	}
 }
 
@@ -292,9 +300,13 @@ tdm_serial_loop(void)
 			rlen--;
 
 			if (rxheader == 0 && rlen != 0) {
-				// its a control packet for the
-				// frequency hopping system
-				//fhop_control_packet(rlen, rbuf);
+				// its a control packet
+				if (rlen == sizeof(struct statistics)) {
+					memcpy(&remote_statistics, rbuf, rlen);
+				}
+
+				// don't count control packets in the stats
+				statistics.receive_count--;
 			} else {
 				// sync our transmit windows based on
 				// received header
@@ -363,12 +375,26 @@ tdm_serial_loop(void)
 			LED_ACTIVITY = LED_ON;
 		}
 
-		// add the control byte
-		rbuf[0] = current_window;
-		radio_write_transmit_fifo(1, rbuf);
-
 		// set right transmit channel
 		radio_set_channel(fhop_transmit_channel());
+
+		if (tx_fifo_bytes == 0 && send_statistics) {
+			// send a statistics packet
+			send_statistics = 0;
+			memcpy(rbuf, &statistics, sizeof(statistics));
+			tx_fifo_bytes = sizeof(statistics);
+			radio_write_transmit_fifo(tx_fifo_bytes, rbuf);
+		
+			// use a control byte of zero to indicate a
+			// statistics packet
+			rbuf[0] = 0;
+		} else {
+			// put the current window in the control byte
+			rbuf[0] = current_window;
+		}
+
+		// add the control byte to the fifo
+		radio_write_transmit_fifo(1, rbuf);
 
 		// start transmitting the packet
 		radio_transmit_start(tx_fifo_bytes + 1, current_window + silence_period);
@@ -480,6 +506,7 @@ tdm_tick(void)
 	if (tick_counter == 0) {
 		link_update();
 		test_display = at_testmode;
+		send_statistics = 1;
 	}
 
 	if (preamble_wait > 0)
