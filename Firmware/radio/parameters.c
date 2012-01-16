@@ -110,6 +110,19 @@ param_set(enum ParamID param, param_t value)
 		return false;
 
 	parameter_values[param].val = value;
+
+	// some parameters we update immediately
+	switch (param) {
+	case PARAM_TXPOWER:
+		// useful to update power level immediately when range
+		// testing in RSSI mode		
+		radio_set_transmit_power(value);
+		break;
+
+	default:
+		break;
+	}
+
 	return true;
 }
 
