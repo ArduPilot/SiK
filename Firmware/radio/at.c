@@ -33,6 +33,7 @@
 ///
 
 #include "radio.h"
+#include "tdm.h"
 
 
 // AT command buffer
@@ -43,6 +44,9 @@ __pdata uint8_t	at_cmd_len;
 // mode flags
 bool		at_mode_active;	///< if true, incoming bytes are for AT command
 bool		at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
+
+// test bits
+uint8_t		at_testmode;    ///< test modes enabled (AT_TEST_*)
 
 // command handlers
 static void	at_ok(void);
@@ -279,6 +283,7 @@ at_i(void)
 		for (id = 0; id < PARAM_MAX; id++) {
 			printf("S%d: %s=%d\n", id, param_name(id), (unsigned)param_get(id));
 		}
+		tdm_report_timing();
 		return;
 	}
 	default:
@@ -364,7 +369,18 @@ at_ampersand(void)
 		break;
 
 	case 'T':
-		// XXX test mode(s)
+		// enable test modes
+		if (!strcmp(at_cmd + 4, "")) {
+			// disable all tests
+			at_testmode = 0;
+		} else if (!strcmp(at_cmd + 4, "=RSSI")) {
+			// display RSSI stats
+			at_testmode ^= AT_TEST_RSSI;
+		} else {
+			at_error();
+		}
+		break;
+		
 	default:
 		at_error();
 		break;

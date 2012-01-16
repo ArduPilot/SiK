@@ -96,10 +96,55 @@ __pdata static uint8_t bytes_per_tick;
 /// sorted out
 __pdata static volatile uint8_t preamble_wait;
 
+
+/// test data to display in the main loop. Updated when the tick
+/// counter wraps, zeroed when display has happened
+__pdata static uint8_t test_display;
+
+
+/// packet and RSSI statistics
+__pdata static struct {
+	uint8_t average_rssi;
+	uint8_t remote_average_rssi;
+	uint8_t receive_count;
+	uint8_t round_count;
+} statistics;
+
 /// the overhead in bytes of a packet. It consists of 5
 /// preamble bytes, 2 sync bytes, 2 header bytes, 2 CRC bytes and 1
 /// control byte
 #define PACKET_OVERHEAD 12
+
+
+/// display test output
+///
+static void
+display_test_output(void)
+{
+	if (test_display & AT_TEST_RSSI) {
+		uint8_t pkt_pct;
+		if (statistics.round_count == 0) {
+			pkt_pct = 0;
+		} else {
+			pkt_pct = (100*(uint16_t)statistics.receive_count)/statistics.round_count;
+		}
+		printf("RSSI: %d  pkts/round: %d%c\n",
+		       (int)statistics.average_rssi,
+		       (int)pkt_pct, 
+			'%');
+	}
+}
+
+
+/// estimate the flight time for a packet given the payload size
+///
+/// @param packet_len		payload length in bytes
+///
+/// @return			flight time in 200Hz ticks
+static uint8_t flight_time_estimate(uint8_t packet_len)
+{
+	return (512 + ((packet_len + PACKET_OVERHEAD) * milliticks_per_byte)) >> 10;
+}
 
 
 /// synchronise tx windows
@@ -113,7 +158,7 @@ __pdata static volatile uint8_t preamble_wait;
 static void
 sync_tx_windows(uint8_t rxheader, uint8_t packet_length)
 __critical {
-	uint8_t flight_time = (512 + ((packet_length + PACKET_OVERHEAD) * milliticks_per_byte)) >> 10;
+	uint8_t flight_time = flight_time_estimate(packet_length);
 	uint8_t old_tx_window = next_tx_window;
 
 	if (rxheader > tx_window_width) {
@@ -184,6 +229,9 @@ __critical {
 #endif
 }
 
+
+/// main loop for time division multiplexing transparent serial
+///
 void
 tdm_serial_loop(void)
 {
@@ -203,6 +251,12 @@ tdm_serial_loop(void)
 		// give the AT command processor a chance to handle a command
 		at_command();
 
+		// display test data if needed
+		if (test_display) {
+			display_test_output();
+			test_display = 0;
+		}
+
 		// set right receive channel
 		radio_set_channel(fhop_receive_channel());
 
@@ -213,6 +267,15 @@ tdm_serial_loop(void)
 				received_packet = 1;
 			}
 			fhop_set_locked(true);
+			
+			// update filtered RSSI value and packet stats
+			statistics.average_rssi = (radio_last_rssi() + 7*(uint16_t)statistics.average_rssi)/8;
+			statistics.receive_count++;
+			if (statistics.receive_count == 255) {
+				statistics.receive_count >>= 1;
+				statistics.round_count >>= 1;
+			}
+			
 
 			// we're not waiting for a preamble
 			// any more
@@ -401,9 +464,14 @@ link_update(void)
 			next_tx_window += silence_period;
 		}
 		fhop_set_locked(false);
+
+		// reset statistics when unlocked
+		memset(&statistics, 0, sizeof(statistics));
 	}
 }
 
+/// called every 5ms 
+///
 void
 tdm_tick(void)
 {
@@ -411,6 +479,7 @@ tdm_tick(void)
 
 	if (tick_counter == 0) {
 		link_update();
+		test_display = at_testmode;
 	}
 
 	if (preamble_wait > 0)
@@ -433,6 +502,13 @@ tdm_tick(void)
 			tx_window_remaining = tx_window_width;
 		}
 		next_tx_window += 2 * (tx_window_width + silence_period);
+
+		// update round statistics
+		statistics.round_count++;
+		if (statistics.round_count == 255) {
+			statistics.receive_count >>= 1;
+			statistics.round_count >>= 1;
+		}
 	}
 	if (other_window_remaining > 0) {
 		other_window_remaining--;
@@ -441,4 +517,26 @@ tdm_tick(void)
 			fhop_window_change();
 		}
 	}
+}
+
+
+/// report tdm timings
+///
+void tdm_report_timing(void)
+{
+	printf("TDM timings:\n"); delay_msec(1);
+	printf("TX chunk size: %d\n", (int)tx_chunk_size); delay_msec(1);
+	printf("milliticks per byte: %d\n", (int)milliticks_per_byte); delay_msec(1);
+	printf("bytes per tick: %d\n", (int)bytes_per_tick); delay_msec(1);
+	printf("silence_period: %d\n", (int)silence_period); delay_msec(1);
+	printf("tx_window_width: %d\n", (int)tx_window_width); delay_msec(1);
+	printf("round time: %d milliseconds\n", (int)2*(tx_window_width+silence_period)*5); delay_msec(1);
+	printf("sync time: %d seconds\n", (50*2*(tx_window_width+silence_period)*5)/1000); delay_msec(1);
+}
+
+/// report tdm RSSI and packet status
+///
+void tdm_report_rssi(void)
+{
+	printf("local RSSI %d\n", statistics.average_rssi);
 }
