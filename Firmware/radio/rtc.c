@@ -1,6 +1,7 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2012 Michael Smith, All Rights Reserved
+// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -37,10 +38,11 @@
 static uint8_t	rtc_read_reg(uint8_t reg);
 static void	rtc_write_reg(uint8_t reg, uint8_t val);
 
-#define CN_RUN		(RTC_CN_EN)
+#define CN_RUN		(RTC_CN_EN | RTC_CN_TR)
 #define CN_CAPTURE	(CN_RUN | RTC_CN_CAP)
 #define CN_LOAD		(CN_RUN | RTC_CN_SET)
 
+/// initialise the RTC subsystem
 void
 rtc_init(void)
 {
@@ -50,10 +52,18 @@ rtc_init(void)
 
 	// configure for self-oscillation
 	rtc_write_reg(RTC_PIN, RTC_PIN_SELF_OSC);
+
+	// double the clock rate
 	rtc_write_reg(RTC_XCN, RTC_XCN_BIASX2);
+
+	// start it running
 	rtc_write_reg(RTC_CN, CN_RUN);
 }
 
+/// return the timer as a 32 bit value.
+///
+/// @return			The RTC clock in 25usec units
+///
 uint32_t
 rtc_read_count(void)
 {
@@ -62,23 +72,90 @@ rtc_read_count(void)
 		uint32_t	l;
 	} mix;
 
-	// capture the current counter value
+	// start a capture
 	rtc_write_reg(RTC_CN, CN_CAPTURE);
 
-	// read the counter shadow
-	mix.b[0] = rtc_read_reg(RTC_CAPTURE0);
-	mix.b[1] = rtc_read_reg(RTC_CAPTURE1);
-	mix.b[2] = rtc_read_reg(RTC_CAPTURE2);
-	mix.b[3] = rtc_read_reg(RTC_CAPTURE3);
+	// wait for capture to complete
+	while (rtc_read_reg(RTC_CN) & RTC_CN_CAP) ;
+
+	// capture the current counter value registers
+	// using a auto-incrementing strobe read
+	RTC0ADR = RTC0ADR_BUSY | RTC0ADR_AUTO | RTC0ADR_SHORT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	mix.b[0] = RTC0DAT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	mix.b[1] = RTC0DAT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	mix.b[2] = RTC0DAT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	mix.b[3] = RTC0DAT;
 
 	return mix.l;
 }
 
+/// return the RTC timer as a 16 bit value.
+///
+/// @return			The RTC clock in 25usec units
+///
+/// Note: this call takes about 50usec
+uint16_t
+rtc_read_count16(void)
+__critical {
+	uint16_t ret;
+
+	// start a capture
+	rtc_write_reg(RTC_CN, CN_CAPTURE);
+
+	// wait for capture to complete
+	while (rtc_read_reg(RTC_CN) & RTC_CN_CAP) ;
+
+	// capture the current counter value registers
+	// using a auto-incrementing strobe read
+	RTC0ADR = RTC0ADR_BUSY | RTC0ADR_AUTO | RTC0ADR_SHORT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	ret = RTC0DAT;
+	__asm
+	NOP
+	NOP
+	NOP
+	__endasm;
+	ret |= (RTC0DAT<<8);
+
+	return ret;
+}
+
+/// return the timer as a 8 bit value.
+///
+/// @return			The RTC clock in 25usec units
+///
 uint8_t
 rtc_read_low(void)
 {
 	// capture the current counter value
 	rtc_write_reg(RTC_CN, CN_CAPTURE);
+
+	// wait for capture to complete
+	while (rtc_read_reg(RTC_CN) & RTC_CN_CAP) ;
 
 	// read the counter shadow
 	return rtc_read_reg(RTC_CAPTURE0);
@@ -106,22 +183,16 @@ rtc_write_count(uint32_t count)
 static uint8_t
 rtc_read_reg(uint8_t reg)
 {
-	RTC0ADR = reg;
-	__asm
-	NOP
-	NOP
-	NOP
-	__endasm;
+	while (RTC0ADR & RTC0ADR_BUSY) ; // wait for busy to clear
+	RTC0ADR = RTC0ADR_BUSY | reg;
+	while (RTC0ADR & RTC0ADR_BUSY) ; // wait for busy to clear
 	return RTC0DAT;
 }
 
 static void
 rtc_write_reg(uint8_t reg, uint8_t val)
 {
+	while (RTC0ADR & RTC0ADR_BUSY) ; // wait for busy to clear
 	RTC0ADR = reg;
 	RTC0DAT = val;
-	__asm
-	NOP
-	__endasm;
 }
-

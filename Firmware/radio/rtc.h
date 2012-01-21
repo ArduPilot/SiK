@@ -33,19 +33,23 @@
 ///
 
 // RTC internal registers
-// note that values include the short strobe and start bits
-#define RTC_CAPTURE0	0x90
-#define RTC_CAPTURE1	0x91
-#define RTC_CAPTURE2	0x92
-#define RTC_CAPTURE3	0x93
-#define RTC_CN		0x94
-#define RTC_XCN		0x95
-#define RTC_XCF		0x96
-#define RTC_PIN		0x97
-#define RTC_ALARM0	0x98
-#define RTC_ALARM1	0x99
-#define RTC_ALARM2	0x9a
-#define RTC_ALARM3	0x9b
+#define RTC_CAPTURE0	0x00
+#define RTC_CAPTURE1	0x01
+#define RTC_CAPTURE2	0x02
+#define RTC_CAPTURE3	0x03
+#define RTC_CN		0x04
+#define RTC_XCN		0x05
+#define RTC_XCF		0x06
+#define RTC_PIN		0x07
+#define RTC_ALARM0	0x08
+#define RTC_ALARM1	0x09
+#define RTC_ALARM2	0x0a
+#define RTC_ALARM3	0x0b
+
+// RTC0ADR bits
+#define RTC0ADR_BUSY	0x80
+#define RTC0ADR_AUTO	0x40
+#define RTC0ADR_SHORT	0x10
 
 // RTC_CN
 #define RTC_CN_EN		(1<<7)
@@ -73,5 +77,6 @@
 
 extern void	rtc_init(void);
 extern uint32_t	rtc_read_count(void);
+extern uint16_t rtc_read_count16(void);
 extern uint8_t	rtc_read_low(void);
 extern void	rtc_write_count(uint32_t val);
