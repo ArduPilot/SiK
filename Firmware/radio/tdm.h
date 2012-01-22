@@ -43,16 +43,8 @@ extern void tdm_init(void);
 ///
 extern void tdm_serial_loop(void);
 
-// called every 5ms
-///
-extern void tdm_tick(void);
-
 /// report tdm timings
 ///
 void tdm_report_timing(void);
-
-/// report tdm RSSI stats
-///
-void tdm_report_rssi(void);
 
 #endif // _TDM_H_
