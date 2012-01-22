@@ -109,8 +109,11 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 			at_plus_detector(c);
 
 			// and queue it for general reception
-			if (BUF_NOT_FULL(rx))
+			if (BUF_NOT_FULL(rx)) {
 				BUF_INSERT(rx, c);
+			} else if (errors.serial_rx_overflow != 255) {
+				errors.serial_rx_overflow++;
+			}
 
 			// XXX use BUF_FREE here to determine flow control state
 		}
@@ -183,6 +186,8 @@ _serial_write(uint8_t c)
 		// if the transmitter is idle, restart it
 		if (tx_idle)
 			serial_restart();
+	} else if (errors.serial_tx_overflow != 255) {
+		errors.serial_tx_overflow++;
 	}
 
 	ES0_RESTORE;
@@ -194,6 +199,9 @@ serial_write_buf(__xdata uint8_t *buf, uint16_t count)
 	ES0_SAVE_DISABLE;
 
 	if (serial_write_space() < count) {
+		if (errors.serial_tx_overflow != 255) {
+			errors.serial_tx_overflow++;
+		}
 		ES0_RESTORE;
 		return false;
 	}
@@ -317,7 +325,7 @@ static const __code struct {
 bool serial_device_valid_speed(uint8_t speed)
 {
 	uint8_t i;
-	uint8_t num_rates = sizeof(serial_rates) / sizeof(serial_rates[0]);
+	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
 	for (i = 0; i < num_rates; i++) {
 		if (speed == serial_rates[i].rate) {
@@ -330,7 +338,7 @@ bool serial_device_valid_speed(uint8_t speed)
 static void serial_device_set_speed(uint8_t speed)
 {
 	uint8_t i;
-	uint8_t num_rates = sizeof(serial_rates) / sizeof(serial_rates[0]);
+	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
 	for (i = 0; i < num_rates; i++) {
 		if (speed == serial_rates[i].rate) {
