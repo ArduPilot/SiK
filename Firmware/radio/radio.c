@@ -38,8 +38,6 @@ __xdata static uint8_t receive_entropy;
 static volatile __bit packet_received;
 static volatile __bit preamble_detected;
 
-__xdata static struct radio_statistics statistics;
-
 __xdata static struct {
 	uint32_t frequency;
 	uint32_t channel_spacing;
@@ -158,38 +156,66 @@ radio_air_rate(void)
 
 // start transmitting a packet from the transmit FIFO
 //
-void
-radio_transmit_start(uint8_t length, uint8_t timeout_ticks)
+// @param length		number of data bytes to send
+// @param timeout_ticks		number of 25usec RTC ticks to allow
+//				for the send
+//
+// @return	    true if packet sent successfully
+//
+bool
+radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 {
 	uint8_t status;
+	uint16_t tstart;
+	__bit transmit_started = 0;
 
 	EX0_SAVE_DISABLE;
-	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
+
+	clear_status_registers();
 
 	// enable just the packet sent IRQ
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
-	clear_status_registers();
+	// wait for chip ready to indicate we have settled
+	while ((register_read(EZRADIOPRO_INTERRUPT_STATUS_2) & EZRADIOPRO_ICHIPRDY) == 0) ;
+
+	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
 
 	preamble_detected = 0;
-	EX0_RESTORE;
 
 	// wait for the IPKSENT interrupt to be raised
-	delay_set_ticks(timeout_ticks);
-	while (!delay_expired()) {
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		if (status & EZRADIOPRO_IPKSENT) {
-			return;
+	tstart = rtc_read_count16();
+	while ((uint16_t)(rtc_read_count16() - tstart) < timeout_ticks) {
+		status = register_read(EZRADIOPRO_EZMAC_STATUS);
+		if (status & EZRADIOPRO_PKTX) {
+			transmit_started = 1;
+		}
+		if (transmit_started && (status & EZRADIOPRO_PKSENT)) {
+			clear_status_registers();
+			EX0_RESTORE;
+			return true;
 		}
 	}
 
+	clear_status_registers();
 	// transmit timeout ... clear the FIFO
+#if 0
+	printf("timeout %d tstart=%d length=%d\n",
+	       (int)timeout_ticks,
+	       (int)tstart,
+	       (int)length);
+#endif
+	if (errors.tx_errors != 255) {
+		errors.tx_errors++;
+	}
 	radio_clear_transmit_fifo();
+
+	EX0_RESTORE;
+	return false;
 }
 
 
@@ -343,6 +369,11 @@ radio_set_channel(uint8_t channel)
 //
 #define NUM_DATA_RATES 13
 #define NUM_RADIO_REGISTERS 16
+
+// the minimum speed allowed ensures that we don't go over the 0.4s
+// transmit time limit
+#define MIN_SPEED_ALLOWED 2000
+
 __code static const uint32_t air_data_rates[NUM_DATA_RATES] = {
 	500,  1000,  2000,  4000,  8000,  9600, 16000, 19200, 24000,  32000,  64000, 128000, 192000
 };
@@ -417,13 +448,16 @@ __code static const uint8_t reg_table[NUM_RADIO_REGISTERS][1 + NUM_DATA_RATES] =
 };
 
 
-
 // configure radio based on the air data rate
 //
 bool
 radio_configure(uint32_t air_rate)
 {
 	uint8_t i, rate_selection;
+
+	if (air_rate < MIN_SPEED_ALLOWED) {
+		air_rate = MIN_SPEED_ALLOWED;
+	}
 
 	// disable interrupts
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
@@ -746,7 +780,9 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	} else if (status & EZRADIOPRO_ICRCERROR) {
 		// we got a crc error on the packet
 		preamble_detected = 0;
-		statistics.rx_errors++;
+		if (errors.rx_errors != 255) {
+			errors.rx_errors++;
+		}
 	} else if (status2 & EZRADIOPRO_IPREAVAL) {
 		// a valid preamble has been detected
 		preamble_detected = 1;
