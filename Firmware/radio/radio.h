@@ -70,6 +70,9 @@
 # define debug(fmt, args...)
 #endif
 
+// useful macro for array sizes
+#define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
+
 /// Print a message and halt, largely for debug purposes
 ///
 /// @param	fmt		printf-style format string and argments
@@ -128,9 +131,13 @@ extern __pdata enum BoardFrequency	g_board_frequency;	///< board RF frequency fr
 extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
 
 /// staticstics maintained by the radio code
-struct radio_statistics {
+struct error_counts {
 	uint8_t rx_errors;		///< count of packet receive errors
+	uint8_t tx_errors;		///< count of packet transmit errors
+	uint8_t serial_tx_overflow;    ///< count of serial transmit overflows
+	uint8_t serial_rx_overflow;    ///< count of serial receive overflows
 };
+__xdata extern struct error_counts errors;
 
 /// receives a packet from the radio
 ///
@@ -160,7 +167,9 @@ extern bool radio_preamble_detected(void);
 /// @param timeout_ticks	The number of ticks to wait before assiming
 ///				that transmission has failed.
 ///
-extern void radio_transmit_start(uint8_t length, uint8_t timeout_ticks);
+/// @return			true if packet sent successfully
+///
+extern bool radio_transmit_start(uint8_t length, uint16_t timeout_ticks);
 
 /// clear the radio transmit FIFO
 ///

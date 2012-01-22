@@ -82,6 +82,11 @@ static void hardware_init(void);
 ///
 static void radio_init(void);
 
+/// statistics for radio and serial errors
+__xdata struct error_counts errors;
+
+
+
 void
 main(void)
 {
@@ -240,6 +245,9 @@ radio_init(void)
 	// report the real transmit power in settings
 	param_set(PARAM_TXPOWER, radio_get_transmit_power());
 
+	// initialise real time clock
+	rtc_init();
+
 	// initialise TDM system
 	tdm_init();
 
@@ -260,9 +268,6 @@ T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
 	// update the delay counter
 	if (delay_counter > 0)
 		delay_counter--;
-
-	// tell the tdm system that another 5ms has passed
-	tdm_tick();
 }
 
 void
