@@ -4,7 +4,7 @@
 import serial, sys, optparse, time, fdpexpect
 
 parser = optparse.OptionParser("set_speed")
-parser.add_option("--baudrate", type='int', default=115200, help='baud rate')
+parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
 parser.add_option("--speed", type='int', default=128, help='air speed')
 
 opts, args = parser.parse_args()

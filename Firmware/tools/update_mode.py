@@ -4,7 +4,7 @@
 import serial, sys, optparse, time, fdpexpect
 
 parser = optparse.OptionParser("update_mode")
-parser.add_option("--baudrate", type='int', default=115200, help='baud rate')
+parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
 
 opts, args = parser.parse_args()
 
