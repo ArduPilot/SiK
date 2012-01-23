@@ -383,6 +383,13 @@ radio_set_channel(uint8_t channel)
 	}
 }
 
+// get the tx/rx frequency channel
+//
+uint8_t radio_get_channel(void)
+{
+	return settings.current_channel;
+}
+
 
 // This table gives the register settings for the radio core indexed by
 // the desired air data rate.

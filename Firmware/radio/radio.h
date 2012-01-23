@@ -211,6 +211,12 @@ extern bool radio_set_channel_spacing(uint32_t value);
 ///
 extern void radio_set_channel(uint8_t value);
 
+/// get the tx/rx frequency channel
+///
+/// @return			the current channel
+///
+uint8_t radio_get_channel(void);
+
 /// configure the radio for a given air data rate
 ///
 /// @param air_rate		The air data rate, in bits per second
