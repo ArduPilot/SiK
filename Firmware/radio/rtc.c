@@ -42,6 +42,9 @@ static void	rtc_write_reg(uint8_t reg, uint8_t val);
 #define CN_CAPTURE	(CN_RUN | RTC_CN_CAP)
 #define CN_LOAD		(CN_RUN | RTC_CN_SET)
 
+#define EX0_SAVE_DISABLE uint8_t EX0_saved = EX0; EX0 = 0
+#define EX0_RESTORE EX0 = EX0_saved
+
 /// initialise the RTC subsystem
 void
 rtc_init(void)
@@ -116,8 +119,10 @@ rtc_read_count(void)
 /// Note: this call takes about 50usec
 uint16_t
 rtc_read_count16(void)
-__critical {
+{
 	uint16_t ret;
+
+	EX0_SAVE_DISABLE;
 
 	// start a capture
 	rtc_write_reg(RTC_CN, CN_CAPTURE);
@@ -140,6 +145,8 @@ __critical {
 	NOP
 	__endasm;
 	ret |= (RTC0DAT<<8);
+
+	EX0_RESTORE;
 
 	return ret;
 }
