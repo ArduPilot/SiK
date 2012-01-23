@@ -202,7 +202,9 @@ sync_tx_windows(uint16_t other_tx_window, uint8_t packet_length)
 	}
 
 	delta = old_remaining - tdm_state_remaining;
-	if (old_state != tdm_state || delta > 10 || delta < -10) {
+	if (old_state != tdm_state ||
+	    delta > (int16_t)silence_period ||
+	    delta < -(int16_t)silence_period) {
 		printf("TDM: %d/%d ",
 		       (int)old_state,
 		       (int)tdm_state);
