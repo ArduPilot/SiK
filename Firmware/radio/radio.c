@@ -188,17 +188,13 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 	__bit transmit_started = 0;
 
 	EX0_SAVE_DISABLE;
-
-	clear_status_registers();
+	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
 	// enable just the packet sent IRQ
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
-	// wait for chip ready to indicate we have settled
-	while ((register_read(EZRADIOPRO_INTERRUPT_STATUS_2) & EZRADIOPRO_ICHIPRDY) == 0) ;
-
-	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
+	clear_status_registers();
 
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
@@ -214,6 +210,13 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 		}
 		if (transmit_started && (status & EZRADIOPRO_PKSENT)) {
 			clear_status_registers();
+			radio_clear_transmit_fifo();
+			EX0_RESTORE;
+			return true;
+		}
+		if (register_read(EZRADIOPRO_INTERRUPT_STATUS_1) & EZRADIOPRO_IPKSENT) {
+			clear_status_registers();
+			radio_clear_transmit_fifo();
 			EX0_RESTORE;
 			return true;
 		}
@@ -222,10 +225,11 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 	clear_status_registers();
 	// transmit timeout ... clear the FIFO
 #if 0
-	printf("timeout %d tstart=%d length=%d\n",
-	       (int)timeout_ticks,
-	       (int)tstart,
-	       (int)length);
+	printf("%u ts=%u tn=%u len=%u\n",
+	       timeout_ticks,
+	       tstart,
+	       rtc_read_count16(),
+	       (unsigned)length);
 #endif
 	if (errors.tx_errors != 255) {
 		errors.tx_errors++;
