@@ -177,6 +177,11 @@ hardware_init(void)
 	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
 	EIE1	|= 0x80;
 
+	// setup TMR2 as a entropy source
+	TMR2RLL = 0;
+	TMR2RLH = 0;
+	TMR2CN  = 0x04; // SYSCLK/12
+
 	// UART - set the configured speed
 	serial_init(param_get(PARAM_SERIAL_SPEED));
 
