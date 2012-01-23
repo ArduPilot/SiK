@@ -272,6 +272,7 @@ radio_clear_receive_fifo(void)
 bool
 radio_receiver_on(void)
 {
+	EX0_SAVE_DISABLE;
 	packet_received = 0;
 	preamble_detected = 0;
 
@@ -281,8 +282,13 @@ radio_receiver_on(void)
 
 	clear_status_registers();
 
+	// clear EXMAC status
+	register_read(EZRADIOPRO_EZMAC_STATUS);
+
 	// put the radio in receive mode
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, (EZRADIOPRO_RXON | EZRADIOPRO_XTON));
+
+	EX0_RESTORE;
 
 	EX0 = 1;
 
