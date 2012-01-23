@@ -263,4 +263,11 @@ void radio_set_transmit_power(uint8_t power);
 ///
 uint8_t radio_get_transmit_power(void);
 
+/// check if a packet is coming in
+///
+/// @return			true if a packet is being received
+///
+///
+bool radio_receive_in_progress(void);
+
 #endif // _RADIO_H_

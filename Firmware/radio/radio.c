@@ -111,6 +111,24 @@ radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
 	EX0_RESTORE;
 }
 
+// check if a packet is being received
+//
+bool
+radio_receive_in_progress(void)
+{
+	uint8_t status;
+
+	if (packet_received) {
+		return true;
+	}
+
+	// check the status register to see if a receive is in progress
+	status = register_read(EZRADIOPRO_EZMAC_STATUS);
+	if (status & EZRADIOPRO_PKRX) {
+		return true;
+	}
+	return false;
+}
 
 // return true if a packet preamble has been detected. This means that
 // a packet may be coming in
