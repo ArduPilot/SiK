@@ -32,6 +32,9 @@
  %d        decimal             int
  %ld       decimal             long
  %hd       decimal             char
+ %u        decimal             unsigned int
+ %lu       decimal             unsigned long
+ %hu       decimal             unsigned char
  %x        hexadecimal         int
  %lx       hexadecimal         long
  %hx       hexadecimal         char
@@ -47,6 +50,7 @@ static __data char radix;
 static __bit long_flag = 0;
 static __bit string_flag = 0;
 static __bit char_flag = 0;
+static __bit unsigned_flag = 0;
 static char * __data str;
 static __data long val;
 
@@ -55,7 +59,7 @@ void vprintfl(char *fmt, va_list ap) __reentrant
 
 	for (; *fmt; fmt++) {
 		if (*fmt == '%') {
-			long_flag = string_flag = char_flag = 0;
+			long_flag = string_flag = char_flag = unsigned_flag = 0;
 			fmt++;
 			switch (*fmt) {
 			case 'l':
@@ -74,14 +78,20 @@ void vprintfl(char *fmt, va_list ap) __reentrant
 			case 'd':
 				radix = 10;
 				break;
+			case 'u':
+				radix = 10;
+				unsigned_flag = 1;
+				break;
 			case 'x':
 				radix = 16;
+				unsigned_flag = 1;
 				break;
 			case 'c':
 				radix = 0;
 				break;
 			case 'o':
 				radix = 8;
+				unsigned_flag = 1;
 				break;
 			}
 
@@ -92,19 +102,33 @@ void vprintfl(char *fmt, va_list ap) __reentrant
 				continue;
 			}
 
-			if (long_flag) {
-				val = va_arg(ap,long);
-			} else if (char_flag) {
-				val = va_arg(ap,char);
+			if (unsigned_flag) {
+				if (long_flag) {
+					val = va_arg(ap,unsigned long);
+				} else if (char_flag) {
+					val = va_arg(ap,unsigned char);
+				} else {
+					val = va_arg(ap,unsigned int);
+				}
 			} else {
-				val = va_arg(ap,int);
+				if (long_flag) {
+					val = va_arg(ap,long);
+				} else if (char_flag) {
+					val = va_arg(ap,char);
+				} else {
+					val = va_arg(ap,int);
+				}
 			}
 
 			if (radix) {
 				static char __idata buffer[12]; /* 37777777777(oct) */
 				char __idata * stri;
 
-				_ltoa(val, buffer, radix);
+				if (unsigned_flag) {
+					_ultoa(val, buffer, radix);
+				} else {
+					_ltoa(val, buffer, radix);
+				}
 				stri = buffer;
 				while (*stri) {
 					putchar(*stri);
