@@ -34,7 +34,6 @@
 __xdata static uint8_t receive_buffer[64];
 __xdata static uint8_t receive_packet_length;
 __xdata static uint8_t last_rssi;
-__xdata static uint8_t receive_entropy;
 
 static volatile __bit packet_received;
 static volatile __bit preamble_detected;
@@ -155,14 +154,6 @@ uint8_t
 radio_last_rssi(void)
 {
 	return last_rssi;
-}
-
-// return a few bits of entropy from the receive interrupt
-//
-uint8_t
-radio_entropy(void)
-{
-	return receive_entropy;
 }
 
 // return the actual air data rate in BPS
@@ -797,8 +788,6 @@ set_frequency_registers(uint32_t frequency)
 INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
 	uint8_t status, status2;
-
-	receive_entropy += register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
 
 	status2 = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
