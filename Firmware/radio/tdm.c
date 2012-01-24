@@ -421,14 +421,16 @@ tdm_serial_loop(void)
 
 		// how many bytes could we transmit in the time we
 		// have left?
-		if (tdm_state_remaining <= flight_time_estimate(3)) {
+		if (tdm_state_remaining < packet_latency) {
 			// none ....
 			continue;
 		}
 		max_xmit = (tdm_state_remaining - packet_latency) / ticks_per_byte;
-		if (max_xmit > 0) {
-			max_xmit--;
+		if (max_xmit < 3) {
+			// can't fit the trailer in with a byte to spare
+			continue;
 		}
+		max_xmit--;
 		if (max_xmit > 62) {
 			max_xmit = 62;
 		}
@@ -451,7 +453,9 @@ tdm_serial_loop(void)
 		// set right transmit channel
 		radio_set_channel(fhop_transmit_channel());
 
-		if (tx_fifo_bytes == 0 && send_statistics) {
+		if (tx_fifo_bytes == 0 && 
+		    send_statistics && 
+		    max_xmit >= sizeof(statistics)) {
 			// send a statistics packet
 			send_statistics = 0;
 			memcpy(rbuf, &statistics, sizeof(statistics));
