@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
+#include "timer.h"
 #include "freq_hopping.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,11 +57,15 @@ extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
 ///
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
-/// Timer tick interrupt handler
+/// Timer2 tick interrupt handler
+///
+extern void    T2_ISR(void)            __interrupt(INTERRUPT_TIMER2);
+
+/// Timer3 tick interrupt handler
 ///
 /// @todo switch this and everything it calls to use another register bank?
 ///
-static void	T3_ISR(void)		__interrupt(INTERRUPT_TIMER3);
+extern void    T3_ISR(void)            __interrupt(INTERRUPT_TIMER3);
 
 //@}
 
@@ -69,10 +74,6 @@ __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify
 
 __pdata enum BoardFrequency	g_board_frequency;	///< board info from the bootloader
 __pdata uint8_t			g_board_bl_version;	///< from the bootloader
-
-/// Counter used by delay_msec
-///
-static volatile uint8_t delay_counter;
 
 /// Configure the Si1000 for operation.
 ///
@@ -84,8 +85,6 @@ static void radio_init(void);
 
 /// statistics for radio and serial errors
 __xdata struct error_counts errors;
-
-
 
 void
 main(void)
@@ -170,17 +169,8 @@ hardware_init(void)
 	// Clear the radio interrupt state
 	IE0	 = 0;
 
-	// 200Hz timer tick using timer3
-	// Derive timer values from SYSCLK, just for laughs.
-	TMR3RLL	 = (65536UL - ((SYSCLK / 12) / 200)) & 0xff;
-	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 200)) >> 8) & 0xff;
-	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
-	EIE1	|= 0x80;
-
-	// setup TMR2 as a entropy source
-	TMR2RLL = 0;
-	TMR2RLH = 0;
-	TMR2CN  = 0x04; // SYSCLK/12
+	// initialise timers
+	timer_init();
 
 	// UART - set the configured speed
 	serial_init(param_get(PARAM_SERIAL_SPEED));
@@ -260,46 +250,3 @@ radio_init(void)
 	fhop_init(param_get(PARAM_NETID));
 }
 
-static void
-T3_ISR(void) __interrupt(INTERRUPT_TIMER3)
-{
-
-	// re-arm the interrupt by clearing TF3H
-	TMR3CN = 0x04;
-
-	// call the AT parser tick
-	at_timer();
-
-	// update the delay counter
-	if (delay_counter > 0)
-		delay_counter--;
-}
-
-void
-delay_set(uint16_t msec)
-{
-	if (msec >= 1250) {
-		delay_counter = 255;
-	} else {
-		delay_counter = (msec + 4) / 5;
-	}
-}
-
-void delay_set_ticks(uint8_t ticks)
-{
-	delay_counter = ticks;
-}
-
-bool
-delay_expired()
-{
-	return delay_counter == 0;
-}
-
-void
-delay_msec(uint16_t msec)
-{
-	delay_set(msec);
-	while (!delay_expired())
-		;
-}

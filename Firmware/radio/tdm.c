@@ -38,6 +38,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
+#include "timer.h"
 #include "freq_hopping.h"
 
 /// all of the tdm timings are in units of 25usec to match

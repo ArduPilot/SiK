@@ -28,6 +28,7 @@
 //
 #include "board.h"
 #include "radio.h"
+#include "timer.h"
 
 
 __xdata static uint8_t receive_buffer[64];
