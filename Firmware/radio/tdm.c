@@ -128,11 +128,11 @@ display_test_output(void)
 		printf("LOCAL RSSI: %d  pkts/round: %d%c   ",
 		       (int)statistics.average_rssi,
 		       (int)pkt_pct, '%');
-		printf("REMOTE RSSI: %d pkts/round: %d%c\n",
+		printf("REMOTE RSSI: %d pkts/round: %d%c",
 		       (int)remote_statistics.average_rssi,
 		       (int)remote_pkt_pct, '%');
-#if 0
-		printf("LOCAL: txe=%d rxe=%d stx=%d srx=%d   ",
+#if 1
+		printf("  txe=%d rxe=%d stx=%d srx=%d\n",
 		       (int)errors.tx_errors,
 		       (int)errors.rx_errors,
 		       (int)errors.serial_tx_overflow,
