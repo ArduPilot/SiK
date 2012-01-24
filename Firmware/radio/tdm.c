@@ -106,7 +106,6 @@ __xdata static struct statistics {
 	uint8_t remote_average_rssi;
 	uint8_t receive_count;
 	uint8_t round_count;
-	struct error_counts errors;
 } statistics, remote_statistics;
 
 /// display test output
@@ -132,18 +131,12 @@ display_test_output(void)
 		printf("REMOTE RSSI: %d pkts/round: %d%c\n",
 		       (int)remote_statistics.average_rssi,
 		       (int)remote_pkt_pct, '%');
-		delay_msec(1);
 #if 0
 		printf("LOCAL: txe=%d rxe=%d stx=%d srx=%d   ",
 		       (int)errors.tx_errors,
 		       (int)errors.rx_errors,
 		       (int)errors.serial_tx_overflow,
 		       (int)errors.serial_rx_overflow);
-		printf("REMOTE: txe=%d rxe=%d stx=%d srx=%d\n",
-		       (int)remote_statistics.errors.tx_errors,
-		       (int)remote_statistics.errors.rx_errors,
-		       (int)remote_statistics.errors.serial_tx_overflow,
-		       (int)remote_statistics.errors.serial_rx_overflow);
 #endif
 	}
 }
@@ -457,7 +450,6 @@ tdm_serial_loop(void)
 		if (tx_fifo_bytes == 0 && send_statistics) {
 			// send a statistics packet
 			send_statistics = 0;
-			memcpy(&statistics.errors, &errors, sizeof(errors));
 			memcpy(rbuf, &statistics, sizeof(statistics));
 			tx_fifo_bytes = sizeof(statistics);
 			radio_write_transmit_fifo(tx_fifo_bytes, rbuf);
