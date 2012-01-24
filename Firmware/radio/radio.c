@@ -203,8 +203,8 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 	preamble_detected = 0;
 
 	// wait for the IPKSENT interrupt to be raised
-	tstart = rtc_read_count16();
-	while ((uint16_t)(rtc_read_count16() - tstart) < timeout_ticks) {
+	tstart = timer2_tick();
+	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
 		status = register_read(EZRADIOPRO_EZMAC_STATUS);
 		if (status & EZRADIOPRO_PKTX) {
 			transmit_started = 1;
@@ -229,7 +229,7 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 	printf("%u ts=%u tn=%u len=%u\n",
 	       timeout_ticks,
 	       tstart,
-	       rtc_read_count16(),
+	       timer2_tick(),
 	       (unsigned)length);
 #endif
 	if (errors.tx_errors != 255) {

@@ -304,7 +304,7 @@ tdm_serial_loop(void)
 {
 	// the number of bytes currently in the send fifo
 	uint8_t tx_fifo_bytes = 0;
-	uint16_t last_t = rtc_read_count16();
+	uint16_t last_t = timer2_tick();
 	uint16_t last_link_update = last_t;
 
 	for (;;) {
@@ -368,7 +368,7 @@ tdm_serial_loop(void)
 				// sync our transmit windows based on
 				// received header
 				sync_tx_windows(other_tx_window, rlen);
-				last_t = rtc_read_count16();
+				last_t = timer2_tick();
 
 				if (rlen != 0) {
 					// its user data - send it out
@@ -385,7 +385,7 @@ tdm_serial_loop(void)
 
 		// see how many 25usec ticks have passed and update
 		// the tdm state machine
-		tnow = rtc_read_count16();
+		tnow = timer2_tick();
 		tdelta = tnow - last_t;
 		tdm_state_update(tdelta);
 		last_t += tdelta;
