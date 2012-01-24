@@ -38,6 +38,14 @@ uint16_t timer2_16(void);
 /// @return		microseconds since boot
 uint32_t micros(void);
 
+/// return a 16 bit value that rolls over in approximately
+/// one second intervals
+///
+/// @return		16 bit value in units of 16 microseconds
+///
+uint16_t timer2_tick(void);
+
+
 /// initialise timers
 ///
 void timer_init(void);

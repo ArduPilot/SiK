@@ -117,6 +117,20 @@ uint32_t micros(void)
 	return ((((uint32_t)high)<<16) | low) >> 1;
 }
 
+// return a 16 bit value that rolls over in approximately
+// one second intervals
+uint16_t timer2_tick(void)
+{
+	uint16_t low, high;
+	do {
+		high = timer2_high;
+		low = timer2_16();
+	} while (high != timer2_high);
+	// take 11 high bits from the 2MHz counter, and 5 low bits
+	// from the rollover of that counter
+	return (high<<11) | (low>>5);
+}
+
 // initialise timers
 void timer_init(void)
 {
