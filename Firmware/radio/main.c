@@ -243,10 +243,10 @@ radio_init(void)
 	// initialise real time clock
 	rtc_init();
 
-	// initialise TDM system
-	tdm_init();
-
 	// initialise frequency hopping system
 	fhop_init(param_get(PARAM_NETID));
+
+	// initialise TDM system
+	tdm_init();
 }
 
