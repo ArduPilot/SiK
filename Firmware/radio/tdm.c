@@ -523,64 +523,65 @@ __code static const struct {
 	uint16_t latency;
 	uint16_t per_byte;
 } timing_table[] = {
-	{ 0,   10156, 795 },
-	{ 1,   5081,  397 },
-	{ 2,   2547,  199 },
-	{ 4,   1279,  99 },
-	{ 8,   646,   50 },
-	{ 9,   541,   41 },
-	{ 16,  330,   25 },
-	{ 19,  274,   21 },
-	{ 24,  224,   17 },
-	{ 32,  171,   12 },
-	{ 64,  90,    6 },
-	{ 128, 51,    3 },
-	{ 192, 40,    2 }
+	{ 0,   13130, 1028 },
+	{ 1,   6574,  514 },
+	{ 2,   3293,  257 },
+	{ 4,   1653,  128 },
+	{ 8,   833,   64 },
+	{ 9,   697,   53 },
+	{ 16,  423,   32 },
+	{ 19,  354,   27 },
+	{ 24,  286,   21 },
+	{ 32,  219,   16 },
+	{ 64,  117,   8 },
+	{ 128, 66,    4 },
+	{ 192, 49,    3 },
 };
 
 #if 0
-/// measure the time it takes to send a packet
-/// this calculates the packet latency and time per
-/// byte in units of 25usec RTC ticks
-/// used to generate the above table
-static void measure_air_rate(uint8_t rate)
+/// build the timing table
+static void tdm_build_timing_table(void)
 {
-	__xdata uint8_t	rbuf[64];
-	uint16_t time_0, time_64, t1, t2;
-	uint8_t tries=100;
+        __xdata uint8_t rbuf[32];
+	__idata uint8_t i, j;
 
-again:
-	if (tries-- == 0) {
-		printf("FAILED\n");
-		return;
+	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
+		__idata uint32_t latency_sum=0, per_byte_sum=0;
+		radio_configure(timing_table[i].air_rate*1000UL);
+		for (j=0; j<10; j++) {
+			__idata uint16_t time_0, time_32, t1, t2;
+			radio_set_channel(1);
+			radio_receiver_on();
+			t1 = timer2_tick();
+			if (!radio_transmit_start(0, 0xFFFF)) {
+				j--;
+				continue;
+			}
+			t2 = timer2_tick();
+			radio_receiver_on();
+
+			time_0 = t2-t1;
+
+			radio_write_transmit_fifo(32, rbuf);
+			radio_set_channel(2);
+			t1 = timer2_tick();
+			if (!radio_transmit_start(32, 0xFFFF)) {
+				j--;
+				continue;
+			}
+
+			t2 = timer2_tick();
+			radio_receiver_on();
+
+			time_32 = t2-t1;
+			latency_sum += time_0;
+			per_byte_sum += (16 + (time_32 - time_0))/32;
+		}
+		printf("{ %u, %u, %u },\n",
+		       (unsigned)(radio_air_rate()/1000UL),
+		       (unsigned)(latency_sum/j),
+		       (unsigned)(per_byte_sum/j));
 	}
-
-	radio_configure(rate*1000UL);
-	radio_set_channel(1);
-	t1 = rtc_read_count16();
-	if (!radio_transmit_start(0, 255)) {
-		goto again;
-	}
-	t2 = rtc_read_count16();
-	radio_receiver_on();
-
-	time_1 = t2-t1;
-
-	radio_write_transmit_fifo(64, rbuf);
-	radio_set_channel(2);
-	t1 = rtc_read_count16();
-	if (!radio_transmit_start(64, 255)) {
-		goto again;
-	}
-	t2 = rtc_read_count16();
-	radio_receiver_on();
-
-	time_64 = t2-t1;
-
-	printf("{ %d, %d, %d },\n",
-	       (int)(radio_air_rate()/1000UL),
-	       (int)(time_1),
-	       (int)((32 + time_64 - time_1)/64));
 }
 #endif
 
@@ -589,7 +590,11 @@ tdm_init(void)
 {
 	uint8_t i;
 	uint8_t air_rate = radio_air_rate() / 1000UL;
-	uint8_t num_rates = ARRAY_LENGTH(timing_table);
+	const uint8_t num_rates = ARRAY_LENGTH(timing_table);
+	__pdata uint32_t window_width;
+#define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
+
+	//tdm_build_timing_table();
 
 	// find the packet latency and time per byte from the timing
 	// table.
@@ -599,14 +604,25 @@ tdm_init(void)
 	if (i==num_rates) {
 		panic("missing rate in timing_table");
 	}
+
+        // find the packet latency and time per byte from the timing
+        // table.
 	packet_latency = timing_table[i].latency;
-	ticks_per_byte = timing_table[i].per_byte;
+        ticks_per_byte = timing_table[i].per_byte;
 
-	// set the silence period to twice the packet latency
-	silence_period = 2*packet_latency;
+	// set the silence period to two times the packet latency
+        silence_period = 2*packet_latency;
 
-	// set the transmit window to allow for 3 full sized packets
-	tx_window_width = 3*(packet_latency+(64*ticks_per_byte));
+        // set the transmit window to allow for 3 full sized packets
+	window_width = 3*(packet_latency+(64*(uint32_t)ticks_per_byte));
+
+	// the window width cannot be more than 0.4 seconds to meet US
+	// regulations
+	if (window_width >= REGULATORY_MAX_WINDOW) {
+		window_width = REGULATORY_MAX_WINDOW;
+	}
+
+	tx_window_width = window_width;
 }
 
 
