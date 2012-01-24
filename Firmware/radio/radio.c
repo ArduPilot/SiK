@@ -399,7 +399,7 @@ uint8_t radio_get_channel(void)
 
 // the minimum speed allowed ensures that we don't go over the 0.4s
 // transmit time limit
-#define MIN_SPEED_ALLOWED 500
+#define MIN_SPEED_ALLOWED 1000
 
 __code static const uint32_t air_data_rates[NUM_DATA_RATES] = {
 	500,  1000,  2000,  4000,  8000,  9600, 16000, 19200, 24000,  32000,  64000, 128000, 192000
