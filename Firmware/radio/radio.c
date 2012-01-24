@@ -550,7 +550,9 @@ radio_configure(uint32_t air_rate)
 	register_write(EZRADIOPRO_SYNC_WORD_2, 0xD4);
 
 	// check 2 bytes of header (the network ID)
-	register_write(EZRADIOPRO_HEADER_CONTROL_1, 2);
+	register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x0C);
+	register_write(EZRADIOPRO_HEADER_ENABLE_3, 0xFF);
+	register_write(EZRADIOPRO_HEADER_ENABLE_2, 0xFF);
 
 	// setup minimum output power during startup
 	radio_set_transmit_power(0);
@@ -604,6 +606,8 @@ radio_set_network_id(uint16_t id)
 {
 	register_write(EZRADIOPRO_TRANSMIT_HEADER_3, id >> 8);
 	register_write(EZRADIOPRO_TRANSMIT_HEADER_2, id & 0xFF);
+	register_write(EZRADIOPRO_CHECK_HEADER_3, id >> 8);
+	register_write(EZRADIOPRO_CHECK_HEADER_2, id & 0xFF);
 }
 
 
