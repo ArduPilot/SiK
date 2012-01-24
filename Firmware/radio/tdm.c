@@ -387,7 +387,7 @@ tdm_serial_loop(void)
 		tdm_state_update(tdelta);
 		last_t += tdelta;
 
-		// update link status every 0.8s
+		// update link status every 0.5s
 		if (tnow - last_link_update > 32768) {
 			link_update();
 			last_link_update = tnow;
