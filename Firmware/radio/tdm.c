@@ -167,7 +167,6 @@ sync_tx_windows(uint16_t other_tx_window, uint8_t packet_length)
 {
 	enum tdm_state old_state = tdm_state;
 	uint16_t old_remaining = tdm_state_remaining;
-	int16_t delta;
 
 	if (other_tx_window > tx_window_width+silence_period) {
 		// the other radio is using our transmit window
@@ -195,16 +194,21 @@ sync_tx_windows(uint16_t other_tx_window, uint8_t packet_length)
 		transmit_yield = 0;
 	}
 
-	delta = old_remaining - tdm_state_remaining;
-	if (old_state != tdm_state ||
-	    delta > (int16_t)silence_period ||
-	    delta < -(int16_t)silence_period) {
-		printf("TDM: %d/%d ",
-		       (int)old_state,
-		       (int)tdm_state);
-		printf(" delta: %d\n",
-		       (int)delta);
+#if 0
+	{
+		int16_t delta;
+		delta = old_remaining - tdm_state_remaining;
+		if (old_state != tdm_state ||
+		    delta > (int16_t)silence_period ||
+		    delta < -(int16_t)silence_period) {
+			printf("TDM: %d/%d ",
+			       (int)old_state,
+			       (int)tdm_state);
+			printf(" delta: %d\n",
+			       (int)delta);
+		}
 	}
+#endif
 }
 
 /// update the TDM state machine
