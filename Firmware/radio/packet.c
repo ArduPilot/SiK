@@ -36,25 +36,58 @@
 #include "radio.h"
 #include "packet.h"
 
-static __bit last_is_resend;
+static __bit last_sent_is_resend;
+static __bit last_recv_is_resend;
+static __bit force_resend;
+
+static __xdata uint8_t last_received[64];
+static __xdata uint8_t last_sent[64];
+static __xdata uint8_t last_sent_len;
+static __xdata uint8_t last_recv_len;
+
+#define PACKET_RESEND_THRESHOLD 256
 
 // return the next packet to be sent
 uint8_t
 packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 {
-	uint16_t slen;
+	uint16_t slen = serial_read_available();
 
-	last_is_resend = 0;
+	if (force_resend ||
+	    (last_sent_is_resend == 0 && last_sent_len != 0 && 
+	     slen < PACKET_RESEND_THRESHOLD)) {
+		if (max_xmit < last_sent_len) {
+			return 0;
+		}
+		last_sent_is_resend = true;
+		force_resend = false;
+		memcpy(buf, last_sent, last_sent_len);
+#if 0
+		printf("RT(%u)[", (unsigned)last_sent_len);
+		serial_write_buf(buf, last_sent_len);
+		printf("]\r\n");
+#endif
+		return last_sent_len;
+	}
+
+	last_sent_is_resend = false;
 
 	// if we have received something via serial see how
 	// much of it we could fit in the transmit FIFO
-	slen = serial_read_available();
 	if (slen > max_xmit) {
 		slen = max_xmit;
 	}
 	if (slen > 0 && serial_read_buf(buf, slen)) {
+		memcpy(last_sent, buf, slen);
+		last_sent_len = slen;
+#if 0
+		printf("NT(%u)[", (unsigned)last_sent_len);
+		serial_write_buf(buf, last_sent_len);
+		printf("]\r\n");
+#endif
 		return (uint8_t)slen;
 	}
+	last_sent_len = 0;
 	return 0;
 }
 
@@ -63,5 +96,38 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 bool 
 packet_is_resend(void)
 {
-	return last_is_resend;
+	return last_sent_is_resend;
+}
+
+// force the last packet to be resent. Used when transmit fails
+void
+packet_force_resend(void)
+{
+	force_resend = true;
+}
+
+
+// determine if a received packet is a duplicate
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend) __reentrant
+{
+	if (!is_resend) {
+		memcpy(last_received, buf, len);
+		last_recv_len = len;
+		last_recv_is_resend = false;
+		return false;
+	}
+	if (last_recv_is_resend == false && 
+	    len == last_recv_len &&
+	    memcmp(last_received, buf, len) == 0) {
+		last_recv_is_resend = false;
+		return true;
+	}
+#if 0
+	printf("RS(%u,%u)[", (unsigned)len, (unsigned)last_recv_len);
+	serial_write_buf(last_received, last_recv_len);
+	serial_write_buf(buf, len);
+	printf("]\r\n");
+#endif
+	last_recv_is_resend = true;
+	return false;
 }

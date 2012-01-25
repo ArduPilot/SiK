@@ -33,25 +33,19 @@
 /// @param buf			buffer to put bytes in
 ///
 /// @return			number of bytes to send
-uint8_t packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
-{
-	uint16_t slen;
-
-	last_is_resend = 0;
-
-	// if we have received something via serial see how
-	// much of it we could fit in the transmit FIFO
-	slen = serial_read_available();
-	if (slen > max_xmit) {
-		slen = max_xmit;
-	}
-	if (slen > 0 && serial_read_buf(buf, slen)) {
-		return (uint8_t)slen;
-	}
-	return 0;
-}
+uint8_t packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf);
 
 /// return the next packet to be sent
 ///
 /// @return			true is a resend
 bool packet_is_resend(void);
+
+/// determine if a received packet is a duplicate
+///
+/// @return			true if this is a duplicate
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend) __reentrant;
+
+/// force the last packet to be re-sent. Used when packet transmit has
+/// failed
+void packet_force_resend(void);
+
