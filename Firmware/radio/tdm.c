@@ -137,13 +137,11 @@ display_test_output(void)
 		printf("REMOTE RSSI: %d pkts/round: %d%c",
 		       (int)remote_statistics.average_rssi,
 		       (int)remote_pkt_pct, '%');
-#if 1
 		printf("  txe=%d rxe=%d stx=%d srx=%d\n",
 		       (int)errors.tx_errors,
 		       (int)errors.rx_errors,
 		       (int)errors.serial_tx_overflow,
 		       (int)errors.serial_rx_overflow);
-#endif
 	}
 }
 
@@ -255,7 +253,7 @@ tdm_state_update(uint16_t tdelta)
 			tdm_state_remaining = silence_period;
 		}
 
-		// change freqency at the start and end of our transmit window
+		// change frequency at the start and end of our transmit window
 		// this maximises the chance we will be on the right frequency
 		// to match the other radio
 		if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE1) {
@@ -326,7 +324,7 @@ tdm_serial_loop(void)
 
 	for (;;) {
 		__pdata uint8_t	len;
-		__xdata uint8_t	pbuf[64-sizeof(trailer)];
+		__xdata uint8_t	pbuf[64];
 		uint16_t tnow, tdelta;
 		uint8_t max_xmit;
 
@@ -383,6 +381,8 @@ tdm_serial_loop(void)
 
 				// don't count control packets in the stats
 				statistics.receive_count--;
+			} else if (trailer.window == 0) {
+				panic("zero window recv");
 			} else {
 				// sync our transmit windows based on
 				// received header
@@ -463,7 +463,8 @@ tdm_serial_loop(void)
 		trailer.bonus = (tdm_state == TDM_RECEIVE);
 		trailer.resend = packet_is_resend();
 
-		if (len == 0 && 
+		if (tdm_state == TDM_TRANSMIT &&
+		    len == 0 && 
 		    send_statistics && 
 		    max_xmit >= sizeof(statistics)) {
 			// send a statistics packet
@@ -473,22 +474,21 @@ tdm_serial_loop(void)
 		
 			// mark a stats packet with a zero window
 			trailer.window = 0;
+			trailer.resend = 0;
 		} else {
 			// calculate the control word as the number of
 			// 16usec RTC ticks that will be left in this
 			// tdm state after this packet is transmitted
-			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len));
+			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
 		}
 
 		// set right transmit channel
 		radio_set_channel(fhop_transmit_channel());
 
-		// put the packet in the FIFO
-		radio_write_transmit_fifo(len, pbuf);
+		memcpy(&pbuf[len], &trailer, sizeof(trailer));
 
-		// add the control word to the fifo
-		memcpy(&pbuf[0], &trailer, sizeof(trailer));
-		radio_write_transmit_fifo(sizeof(trailer), pbuf);
+		// put the packet in the FIFO
+		radio_write_transmit_fifo(len+sizeof(trailer), pbuf);
 
 		if (len != 0) {
 			// show the user that we're sending real data
