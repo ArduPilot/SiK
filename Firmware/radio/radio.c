@@ -59,8 +59,7 @@ static void	clear_status_registers(void);
 // save and restore radio interrupt. We use this rather than
 // __critical to ensure we don't disturb the timer interrupt at all.
 // minimal tick drift is critical for TDM
-// note that we don't use __bit here due to what appears to be a compiler bug
-#define EX0_SAVE_DISABLE uint8_t EX0_saved = EX0; EX0 = 0
+#define EX0_SAVE_DISABLE __bit EX0_saved = EX0; EX0 = 0
 #define EX0_RESTORE EX0 = EX0_saved
 
 

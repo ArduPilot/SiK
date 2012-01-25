@@ -42,7 +42,7 @@ static void	rtc_write_reg(uint8_t reg, uint8_t val);
 #define CN_CAPTURE	(CN_RUN | RTC_CN_CAP)
 #define CN_LOAD		(CN_RUN | RTC_CN_SET)
 
-#define EX0_SAVE_DISABLE uint8_t EX0_saved = EX0; EX0 = 0
+#define EX0_SAVE_DISABLE __bit EX0_saved = EX0; EX0 = 0
 #define EX0_RESTORE EX0 = EX0_saved
 
 /// initialise the RTC subsystem

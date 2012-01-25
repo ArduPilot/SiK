@@ -84,7 +84,7 @@ static void serial_device_set_speed(uint8_t speed);
 // save and restore serial interrupt. We use this rather than
 // __critical to ensure we don't disturb the timer interrupt at all.
 // minimal tick drift is critical for TDM
-#define ES0_SAVE_DISABLE uint8_t ES_saved = ES0; ES0 = 0
+#define ES0_SAVE_DISABLE __bit ES_saved = ES0; ES0 = 0
 #define ES0_RESTORE ES0 = ES_saved
 
 void
