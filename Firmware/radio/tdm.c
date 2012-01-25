@@ -33,12 +33,11 @@
 /// time division multiplexing code
 ///
 
-#define DEBUG 1
-
 #include <stdarg.h>
 #include "radio.h"
 #include "tdm.h"
 #include "timer.h"
+#include "packet.h"
 #include "freq_hopping.h"
 
 /// all of the tdm timings are in units of 25usec to match
@@ -301,15 +300,12 @@ link_update(void)
 void
 tdm_serial_loop(void)
 {
-	// the number of bytes currently in the send fifo
-	uint8_t tx_fifo_bytes = 0;
 	uint16_t last_t = timer2_tick();
 	uint16_t last_link_update = last_t;
 
 	for (;;) {
-		__pdata uint8_t	rlen;
-		__xdata uint8_t	rbuf[64];
-		uint16_t slen;
+		__pdata uint8_t	len;
+		__xdata uint8_t	pbuf[64-sizeof(trailer)];
 		uint16_t tnow, tdelta;
 		uint8_t max_xmit;
 
@@ -326,7 +322,7 @@ tdm_serial_loop(void)
 		radio_set_channel(fhop_receive_channel());
 
 		// see if we have received a packet
-		if (radio_receive_packet(&rlen, rbuf)) {
+		if (radio_receive_packet(&len, pbuf)) {
 
 			// update the activity indication
 			received_packet = 1;
@@ -344,20 +340,20 @@ tdm_serial_loop(void)
 			// any more
 			preamble_wait = 0;
 
-			if (rlen < 2) {
+			if (len < 2) {
 				// not a valid packet. We always send
 				// two control bytes at the end of every packet
 				continue;
 			}
 
 			// extract control bytes from end of packet
-			memcpy(&trailer, &rbuf[rlen-sizeof(trailer)], sizeof(trailer));
-			rlen -= sizeof(trailer);
+			memcpy(&trailer, &pbuf[len-sizeof(trailer)], sizeof(trailer));
+			len -= sizeof(trailer);
 
-			if (trailer.window == 0 && rlen != 0) {
+			if (trailer.window == 0 && len != 0) {
 				// its a control packet
-				if (rlen == sizeof(struct statistics)) {
-					memcpy(&remote_statistics, rbuf, rlen);
+				if (len == sizeof(struct statistics)) {
+					memcpy(&remote_statistics, pbuf, len);
 				}
 
 				// don't count control packets in the stats
@@ -365,15 +361,15 @@ tdm_serial_loop(void)
 			} else {
 				// sync our transmit windows based on
 				// received header
-				sync_tx_windows(rlen);
+				sync_tx_windows(len);
 				last_t = timer2_tick();
 
-				if (rlen != 0) {
+				if (len != 0) {
 					// its user data - send it out
 					// the serial port
-					//printf("rcv(%d,[", rlen);
+					//printf("rcv(%d,[", len);
 					LED_ACTIVITY = LED_ON;
-					serial_write_buf(rbuf, rlen);
+					serial_write_buf(pbuf, len);
 					LED_ACTIVITY = LED_OFF;
 					//printf("]\n");
 				}
@@ -431,60 +427,50 @@ tdm_serial_loop(void)
 			// can't fit the trailer in with a byte to spare
 			continue;
 		}
-		max_xmit--;
+		max_xmit -= sizeof(trailer)+1;
 		if (max_xmit > 64-sizeof(trailer)) {
 			max_xmit = 64-sizeof(trailer);
 		}
-		if (tx_fifo_bytes > max_xmit) {
-			continue;
-		}
 
-		// if we have received something via serial see how
-		// much of it we could fit in the transmit FIFO
-		slen = serial_read_available();
-		if (slen + tx_fifo_bytes > max_xmit) {
-			slen = max_xmit - tx_fifo_bytes;
-		}
-		if (slen > 0 && serial_read_buf(rbuf, slen)) {
-			// put it in the send FIFO
-			radio_write_transmit_fifo(slen, rbuf);
-			tx_fifo_bytes += slen;
-		}
-
-		// set right transmit channel
-		radio_set_channel(fhop_transmit_channel());
+		// ask the packet system for the next packet to send
+		len = packet_get_next(max_xmit, pbuf);
 
 		trailer.bonus = (tdm_state == TDM_RECEIVE);
-		trailer.resend = 0;
+		trailer.resend = packet_is_resend();
 
-		if (tx_fifo_bytes == 0 && 
+		if (len == 0 && 
 		    send_statistics && 
 		    max_xmit >= sizeof(statistics)) {
 			// send a statistics packet
 			send_statistics = 0;
-			memcpy(rbuf, &statistics, sizeof(statistics));
-			tx_fifo_bytes = sizeof(statistics);
-			radio_write_transmit_fifo(tx_fifo_bytes, rbuf);
+			memcpy(pbuf, &statistics, sizeof(statistics));
+			len = sizeof(statistics);
 		
 			// mark a stats packet with a zero window
 			trailer.window = 0;
 		} else {
 			// calculate the control word as the number of
-			// 25usec RTC ticks that will be left in this
+			// 16usec RTC ticks that will be left in this
 			// tdm state after this packet is transmitted
-			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(tx_fifo_bytes));
+			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len));
 		}
 
-		// add the control word to the fifo
-		memcpy(&rbuf[0], &trailer, sizeof(trailer));
-		radio_write_transmit_fifo(sizeof(trailer), rbuf);
+		// set right transmit channel
+		radio_set_channel(fhop_transmit_channel());
 
-		if (tx_fifo_bytes != 0) {
+		// put the packet in the FIFO
+		radio_write_transmit_fifo(len, pbuf);
+
+		// add the control word to the fifo
+		memcpy(&pbuf[0], &trailer, sizeof(trailer));
+		radio_write_transmit_fifo(sizeof(trailer), pbuf);
+
+		if (len != 0) {
 			// show the user that we're sending real data
 			LED_ACTIVITY = LED_ON;
 		}
 
-		if (tx_fifo_bytes == 0) {
+		if (len == 0) {
 			// sending a zero byte packet gives up
 			// our window, but doesn't change the
 			// start of the next window
@@ -492,7 +478,7 @@ tdm_serial_loop(void)
 		}
 
 		// start transmitting the packet
-		radio_transmit_start(tx_fifo_bytes + sizeof(trailer), tdm_state_remaining + (silence_period/2));
+		radio_transmit_start(len + sizeof(trailer), tdm_state_remaining + (silence_period/2));
 
 		// set right receive channel
 		radio_set_channel(fhop_receive_channel());
@@ -500,11 +486,9 @@ tdm_serial_loop(void)
 		// re-enable the receiver
 		radio_receiver_on();
 
-		if (tx_fifo_bytes != 0) {
+		if (len != 0) {
 			LED_ACTIVITY = LED_OFF;
 		}
-
-		tx_fifo_bytes = 0;
 	}
 }
 
@@ -534,7 +518,7 @@ __code static const struct {
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
-        __xdata uint8_t rbuf[32];
+        __xdata uint8_t pbuf[32];
 	__idata uint8_t i, j;
 
 	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
@@ -554,7 +538,7 @@ static void tdm_build_timing_table(void)
 
 			time_0 = t2-t1;
 
-			radio_write_transmit_fifo(32, rbuf);
+			radio_write_transmit_fifo(32, pbuf);
 			radio_set_channel(2);
 			t1 = timer2_tick();
 			if (!radio_transmit_start(32, 0xFFFF)) {
