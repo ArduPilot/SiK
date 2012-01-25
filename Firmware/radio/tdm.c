@@ -177,8 +177,24 @@ sync_tx_windows(uint8_t packet_length)
 	if (trailer.bonus) {
 		// the other radio is using our transmit window
 		// via yielded ticks
-		tdm_state = TDM_TRANSMIT;
-		tdm_state_remaining = trailer.window;
+		if (old_state == TDM_SILENCE1) {
+			// This can be caused by a packet
+			// taking longer than expected to arrive.
+			// don't change back to transmit state or we
+			// will cause an extra frequency change which
+			// will get us out of sequence
+			tdm_state_remaining = silence_period;
+		} else if (old_state == TDM_RECEIVE || old_state == TDM_SILENCE2) {
+			// this is quite strange. We received a packet
+			// so we must have been on the right
+			// frequency. Best bet is to set us at the end
+			// of their silence period
+			tdm_state = TDM_SILENCE2;
+			tdm_state_remaining = 1;
+		} else {
+			tdm_state = TDM_TRANSMIT;
+			tdm_state_remaining = trailer.window;
+		}
 	} else {
 		// we are in the other radios transmit window, our
 		// receive window
