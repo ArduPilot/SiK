@@ -389,7 +389,7 @@ tdm_serial_loop(void)
 				sync_tx_windows(len);
 				last_t = timer2_tick();
 
-				if (len != 0) {
+				if (len != 0 && !packet_is_duplicate(len, pbuf, trailer.resend)) {
 					// its user data - send it out
 					// the serial port
 					//printf("rcv(%d,[", len);
@@ -503,7 +503,10 @@ tdm_serial_loop(void)
 		}
 
 		// start transmitting the packet
-		radio_transmit_start(len + sizeof(trailer), tdm_state_remaining + (silence_period/2));
+		if (!radio_transmit_start(len + sizeof(trailer), tdm_state_remaining + (silence_period/2)) &&
+		    len != 0 && trailer.window != 0) {
+			packet_force_resend();
+		}
 
 		// set right receive channel
 		radio_set_channel(fhop_receive_channel());
