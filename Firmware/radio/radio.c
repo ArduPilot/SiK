@@ -49,7 +49,7 @@ __xdata static struct {
 
 // internal helper functions
 //
-static void	register_write(uint8_t reg, uint8_t value);
+static void	register_write(uint8_t reg, uint8_t value) __reentrant;
 static uint8_t	register_read(uint8_t reg);
 static bool	software_reset(void);
 static void	set_frequency_registers(uint32_t frequency);
@@ -252,7 +252,7 @@ radio_clear_transmit_fifo(void)
 // clear the receive FIFO
 //
 void
-radio_clear_receive_fifo(void)
+radio_clear_receive_fifo(void) __reentrant
 {
 	uint8_t control;
 	EX0_SAVE_DISABLE;
@@ -608,7 +608,7 @@ radio_set_network_id(uint16_t id)
 /// @param value		The value to write
 ///
 static void
-register_write(uint8_t reg, uint8_t value)
+register_write(uint8_t reg, uint8_t value) __reentrant
 {
 	EX0_SAVE_DISABLE;
 
@@ -633,7 +633,7 @@ register_write(uint8_t reg, uint8_t value)
 /// @return			The value read
 ///
 static uint8_t
-register_read(uint8_t reg)
+register_read(uint8_t reg) __reentrant
 {
 	uint8_t value;
 	EX0_SAVE_DISABLE;
@@ -659,7 +659,7 @@ register_read(uint8_t reg)
 /// @param n			The number of bytes to read
 /// @param buffer		Buffer into which the bytes should be placed
 static void
-read_receive_fifo(uint8_t n, __xdata uint8_t *buffer)
+read_receive_fifo(uint8_t n, __xdata uint8_t *buffer) __reentrant
 {
 	EX0_SAVE_DISABLE;
 
