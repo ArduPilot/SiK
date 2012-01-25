@@ -311,6 +311,9 @@ link_update(void)
 	send_statistics = 1;
 }
 
+// a stack carary to detect a stack overflow
+__at(0xFF) uint8_t __idata _canary;
+
 /// main loop for time division multiplexing transparent serial
 ///
 void
@@ -319,11 +322,17 @@ tdm_serial_loop(void)
 	uint16_t last_t = timer2_tick();
 	uint16_t last_link_update = last_t;
 
+	_canary = 42;
+
 	for (;;) {
 		__pdata uint8_t	len;
 		__xdata uint8_t	pbuf[64-sizeof(trailer)];
 		uint16_t tnow, tdelta;
 		uint8_t max_xmit;
+
+		if (_canary != 42) {
+			panic("stack blown\n");
+		}
 
 		// give the AT command processor a chance to handle a command
 		at_command();
