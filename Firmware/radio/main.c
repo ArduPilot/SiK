@@ -125,6 +125,9 @@ panic(char *fmt, ...)
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	puts("");
+
+	// generate a software reset
+	RSTSRC |= (1 << 4);
 	for (;;)
 		;
 }
