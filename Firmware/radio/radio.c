@@ -174,15 +174,14 @@ radio_air_rate(void)
 bool
 radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 {
-	uint8_t status;
 	uint16_t tstart;
-	__bit transmit_started = 0;
+	bool transmit_started;
 
 	EX0_SAVE_DISABLE;
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
-	// enable just the packet sent IRQ
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKSENT);
+	// we won't use interrupts for packet send completion
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
 
 	clear_status_registers();
@@ -192,24 +191,25 @@ radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
 
 	preamble_detected = 0;
 
-	// wait for the IPKSENT interrupt to be raised
+	transmit_started = false;
+
+	// to detect transmit completion, watch the chip power state
+	// wait for the radio to first go into TX state, then out
+	// again. This seems to be more reliable than waiting for the PKSENT
+	// interrupt. About 2% of the time we don't see the PKSENT
+	// interrupt at all even if the packet does get through
 	tstart = timer2_tick();
 	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
-		status = register_read(EZRADIOPRO_EZMAC_STATUS);
-		if (status & EZRADIOPRO_PKTX) {
-			transmit_started = 1;
+		uint8_t status = register_read(EZRADIOPRO_DEVICE_STATUS);
+		if (status & 0x02) {
+			transmit_started = true;
 		}
-		if (transmit_started && (status & EZRADIOPRO_PKSENT)) {
+		if (transmit_started && (status & 0x02) == 0) {
+			// transmitter has finished
 			clear_status_registers();
 			radio_clear_transmit_fifo();
 			EX0_RESTORE;
-			return true;
-		}
-		if (register_read(EZRADIOPRO_INTERRUPT_STATUS_1) & EZRADIOPRO_IPKSENT) {
-			clear_status_registers();
-			radio_clear_transmit_fifo();
-			EX0_RESTORE;
-			return true;
+			return true;			
 		}
 	}
 
