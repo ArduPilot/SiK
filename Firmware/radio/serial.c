@@ -173,7 +173,7 @@ serial_write(uint8_t c)
 }
 
 static void
-_serial_write(uint8_t c)
+_serial_write(uint8_t c) __reentrant
 {
 	ES0_SAVE_DISABLE;
 
@@ -292,7 +292,7 @@ serial_read_available(void)
 }
 
 void
-putchar(char c)
+putchar(char c) __reentrant
 {
 	if (c == '\n')
 		_serial_write('\r');
