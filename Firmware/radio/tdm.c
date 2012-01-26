@@ -40,10 +40,6 @@
 #include "packet.h"
 #include "freq_hopping.h"
 
-/// all of the tdm timings are in units of 25usec to match
-/// the RTC resolution (assuming a 40kHz clock)
-#define RTC_TICK_USEC 25
-
 /// the state of the tdm system
 enum tdm_state { TDM_TRANSMIT=0, TDM_SILENCE1=1, TDM_RECEIVE=2, TDM_SILENCE2=3 };
 __pdata static enum tdm_state tdm_state;
@@ -591,7 +587,6 @@ static void tdm_build_timing_table(void)
 		       (unsigned)(per_byte_sum/j));
 	}
 }
-#endif
 
 /// test the timing table
 static void tdm_test_timing(void)
@@ -628,7 +623,9 @@ static void tdm_test_timing(void)
 	}
 	printf("%u failures\n", (unsigned)failures);
 }
+#endif
 
+// initialise the TDM subsystem
 void
 tdm_init(void)
 {
