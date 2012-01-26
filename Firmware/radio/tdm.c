@@ -490,7 +490,7 @@ tdm_serial_loop(void)
 		// put the packet in the FIFO
 		radio_write_transmit_fifo(len+sizeof(trailer), pbuf);
 
-		if (len != 0) {
+		if (len != 0 && trailer.window != 0) {
 			// show the user that we're sending real data
 			LED_ACTIVITY = LED_ON;
 		}
@@ -514,7 +514,7 @@ tdm_serial_loop(void)
 		// re-enable the receiver
 		radio_receiver_on();
 
-		if (len != 0) {
+		if (len != 0 && trailer.window != 0) {
 			LED_ACTIVITY = LED_OFF;
 		}
 	}
