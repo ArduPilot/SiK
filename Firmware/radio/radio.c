@@ -513,6 +513,19 @@ radio_configure(uint32_t air_rate)
 	// set capacitance
 	register_write(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, EZRADIOPRO_OSC_CAP_VALUE);
 
+	// see Si4432V2Errata.pdf point 9
+	register_write(EZRADIOPRO_DIVIDER_CURRENT_TRIMMING, 0x00);
+	register_write(EZRADIOPRO_VCO_CURRENT_TRIMMING, 0x03);
+	register_write(EZRADIOPRO_LDO_LEVEL_SETTING, 0x02);
+
+	// see Si4432V2Errata.pdf point 10
+	register_write(EZRADIOPRO_LDO_CONTROL_OVERRIDE, 0xA1);
+
+	// see Si4432V2Errata.pdf point 18
+	if (air_rate > 100000UL) {
+		register_write(EZRADIOPRO_CHARGEPUMP_CURRENT_TRIMMING_OVERRIDE, 0xC0);
+	}
+
 	// setup frequency and channel spacing
 	set_frequency_registers(settings.frequency);
 	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, settings.channel_spacing);
