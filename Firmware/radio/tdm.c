@@ -297,7 +297,11 @@ link_update(void)
 		// randomise the next transmit window using some
 		// entropy from the radio
 		if (timer_entropy() & 1) {
-			tdm_state_remaining = 1;
+			if (tdm_state_remaining > silence_period) {
+				tdm_state_remaining -= silence_period;
+			} else {
+				tdm_state_remaining = 1;
+			}
 		}
 		fhop_set_locked(false);
 
