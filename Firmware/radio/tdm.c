@@ -589,6 +589,42 @@ static void tdm_build_timing_table(void)
 }
 #endif
 
+/// test the timing table
+static void tdm_test_timing(void)
+{
+        __xdata uint8_t pbuf[64];
+	uint8_t i, failures=0;
+	
+	memset(pbuf, 42, 64);
+
+	for (i=0; i<255; i++) {
+		__pdata uint8_t len = rand() & 0x3f;
+		__pdata uint16_t fte = flight_time_estimate(len);
+		__pdata int16_t diff;
+		__pdata uint16_t t1, t2;
+
+		radio_set_channel(1);
+		//radio_receiver_on();
+		t1 = timer2_tick();
+		radio_write_transmit_fifo(len, pbuf);
+		if (!radio_transmit_start(len, fte + silence_period)) {
+			printf("max timeout len=%u\n", 
+			       (unsigned)len);
+			failures++;
+			continue;
+		}
+		t2 = timer2_tick();
+		diff = (int16_t)(((uint16_t)(t2-t1)) - fte);
+		printf("i=%u len=%u fte=%u t=%u diff=%d\n",
+		       (unsigned)i, (unsigned)len, 
+		       fte, (uint16_t)(t2-t1), diff);
+		if (diff > (int16_t)silence_period || diff < -(int16_t)silence_period) {
+			failures++;
+		}
+	}
+	printf("%u failures\n", (unsigned)failures);
+}
+
 void
 tdm_init(void)
 {
@@ -632,6 +668,8 @@ tdm_init(void)
 	}
 
 	tx_window_width = window_width;
+
+	// tdm_test_timing();
 }
 
 
