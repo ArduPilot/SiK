@@ -34,6 +34,7 @@
 ///
 
 #include "serial.h"
+#include "packet.h"
 
 // Serial rx/tx buffers.
 //
@@ -76,6 +77,8 @@ static volatile bool			tx_idle;
 		_which##_insert = ((_which##_insert+1) & _which##_mask); } while(0)
 #define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove]; \
 		_which##_remove = ((_which##_remove+1) & _which##_mask); } while(0)
+#define BUF_PEEK(_which)	_which##_buf[_which##_remove]
+#define BUF_PEEK2(_which)	_which##_buf[(_which##_remove+1) & _which##_mask]
 
 static void			_serial_write(uint8_t c);
 static void			serial_restart(void);
@@ -267,6 +270,30 @@ serial_read(void)
 	return c;
 }
 
+uint8_t
+serial_peek(void)
+{
+	register uint8_t c;
+
+	ES0_SAVE_DISABLE;
+	c = BUF_PEEK(rx);
+	ES0_RESTORE;
+
+	return c;
+}
+
+uint8_t
+serial_peek2(void)
+{
+	register uint8_t c;
+
+	ES0_SAVE_DISABLE;
+	c = BUF_PEEK2(rx);
+	ES0_RESTORE;
+
+	return c;
+}
+
 bool
 serial_read_buf(__xdata uint8_t *buf, uint16_t count)
 {
@@ -352,5 +379,9 @@ static void serial_device_set_speed(uint8_t speed)
 	// set the rates in the UART
 	TH1 = serial_rates[i].th1;
 	CKCON = (CKCON & ~0x0b) | serial_rates[i].ckcon;
+
+	// tell the packet layer how fast the serial link is. This is
+	// needed for packet framing timeouts
+	packet_set_serial_speed(speed*125UL);	
 }
 

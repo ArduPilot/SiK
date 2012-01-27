@@ -85,6 +85,20 @@ extern uint16_t	serial_write_space(void);
 ///
 extern uint8_t	serial_read(void);
 
+/// peek at a byte from the serial port, without removing it
+/// caller must ensure serial available is > 0
+///
+/// @return			The next byte in the receive FIFO.
+///
+extern uint8_t	serial_peek(void);
+
+/// peek at the byte after next from the serial port, without removing it
+/// caller must ensure serial available is > 1
+///
+/// @return			The byte after next in the receive FIFO.
+///
+extern uint8_t	serial_peek2(void);
+
 /// Read bytes from the serial port.
 ///
 /// @param	buf		Buffer for read data.
