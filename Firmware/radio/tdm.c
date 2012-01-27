@@ -487,9 +487,6 @@ tdm_serial_loop(void)
 
 		memcpy(&pbuf[len], &trailer, sizeof(trailer));
 
-		// put the packet in the FIFO
-		radio_write_transmit_fifo(len+sizeof(trailer), pbuf);
-
 		if (len != 0 && trailer.window != 0) {
 			// show the user that we're sending real data
 			LED_ACTIVITY = LED_ON;
@@ -503,7 +500,7 @@ tdm_serial_loop(void)
 		}
 
 		// start transmitting the packet
-		if (!radio_transmit_start(len + sizeof(trailer), tdm_state_remaining + (silence_period/2)) &&
+		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
 		    len != 0 && trailer.window != 0) {
 			packet_force_resend();
 		}
@@ -558,7 +555,7 @@ static void tdm_build_timing_table(void)
 			radio_set_channel(1);
 			radio_receiver_on();
 			t1 = timer2_tick();
-			if (!radio_transmit_start(0, 0xFFFF)) {
+			if (!radio_transmit(0, pbuf, 0xFFFF)) {
 				j--;
 				continue;
 			}
@@ -567,10 +564,9 @@ static void tdm_build_timing_table(void)
 
 			time_0 = t2-t1;
 
-			radio_write_transmit_fifo(32, pbuf);
 			radio_set_channel(2);
 			t1 = timer2_tick();
-			if (!radio_transmit_start(32, 0xFFFF)) {
+			if (!radio_transmit(32, pbuf, 0xFFFF)) {
 				j--;
 				continue;
 			}
@@ -606,8 +602,7 @@ static void tdm_test_timing(void)
 		radio_set_channel(1);
 		//radio_receiver_on();
 		t1 = timer2_tick();
-		radio_write_transmit_fifo(len, pbuf);
-		if (!radio_transmit_start(len, fte + silence_period)) {
+		if (!radio_transmit(len, pbuf, fte + silence_period)) {
 			printf("max timeout len=%u\n", 
 			       (unsigned)len);
 			failures++;

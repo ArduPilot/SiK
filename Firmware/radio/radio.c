@@ -89,10 +89,9 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t *buf)
 
 // write to the radios transmit FIFO
 //
-void
+static void
 radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
 {
-	EX0_SAVE_DISABLE;
 	NSS1 = 0;
 	SPIF1 = 0;
 	SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -107,7 +106,6 @@ radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
 
 	SPIF1 = 0;
 	NSS1 = 1;
-	EX0_RESTORE;
 }
 
 // check if a packet is being received
@@ -169,12 +167,16 @@ radio_air_rate(void)
 // @return	    true if packet sent successfully
 //
 bool
-radio_transmit_start(uint8_t length, __pdata uint16_t timeout_ticks)
+radio_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks)
 {
 	__pdata uint16_t tstart;
 	bool transmit_started;
 
 	EX0_SAVE_DISABLE;
+
+	// put the packet in the FIFO
+	radio_write_transmit_fifo(length, buf);
+
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
 	// we won't use interrupts for packet send completion

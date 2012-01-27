@@ -118,13 +118,6 @@ __xdata extern struct error_counts errors;
 ///
 extern bool radio_receive_packet(uint8_t *len, __xdata uint8_t *buf);
 
-/// write data into the radio transmit fifo
-///
-/// @param n			The number of bytes to write
-/// @param buf			Pointer to the bytes to write
-///
-extern void radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer);
-
 /// test whether the radio has detected a packet preamble
 ///
 /// @return			True if a preamble has been detected
@@ -140,7 +133,7 @@ extern bool radio_preamble_detected(void);
 ///
 /// @return			true if packet sent successfully
 ///
-extern bool radio_transmit_start(uint8_t length, __pdata uint16_t timeout_ticks);
+extern bool radio_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks);
 
 /// clear the radio transmit FIFO
 ///
