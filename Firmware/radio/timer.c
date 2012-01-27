@@ -32,10 +32,10 @@
 
 /// Counter used by delay_msec
 ///
-static volatile uint8_t delay_counter;
+static __pdata volatile uint8_t delay_counter;
 
 /// high 16 bits of timer2 SYSCLK/12 interrupt
-static volatile uint16_t timer2_high;
+static __pdata volatile uint16_t timer2_high;
 
 
 INTERRUPT(T3_ISR, INTERRUPT_TIMER3)
@@ -52,7 +52,7 @@ INTERRUPT(T3_ISR, INTERRUPT_TIMER3)
 }
 
 void
-delay_set(uint16_t msec)
+delay_set(__pdata uint16_t msec)
 {
 	if (msec >= 2550) {
 		delay_counter = 255;
@@ -73,7 +73,7 @@ delay_expired()
 }
 
 void
-delay_msec(uint16_t msec)
+delay_msec(__pdata uint16_t msec)
 {
 	delay_set(msec);
 	while (!delay_expired())
@@ -105,6 +105,7 @@ uint16_t timer2_16(void)
 	return low | (((uint16_t)high)<<8);
 }
 
+#if 0
 // return microseconds since boot
 // this call costs about 5usec
 uint32_t micros(void)
@@ -116,6 +117,7 @@ uint32_t micros(void)
 	} while (high != timer2_high);
 	return ((((uint32_t)high)<<16) | low) >> 1;
 }
+#endif
 
 // return a 16 bit value that rolls over in approximately
 // one second intervals

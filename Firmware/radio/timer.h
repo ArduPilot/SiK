@@ -57,7 +57,7 @@ void timer_init(void);
 /// @param	msec		Minimum time before the timer expiers.  The actual time
 ///				may be greater.
 ///
-extern void	delay_set(uint16_t msec);
+extern void	delay_set(__pdata uint16_t msec);
 
 /// Set the delay timer in 100Hz ticks
 ///
@@ -78,7 +78,7 @@ extern bool	delay_expired(void);
 /// @param	msec		Minimum time to wait.  The actual time
 ///				may be greater.
 ///
-extern void	delay_msec(uint16_t msec);
+extern void	delay_msec(__pdata uint16_t msec);
 
 /// return some entropy from timers
 ///
