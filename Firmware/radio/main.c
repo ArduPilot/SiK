@@ -243,8 +243,10 @@ radio_init(void)
 	// report the real transmit power in settings
 	param_set(PARAM_TXPOWER, radio_get_transmit_power());
 
+#ifdef USE_RTC
 	// initialise real time clock
 	rtc_init();
+#endif
 
 	// initialise frequency hopping system
 	fhop_init(param_get(PARAM_NETID));

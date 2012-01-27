@@ -35,6 +35,7 @@
 
 #include "radio.h"
 
+#ifdef USE_RTC
 static uint8_t	rtc_read_reg(uint8_t reg);
 static void	rtc_write_reg(uint8_t reg, uint8_t val);
 
@@ -203,3 +204,4 @@ rtc_write_reg(uint8_t reg, uint8_t val)
 	RTC0ADR = reg;
 	RTC0DAT = val;
 }
+#endif
