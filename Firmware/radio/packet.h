@@ -49,3 +49,13 @@ bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend) __re
 /// failed
 void packet_force_resend(void);
 
+/// set the maximum size of a packet
+///
+void packet_set_max_xmit(uint8_t max);
+
+/// set the serial rate in bytes/s
+///
+/// @param  speed		serial speed bytes/s
+///
+void packet_set_serial_speed(uint16_t speed);
+
