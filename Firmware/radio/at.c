@@ -124,8 +124,8 @@ at_input(uint8_t c) __using(1)
 
 #define ATP_COUNT_1S		100	// 100 ticks of the 100Hz timer
 
-__data uint8_t	at_plus_state;
-__data uint8_t	at_plus_counter = ATP_COUNT_1S;
+static __pdata uint8_t	at_plus_state;
+static __pdata uint8_t	at_plus_counter = ATP_COUNT_1S;
 
 #pragma save
 #pragma nooverlay
