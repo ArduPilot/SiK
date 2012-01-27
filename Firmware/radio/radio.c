@@ -115,15 +115,12 @@ radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
 bool
 radio_receive_in_progress(void)
 {
-	uint8_t status;
-
 	if (packet_received) {
 		return true;
 	}
 
 	// check the status register to see if a receive is in progress
-	status = register_read(EZRADIOPRO_EZMAC_STATUS);
-	if (status & EZRADIOPRO_PKRX) {
+	if (register_read(EZRADIOPRO_EZMAC_STATUS) & EZRADIOPRO_PKRX) {
 		return true;
 	}
 	return false;
@@ -172,9 +169,9 @@ radio_air_rate(void)
 // @return	    true if packet sent successfully
 //
 bool
-radio_transmit_start(uint8_t length, uint16_t timeout_ticks)
+radio_transmit_start(uint8_t length, __pdata uint16_t timeout_ticks)
 {
-	uint16_t tstart;
+	__pdata uint16_t tstart;
 	bool transmit_started;
 
 	EX0_SAVE_DISABLE;
@@ -342,7 +339,7 @@ radio_initialise(void)
 // set the transmit frequency
 //
 bool
-radio_set_frequency(uint32_t value)
+radio_set_frequency(__pdata uint32_t value)
 {
 	if (value < 240000000L || value > 930000000L) {
 		return false;
@@ -356,7 +353,7 @@ radio_set_frequency(uint32_t value)
 // set the channel spacing
 //
 bool
-radio_set_channel_spacing(uint32_t value)
+radio_set_channel_spacing(__pdata uint32_t value)
 {
 	if (value > 2550000L)
 		return false;
@@ -478,7 +475,7 @@ __code static const uint8_t reg_table[NUM_RADIO_REGISTERS][1 + NUM_DATA_RATES] =
 // configure radio based on the air data rate
 //
 bool
-radio_configure(uint32_t air_rate)
+radio_configure(__pdata uint32_t air_rate)
 {
 	uint8_t i, rate_selection;
 
@@ -670,13 +667,14 @@ register_read(uint8_t reg) __reentrant
 	return value;
 }
 
-/// read some bytes from the receive FIFO
+/// read some bytes from the receive FIFO into receive_buffer[]
 ///
 /// @param n			The number of bytes to read
-/// @param buffer		Buffer into which the bytes should be placed
 static void
-read_receive_fifo(uint8_t n, __xdata uint8_t *buffer) __reentrant
+read_receive_fifo(uint8_t n) __reentrant
 {
+	uint8_t i;
+
 	EX0_SAVE_DISABLE;
 
 	NSS1 = 0;				// drive NSS low
@@ -685,11 +683,11 @@ read_receive_fifo(uint8_t n, __xdata uint8_t *buffer) __reentrant
 	while (!SPIF1);				// wait on SPIF
 	ACC = SPI1DAT;				// discard first byte
 
-	while (n--) {
+	for (i=0; i<n; i++) {
 		SPIF1 = 0;			// clear SPIF
 		SPI1DAT = 0x00;			// write anything
 		while (!SPIF1);			// wait on SPIF
-		*buffer++ = SPI1DAT;		// copy to buffer
+		receive_buffer[i] = SPI1DAT;	// copy to buffer
 	}
 
 	SPIF1 = 0;				// leave SPIF cleared
@@ -714,7 +712,7 @@ clear_status_registers(void)
 /// @return			value / scale, rounded to the nearest integer
 ///
 static uint32_t
-scale_uint32(uint32_t value, uint32_t scale)
+scale_uint32(__pdata uint32_t value, __pdata uint32_t scale)
 {
 	return (value + (value >> 1)) / scale;
 }
@@ -764,10 +762,10 @@ software_reset(void)
 ///
 /// @param frequency		The frequency to set, in Hz
 static void
-set_frequency_registers(uint32_t frequency)
+set_frequency_registers(__pdata uint32_t frequency)
 {
 	uint8_t band;
-	uint16_t carrier;
+	__pdata uint16_t carrier;
 
 	if (frequency > 480000000UL) {
 		frequency -= 480000000UL;
@@ -818,7 +816,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 			packet_received = 1;
 			receive_packet_length = register_read(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
 			if (receive_packet_length != 0) {
-				read_receive_fifo(receive_packet_length, receive_buffer);
+				read_receive_fifo(receive_packet_length);
 			}
 		}
 

@@ -140,7 +140,7 @@ extern bool radio_preamble_detected(void);
 ///
 /// @return			true if packet sent successfully
 ///
-extern bool radio_transmit_start(uint8_t length, uint16_t timeout_ticks);
+extern bool radio_transmit_start(uint8_t length, __pdata uint16_t timeout_ticks);
 
 /// clear the radio transmit FIFO
 ///
@@ -168,13 +168,13 @@ extern bool radio_initialise(void);
 ///
 /// @param value		The frequency in Hz
 ///
-extern bool radio_set_frequency(uint32_t value);
+extern bool radio_set_frequency(__pdata uint32_t value);
 
 /// set the channel spacing used by the channel offset control
 ///
 /// @param value		The channel spacing in Hz
 ///
-extern bool radio_set_channel_spacing(uint32_t value);
+extern bool radio_set_channel_spacing(__pdata uint32_t value);
 
 /// set the channel for transmit/receive
 ///
@@ -195,7 +195,7 @@ uint8_t radio_get_channel(void);
 ///				the next supported value
 /// @return			True if the radio was successfully configured.
 ///
-extern bool radio_configure(uint32_t air_rate);
+extern bool radio_configure(__pdata uint32_t air_rate);
 
 /// configure the radio network ID
 ///
