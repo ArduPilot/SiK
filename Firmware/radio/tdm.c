@@ -671,6 +671,14 @@ tdm_init(void)
 
 	tx_window_width = window_width;
 
+	// tell the packet subsystem our max packet size, which it
+	// needs to know for MAVLink packet boundary detection
+	i = (tx_window_width - packet_latency) / ticks_per_byte;
+	if (i > 64 - sizeof(trailer)) {
+		i = 64 - sizeof(trailer);
+	}
+	packet_set_max_xmit(i);
+
 	// tdm_test_timing();
 }
 
