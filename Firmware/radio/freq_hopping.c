@@ -60,7 +60,7 @@ __xdata static uint8_t channel_map[NUM_FREQ_CHANNELS];
 // a vary simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
-static void shuffle(__xdata uint8_t *array, uint8_t n)
+static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 {
 	uint8_t i;
 	for (i = 0; i < n - 1; i++) {
@@ -74,7 +74,7 @@ static void shuffle(__xdata uint8_t *array, uint8_t n)
 // initialise frequency hopping logic
 void fhop_init(uint16_t netid)
 {
-	int i;
+	uint8_t i;
 	// create a random mapping between virtual and physical channel
 	// numbers, seeded by the network ID
 	for (i = 0; i < NUM_FREQ_CHANNELS; i++) {
