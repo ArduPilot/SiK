@@ -147,7 +147,7 @@ display_test_output(void)
 /// @param packet_len		payload length in bytes
 ///
 /// @return			flight time in 25usec ticks
-static uint16_t flight_time_estimate(uint8_t packet_len)
+static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 {
 	return packet_latency + (packet_len * ticks_per_byte);
 }
@@ -163,7 +163,7 @@ static uint16_t flight_time_estimate(uint8_t packet_len)
 /// match the other radio and thus bring the two radios into sync
 ///
 static void
-sync_tx_windows(uint8_t packet_length)
+sync_tx_windows(__pdata uint8_t packet_length)
 {
 	enum tdm_state old_state = tdm_state;
 	__pdata uint16_t old_remaining = tdm_state_remaining;
@@ -225,7 +225,7 @@ sync_tx_windows(uint8_t packet_length)
 /// update the TDM state machine
 ///
 static void
-tdm_state_update(uint16_t tdelta)
+tdm_state_update(__pdata uint16_t tdelta)
 {
 	// update the amount of time we are waiting for a preamble
 	// to turn into a real packet
@@ -632,7 +632,6 @@ tdm_init(void)
 {
 	__pdata uint8_t i;
 	__pdata uint8_t air_rate = radio_air_rate() / 1000UL;
-	const uint8_t num_rates = ARRAY_LENGTH(timing_table);
 	__pdata uint32_t window_width;
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
@@ -641,10 +640,10 @@ tdm_init(void)
 
 	// find the packet latency and time per byte from the timing
 	// table.
-	for (i=0; i<num_rates; i++) {
+	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
 		if (timing_table[i].air_rate == air_rate) break;
 	}
-	if (i==num_rates) {
+	if (i == ARRAY_LENGTH(timing_table)) {
 		panic("missing rate in timing_table");
 	}
 
