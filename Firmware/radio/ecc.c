@@ -34,7 +34,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "golay.h"
-#include "eec.h"
+#include "ecc.h"
 
 static __xdata uint8_t ebuf[64];
 
@@ -44,7 +44,6 @@ bool
 eec_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks)
 {
 	__pdata uint8_t elen = 3*((length+3)/3);
-	__pdata uint8_t i;
 	buf[elen-1] = length;
 	golay_encode(elen, buf, ebuf);
 	return radio_transmit(elen*2, ebuf, timeout_ticks);
@@ -55,7 +54,6 @@ bool
 eec_receive(uint8_t *length, __xdata uint8_t *buf)
 {
 	__pdata uint8_t elen;
-	__pdata uint8_t i;
 
 	if (!radio_receive_packet(&elen, ebuf)) {
 		return false;
