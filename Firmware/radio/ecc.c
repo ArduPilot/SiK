@@ -41,7 +41,7 @@ static __xdata uint8_t ebuf[64];
 // first attempt at error correcting code
 
 bool
-eec_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks)
+ecc_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks)
 {
 	__pdata uint8_t elen = 3*((length+3)/3);
 	buf[elen-1] = length;
@@ -51,7 +51,7 @@ eec_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_tick
 
 
 bool
-eec_receive(uint8_t *length, __xdata uint8_t *buf)
+ecc_receive(uint8_t *length, __xdata uint8_t *buf)
 {
 	__pdata uint8_t elen;
 
