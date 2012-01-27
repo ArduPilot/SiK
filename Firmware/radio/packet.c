@@ -249,7 +249,7 @@ packet_set_serial_speed(uint16_t speed)
 }
 
 // determine if a received packet is a duplicate
-bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend) __reentrant
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend)
 {
 	if (!is_resend) {
 		memcpy(last_received, buf, len);
