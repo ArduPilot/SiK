@@ -116,7 +116,7 @@ static void
 display_test_output(void)
 {
 	if (test_display & AT_TEST_RSSI) {
-		uint8_t pkt_pct, remote_pkt_pct;
+		__pdata uint8_t pkt_pct, remote_pkt_pct;
 		if (statistics.round_count == 0) {
 			pkt_pct = 0;
 		} else {
@@ -166,7 +166,7 @@ static void
 sync_tx_windows(uint8_t packet_length)
 {
 	enum tdm_state old_state = tdm_state;
-	uint16_t old_remaining = tdm_state_remaining;
+	__pdata uint16_t old_remaining = tdm_state_remaining;
 
 	if (trailer.bonus) {
 		// the other radio is using our transmit window
@@ -317,16 +317,16 @@ __at(0xFF) uint8_t __idata _canary;
 void
 tdm_serial_loop(void)
 {
-	uint16_t last_t = timer2_tick();
-	uint16_t last_link_update = last_t;
+	__pdata uint16_t last_t = timer2_tick();
+	__pdata uint16_t last_link_update = last_t;
 
 	_canary = 42;
 
 	for (;;) {
 		__pdata uint8_t	len;
 		__xdata uint8_t	pbuf[64];
-		uint16_t tnow, tdelta;
-		uint8_t max_xmit;
+		__pdata uint16_t tnow, tdelta;
+		__pdata uint8_t max_xmit;
 
 		if (_canary != 42) {
 			panic("stack blown\n");
@@ -592,7 +592,7 @@ static void tdm_build_timing_table(void)
 static void tdm_test_timing(void)
 {
         __xdata uint8_t pbuf[64];
-	uint8_t i, failures=0;
+	__pdata uint8_t i, failures=0;
 	
 	memset(pbuf, 42, 64);
 
@@ -629,10 +629,11 @@ static void tdm_test_timing(void)
 void
 tdm_init(void)
 {
-	uint8_t i;
-	uint8_t air_rate = radio_air_rate() / 1000UL;
+	__pdata uint8_t i;
+	__pdata uint8_t air_rate = radio_air_rate() / 1000UL;
 	const uint8_t num_rates = ARRAY_LENGTH(timing_table);
 	__pdata uint32_t window_width;
+
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
 
 	//tdm_build_timing_table();
@@ -678,7 +679,7 @@ tdm_init(void)
 ///
 void tdm_report_timing(void)
 {
-	printf("silence_period: %d\n", (int)silence_period); delay_msec(1);
-	printf("tx_window_width: %d\n", (int)tx_window_width); delay_msec(1);
+	printf("silence_period: %u\n", (unsigned)silence_period); delay_msec(1);
+	printf("tx_window_width: %u\n", (unsigned)tx_window_width); delay_msec(1);
 }
 
