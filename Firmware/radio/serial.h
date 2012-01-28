@@ -70,7 +70,7 @@ extern bool	serial_write(uint8_t c);
 ///				buffer for @a count bytes (no bytes are
 ///				written in this case).
 ///
-extern bool	serial_write_buf(__xdata uint8_t *buf, uint16_t count);
+extern bool	serial_write_buf(__xdata uint8_t *buf, __pdata uint8_t count);
 
 /// Check for space in the write FIFO
 ///
@@ -108,7 +108,7 @@ extern uint8_t	serial_peek2(void);
 ///				to satisfy the request (no bytes are read
 ///				in this case).
 ///
-extern bool	serial_read_buf(__xdata uint8_t *buf, uint16_t count);
+extern bool	serial_read_buf(__xdata uint8_t * __pdata buf, __pdata uint8_t count);
 
 /// Check for bytes in the read FIFO
 ///

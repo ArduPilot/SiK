@@ -197,8 +197,9 @@ _serial_write(uint8_t c) __reentrant
 }
 
 bool
-serial_write_buf(__xdata uint8_t *buf, uint16_t count)
+serial_write_buf(__xdata uint8_t *buf, __pdata uint8_t count)
 {
+	register uint8_t n = count;
 	ES0_SAVE_DISABLE;
 
 	if (serial_write_space() < count) {
@@ -209,7 +210,7 @@ serial_write_buf(__xdata uint8_t *buf, uint16_t count)
 		return false;
 	}
 
-	while (count--)
+	while (n--)
 		BUF_INSERT(tx, *buf++);
 
 	// if the transmitter is idle, restart it
@@ -295,14 +296,15 @@ serial_peek2(void)
 }
 
 bool
-serial_read_buf(__xdata uint8_t *buf, uint16_t count)
+serial_read_buf(__xdata uint8_t * __pdata buf, __pdata uint8_t count)
 {
+	register uint8_t n = count;
 	ES0_SAVE_DISABLE;
 	if (BUF_USED(rx) < count) {
 		ES0_RESTORE;
 		return false;
 	}
-	while (count--)
+	while (n--)
 		BUF_REMOVE(rx, *buf++);
 	ES0_RESTORE;
 	return true;
