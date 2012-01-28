@@ -36,7 +36,7 @@
 #include "golay.h"
 #include "ecc.h"
 
-static __xdata uint8_t ebuf[64];
+static __xdata uint8_t ebuf[MAX_AIR_PACKET_LENGTH];
 
 // first attempt at error correcting code
 
@@ -46,6 +46,10 @@ ecc_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t tim
 	uint8_t elen;
 
 	elen = 3*((length+1+2)/3);
+
+	if (elen > MAX_AIR_PACKET_LENGTH/2) {
+		panic("ecc packet too long");
+	}
 	buf[elen-1] = length;
 	golay_encode(elen, buf, ebuf);
 	return radio_transmit(elen*2, ebuf, timeout_ticks);
@@ -60,7 +64,7 @@ ecc_receive(uint8_t *length, __xdata uint8_t * __pdata buf)
 	if (!radio_receive_packet(&elen, ebuf)) {
 		return false;
 	}
-	if ((elen % 6) != 0) {
+	if (elen > MAX_AIR_PACKET_LENGTH || (elen % 6) != 0) {
 		printf("invalid elen %u\n", (unsigned)elen);
 		return false;
 	}

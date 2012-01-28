@@ -48,11 +48,11 @@
 #define tdm_transmit ecc_transmit
 #define tdm_receive ecc_receive
 // leave room for golay coding with length byte
-#define TDM_MAX_PACKET_SIZE 29
+#define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
 #else
 #define tdm_transmit radio_transmit
 #define tdm_receive radio_receive_packet
-#define TDM_MAX_PACKET_SIZE 64
+#define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
 #endif
 
 
@@ -340,7 +340,7 @@ tdm_serial_loop(void)
 
 	for (;;) {
 		__pdata uint8_t	len;
-		__xdata uint8_t	pbuf[64];
+		__xdata uint8_t	pbuf[MAX_DATA_PACKET_LENGTH];
 		__pdata uint16_t tnow, tdelta;
 		__pdata uint8_t max_xmit;
 
@@ -573,7 +573,7 @@ __code static const struct {
 #endif
 };
 
-#if 1
+#if 0
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
@@ -621,10 +621,10 @@ static void tdm_build_timing_table(void)
 /// test the timing table
 static void tdm_test_timing(void)
 {
-        __xdata uint8_t pbuf[64];
+        __xdata uint8_t pbuf[MAX_DATA_PACKET_LENGTH];
 	__pdata uint8_t i, failures=0;
 	
-	memset(pbuf, 42, 64);
+	memset(pbuf, 42, sizeof(pbuf));
 
 	for (i=0; i<255; i++) {
 		__pdata uint8_t len = rand() & 0x3f;
@@ -684,7 +684,7 @@ tdm_init(void)
         silence_period = 2*packet_latency;
 
         // set the transmit window to allow for 3 full sized packets
-	window_width = 3*(packet_latency+(64*(uint32_t)ticks_per_byte));
+	window_width = 3*(packet_latency+(MAX_DATA_PACKET_LENGTH*(uint32_t)ticks_per_byte));
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
