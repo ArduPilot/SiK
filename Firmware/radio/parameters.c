@@ -68,7 +68,7 @@ union param_private {
 __xdata union param_private	parameter_values[PARAM_MAX];
 
 static bool
-param_check(enum ParamID id, uint16_t val)
+param_check(enum ParamID id, __pdata uint16_t val)
 {
 	// parameter value out of range - fail
 	if (id >= PARAM_MAX)
@@ -103,7 +103,7 @@ param_check(enum ParamID id, uint16_t val)
 }
 
 bool
-param_set(enum ParamID param, param_t value)
+param_set(enum ParamID param, __pdata param_t value)
 {
 	// Sanity-check the parameter value first.
 	if (!param_check(param, value))
@@ -210,7 +210,7 @@ param_default(void)
 }
 
 enum ParamID
-param_id(char *name)
+param_id(char * __pdata name)
 {
 	__pdata uint8_t i;
 

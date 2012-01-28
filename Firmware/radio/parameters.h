@@ -70,7 +70,7 @@ typedef uint16_t	param_t;
 /// @param	value		The value to assign to the parameter.
 /// @return			True if the parameter's value is valid.
 ///
-extern bool param_set(enum ParamID param, param_t value);
+extern bool param_set(enum ParamID param, __pdata param_t value);
 
 /// Get a parameter
 ///
@@ -86,7 +86,7 @@ extern param_t param_get(enum ParamID param);
 /// @return			The parameter ID, or PARAM_MAX if the
 ///				parameter is not known.
 ///
-extern enum ParamID param_id(char *name);
+extern enum ParamID param_id(char * __pdata name);
 
 /// Return the name of a parameter.
 ///
