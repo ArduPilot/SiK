@@ -43,7 +43,9 @@ static __xdata uint8_t ebuf[64];
 bool
 ecc_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_ticks)
 {
-	__pdata uint8_t elen = 3*((length+3)/3);
+	uint8_t elen;
+
+	elen = 3*((length+1+2)/3);
 	buf[elen-1] = length;
 	golay_encode(elen, buf, ebuf);
 	return radio_transmit(elen*2, ebuf, timeout_ticks);
@@ -53,19 +55,16 @@ ecc_transmit(uint8_t length, __xdata uint8_t *buf, __pdata uint16_t timeout_tick
 bool
 ecc_receive(uint8_t *length, __xdata uint8_t *buf)
 {
-	__pdata uint8_t elen;
+	uint8_t elen;
 
 	if (!radio_receive_packet(&elen, ebuf)) {
 		return false;
 	}
 	if ((elen % 6) != 0) {
-		// not a valid encrypted packet
+		printf("invalid elen %u\n", (unsigned)elen);
 		return false;
 	}
 	golay_decode(elen, ebuf, buf);
 	*length = buf[(elen/2)-1];
-	printf("elen=%u len=%u\n", 
-	       (unsigned)elen, 
-	       (unsigned)*length);
 	return true;
 }
