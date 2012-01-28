@@ -46,7 +46,7 @@ bool		at_mode_active;	///< if true, incoming bytes are for AT command
 bool		at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
 
 // test bits
-uint8_t		at_testmode;    ///< test modes enabled (AT_TEST_*)
+__pdata uint8_t		at_testmode;    ///< test modes enabled (AT_TEST_*)
 
 // command handlers
 static void	at_ok(void);

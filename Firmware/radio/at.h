@@ -69,7 +69,7 @@ extern void	at_input(uint8_t c) __using(1);
 extern void	at_command(void);
 
 /// AT_TEST_* test modes
-extern uint8_t  at_testmode;    ///< AT_TEST_* bits
+extern __pdata uint8_t  at_testmode;    ///< AT_TEST_* bits
 
 #define AT_TEST_RSSI 1
 
