@@ -33,7 +33,7 @@
 /// @param buf			buffer to put bytes in
 ///
 /// @return			number of bytes to send
-uint8_t packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf);
+uint8_t packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf);
 
 /// return the next packet to be sent
 ///
@@ -43,7 +43,7 @@ bool packet_is_resend(void);
 /// determine if a received packet is a duplicate
 ///
 /// @return			true if this is a duplicate
-bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend);
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend);
 
 /// force the last packet to be re-sent. Used when packet transmit has
 /// failed

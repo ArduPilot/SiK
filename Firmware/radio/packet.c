@@ -70,7 +70,7 @@ static __xdata uint8_t mav_max_xmit;
 
 // return the next packet to be sent
 uint8_t
-packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
+packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	__xdata uint16_t slen = serial_read_available();
 
@@ -82,7 +82,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 		}
 		last_sent_is_resend = true;
 		force_resend = false;
-		memcpy(buf, last_sent, last_sent_len);
+		xmemcpy(buf, last_sent, last_sent_len);
 		return last_sent_len;
 	}
 
@@ -110,7 +110,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 			if ((uint16_t)(timer2_tick() - mav_pkt_start_time) > mav_pkt_max_time) {
 				// we didn't get the length byte in time
 				last_sent[last_sent_len++] = serial_read();
-				memcpy(buf, last_sent, last_sent_len);				
+				xmemcpy(buf, last_sent, last_sent_len);				
 				mav_pkt_len = 0;
 				return last_sent_len;
 			}
@@ -130,7 +130,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 				// it. Send what we have now.
 				serial_read_buf(last_sent, slen);
 				last_sent_len = slen;
-				memcpy(buf, last_sent, last_sent_len);
+				xmemcpy(buf, last_sent, last_sent_len);
 				mav_pkt_len = 0;
 				return last_sent_len;
 			}
@@ -142,7 +142,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 		// the whole of the MAVLink packet is available
 		serial_read_buf(last_sent, mav_pkt_len);
 		last_sent_len = mav_pkt_len;
-		memcpy(buf, last_sent, last_sent_len);
+		xmemcpy(buf, last_sent, last_sent_len);
 		mav_pkt_len = 0;
 		return last_sent_len;
 	}
@@ -180,7 +180,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 				// send what we've got so far,
 				// and send the MAVLink payload
 				// in the next packet
-				memcpy(buf, last_sent, last_sent_len);
+				xmemcpy(buf, last_sent, last_sent_len);
 				mav_pkt_start_time = timer2_tick();
 				mav_pkt_max_time = mav_pkt_len * serial_rate;
 				return last_sent_len;
@@ -195,7 +195,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 				// and ready to be read
 				serial_read_buf(last_sent, mav_pkt_len);
 				last_sent_len = mav_pkt_len;
-				memcpy(buf, last_sent, last_sent_len);
+				xmemcpy(buf, last_sent, last_sent_len);
 				mav_pkt_len = 0;
 				return last_sent_len;
 			}
@@ -205,11 +205,11 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t *buf)
 		}
 	}
 
-	memcpy(buf, last_sent, last_sent_len);
+	xmemcpy(buf, last_sent, last_sent_len);
 	return last_sent_len;
 #else
 	if (slen > 0 && serial_read_buf(buf, slen)) {
-		memcpy(last_sent, buf, slen);
+		xmemcpy(last_sent, buf, slen);
 		last_sent_len = slen;
 	} else {
 		last_sent_len = 0;
@@ -249,10 +249,10 @@ packet_set_serial_speed(uint16_t speed)
 }
 
 // determine if a received packet is a duplicate
-bool packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend)
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
 {
 	if (!is_resend) {
-		memcpy(last_received, buf, len);
+		xmemcpy(last_received, buf, len);
 		last_recv_len = len;
 		last_recv_is_resend = false;
 		return false;
