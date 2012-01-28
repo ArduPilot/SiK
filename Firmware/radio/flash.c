@@ -67,7 +67,7 @@ __critical {
 }
 
 uint8_t
-flash_read_scratch(uint16_t address)
+flash_read_scratch(__pdata uint16_t address)
 __critical {
 	uint8_t	d;
 
@@ -78,7 +78,7 @@ __critical {
 }
 
 void
-flash_write_scratch(uint16_t address, uint8_t c)
+flash_write_scratch(__pdata uint16_t address, __pdata uint8_t c)
 __critical {
 	flash_load_keys();
 	PSCTL = 0x05;
