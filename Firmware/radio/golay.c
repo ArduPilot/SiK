@@ -42,15 +42,15 @@
 static __xdata uint8_t g3[3], g6[6];
 
 // calculate the golay syndrome value
-static uint16_t golay_syndrome(__pdata uint32_t codeword)
+static uint16_t golay_syndrome(uint32_t codeword)
 {
-	__pdata uint32_t shift = (1UL<<22);
+	uint32_t shift = (1UL<<22);
 
-	while (codeword >= (1<<11)) {
+	while (codeword >= (1UL<<11)) {
 		while ((shift & codeword) == 0) {
 			shift >>= 1;
 		}
-		codeword ^= (shift>>11) * 0xc75;
+		codeword ^= (shift>>11) * 0xc75UL;
 	}
 	return codeword;
 }
@@ -59,8 +59,8 @@ static uint16_t golay_syndrome(__pdata uint32_t codeword)
 // input is in g3[], output in g6[]
 static void golay_encode24(void)
 {
-	__pdata uint16_t v;
-	__pdata uint32_t codeword;
+	uint16_t v;
+	uint32_t codeword;
 
 	v = g3[0] | ((uint16_t)g3[1]&0xF)<<8;
 	codeword = golay23_encode[v];
@@ -76,7 +76,7 @@ static void golay_encode24(void)
 }
 
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
-void golay_encode(__pdata uint8_t n, __xdata uint8_t *in, __xdata uint8_t *out)
+void golay_encode(uint8_t n, __xdata uint8_t *in, __xdata uint8_t *out)
 {
 	while (n >= 3) {
 		memcpy(g3, in, 3);
@@ -92,10 +92,10 @@ void golay_encode(__pdata uint8_t n, __xdata uint8_t *in, __xdata uint8_t *out)
 // input is in g6[], output in g3[]
 static void golay_decode24(void)
 {
-	__pdata uint16_t v;
-	__pdata uint32_t codeword;
+	uint16_t v;
+	uint32_t codeword;
 
-	codeword = g6[0] | ((uint16_t)g6[1]<<8) | ((uint32_t)(g6[2]&0x7F)<<16);
+	codeword = g6[0] | (((uint16_t)g6[1])<<8) | (((uint32_t)(g6[2]&0x7F))<<16);
 	v = golay_syndrome(codeword);
 	codeword ^= golay23_decode[v];
 	v = codeword >> 11;
@@ -103,7 +103,7 @@ static void golay_decode24(void)
 	g3[0] = v & 0xFF;
 	g3[1] = (v >> 8);
 
-	codeword = g6[3] | ((uint16_t)g6[4]<<8) | ((uint32_t)(g6[5]&0x7F)<<16);
+	codeword = g6[3] | (((uint16_t)g6[4])<<8) | (((uint32_t)(g6[5]&0x7F))<<16);
 	v = golay_syndrome(codeword);
 	codeword ^= golay23_decode[v];
 	v = codeword >> 11;
