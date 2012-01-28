@@ -76,12 +76,13 @@ static void golay_encode24(void)
 }
 
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
-void golay_encode(uint8_t n, __xdata uint8_t *in, __xdata uint8_t *out)
+void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 3) {
-		memcpy(g3, in, 3);
+		g3[0] = in[0]; g3[1] = in[1]; g3[2] = in[2];
 		golay_encode24();
-		memcpy(out, g6, 6);
+		out[0] = g6[0]; out[1] = g6[1]; out[2] = g6[2]; 
+		out[3] = g6[3]; out[4] = g6[4]; out[5] = g6[5]; 
 		in += 3;
 		out += 6;
 		n -= 3;
@@ -114,12 +115,13 @@ static void golay_decode24(void)
 
 // decode n bytes of coded data into n/2 bytes of original data
 // n must be a multiple of 6
-void golay_decode(uint8_t n, __xdata uint8_t *in, __xdata uint8_t *out)
+void golay_decode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 6) {
-		memcpy(g6, in, 6);
+		g6[0] = in[0]; g6[1] = in[1]; g6[2] = in[2];
+		g6[3] = in[3]; g6[4] = in[4]; g6[5] = in[5];
 		golay_decode24();
-		memcpy(out, g3, 3);
+		out[0] = g3[0]; out[1] = g3[1]; out[2] = g3[2];
 		in += 6;
 		out += 3;
 		n -= 6;
