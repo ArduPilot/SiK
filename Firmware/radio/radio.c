@@ -68,12 +68,16 @@ static void	clear_status_registers(void);
 #define RADIO_RX_INTERRUPTS EZRADIOPRO_ENPKVALID
 #endif
 
+// FIFO thresholds to allow for packets larger than 64 bytes
+#define FIFO_THRESHOLD_LOW 4
+#define FIFO_THRESHOLD_HIGH 60
+
 // return a received packet
 //
 // returns true on success, false on no packet available
 //
 bool
-radio_receive_packet(uint8_t *length, __xdata uint8_t *buf)
+radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
 	EX0_SAVE_DISABLE;
 
@@ -83,7 +87,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t *buf)
 	}
 
 	*length = receive_packet_length;
-	memcpy(buf, receive_buffer, *length);
+	xmemcpy(buf, receive_buffer, *length);
 
 	packet_received = 0;
 
@@ -662,7 +666,7 @@ register_write(uint8_t reg, uint8_t value) __reentrant
 static uint8_t
 register_read(uint8_t reg) __reentrant
 {
-	uint8_t value;
+	register uint8_t value;
 	EX0_SAVE_DISABLE;
 
 	NSS1 = 0;				// dsrive NSS low
