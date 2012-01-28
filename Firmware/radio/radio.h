@@ -92,12 +92,12 @@ extern void	panic(char *fmt, ...);
 
 /// Alternate vprintf implementation
 ///
-extern void	vprintfl(char *fmt, va_list ap) __reentrant;
+extern void	vprintfl(const char * fmt, va_list ap) __reentrant;
 #define	vprintf(_fmt, _ap)	vprintfl(_fmt, _ap)		///< avoid fighting with the library vprintf() prototype
 
 /// Alternate printf implementation
 ///
-extern void	printfl(char *fmt, ...) __reentrant;
+extern void	printfl(const char * fmt, ...) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)		///< avoid fighting with the library printf() prototype
 
 // Macro evil for generating strings

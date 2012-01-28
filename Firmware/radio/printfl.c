@@ -54,7 +54,7 @@ static __bit unsigned_flag = 0;
 static char * __data str;
 static __data long val;
 
-void vprintfl(char *fmt, va_list ap) __reentrant
+void vprintfl(const char * fmt, va_list ap) __reentrant
 {
 
 	for (; *fmt; fmt++) {
@@ -144,7 +144,7 @@ void vprintfl(char *fmt, va_list ap) __reentrant
 	}
 }
 
-void printfl(char * fmt, ...) __reentrant
+void printfl(const char *fmt, ...) __reentrant
 {
 	va_list ap;
 
