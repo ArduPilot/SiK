@@ -120,9 +120,9 @@ __xdata static struct statistics {
 } statistics, remote_statistics;
 
 struct tdm_trailer {
-	uint16_t bonus:1;
-	uint16_t resend:1;
 	uint16_t window:14;
+	uint8_t bonus:1;
+	uint8_t resend:1;
 };
 __xdata static struct tdm_trailer trailer;
 
