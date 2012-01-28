@@ -62,6 +62,11 @@ static void	clear_status_registers(void);
 #define EX0_SAVE_DISABLE __bit EX0_saved = EX0; EX0 = 0
 #define EX0_RESTORE EX0 = EX0_saved
 
+#if USE_ECC_CODE
+#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENCRCERROR)
+#else
+#define RADIO_RX_INTERRUPTS EZRADIOPRO_ENPKVALID
+#endif
 
 // return a received packet
 //
@@ -270,8 +275,8 @@ radio_receiver_on(void)
 	packet_received = 0;
 	preamble_detected = 0;
 
-	// enable packet valid and preamble detection interrupts
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID);
+	// enable receive interrupts
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
 
 	clear_status_registers();
@@ -533,10 +538,19 @@ radio_configure(__pdata uint32_t air_rate)
 	set_frequency_registers(settings.frequency);
 	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, settings.channel_spacing);
 
-	// enable automatic packet handling
+#if USE_ECC_CODE
+	// enable automatic packet handling, with no CRC
 	register_write(EZRADIOPRO_DATA_ACCESS_CONTROL,
 	               EZRADIOPRO_ENPACTX |
 	               EZRADIOPRO_ENPACRX);
+#else
+	// enable automatic packet handling and CRC
+	register_write(EZRADIOPRO_DATA_ACCESS_CONTROL,
+	               EZRADIOPRO_ENPACTX |
+	               EZRADIOPRO_ENCRC |
+	               EZRADIOPRO_CRC_16 |
+	               EZRADIOPRO_ENPACRX);
+#endif
 
 	// set FIFO limits to max (we are not using FIFO
 	// overflow/underflow interrupts)
@@ -833,16 +847,16 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		// read the RSSI register for logging
 		last_rssi = register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
 
-		// enable packet valid error IRQ
-		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID);
+		// enable packet receive interrupts
+		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
 		register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
 		return;
 	}
 
 	radio_clear_receive_fifo();
 
-	// enable packet valid error IRQ
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENPKVALID);
+	// enable packet valid and CRC error IRQ
+	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
 
 	// enable RX again

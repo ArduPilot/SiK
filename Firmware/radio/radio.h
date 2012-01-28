@@ -50,6 +50,9 @@
 #include <stdbool.h>
 #include <string.h>
 
+// set to 1 to use a ECC code
+#define USE_ECC_CODE 1
+
 #include "board.h"
 #include "serial.h"
 #include "board_info.h"

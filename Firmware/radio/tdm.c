@@ -38,7 +38,23 @@
 #include "tdm.h"
 #include "timer.h"
 #include "packet.h"
+#include "ecc.h"
+#include "golay.h"
 #include "freq_hopping.h"
+
+// switch out receive and send routines based on whether we are using
+// ECC coding or not
+#if USE_ECC_CODE
+#define tdm_transmit ecc_transmit
+#define tdm_receive ecc_receive
+// leave room for golay coding with length byte
+#define TDM_MAX_PACKET_SIZE 29
+#else
+#define tdm_transmit radio_transmit
+#define tdm_receive radio_receive_packet
+#define TDM_MAX_PACKET_SIZE 64
+#endif
+
 
 /// the state of the tdm system
 enum tdm_state { TDM_TRANSMIT=0, TDM_SILENCE1=1, TDM_RECEIVE=2, TDM_SILENCE2=3 };
@@ -345,7 +361,7 @@ tdm_serial_loop(void)
 		radio_set_channel(fhop_receive_channel());
 
 		// see if we have received a packet
-		if (radio_receive_packet(&len, pbuf)) {
+		if (tdm_receive(&len, pbuf)) {
 
 			// update the activity indication
 			received_packet = 1;
@@ -437,7 +453,7 @@ tdm_serial_loop(void)
 		if (radio_preamble_detected()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
-			preamble_wait = flight_time_estimate(64);
+			preamble_wait = flight_time_estimate(TDM_MAX_PACKET_SIZE);
 			continue;
 		}
 
@@ -453,8 +469,8 @@ tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit -= sizeof(trailer)+1;
-		if (max_xmit > 64-sizeof(trailer)) {
-			max_xmit = 64-sizeof(trailer);
+		if (max_xmit > TDM_MAX_PACKET_SIZE-sizeof(trailer)) {
+			max_xmit = TDM_MAX_PACKET_SIZE-sizeof(trailer);
 		}
 
 		// ask the packet system for the next packet to send
@@ -500,7 +516,7 @@ tdm_serial_loop(void)
 		}
 
 		// start transmitting the packet
-		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
+		if (!tdm_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
 		    len != 0 && trailer.window != 0) {
 			packet_force_resend();
 		}
@@ -524,6 +540,22 @@ __code static const struct {
 	uint16_t latency;
 	uint16_t per_byte;
 } timing_table[] = {
+#if USE_ECC_CODE
+	{ 0,   17000, 1918 },
+	{ 1,    8635, 959 },
+	{ 2,    4327, 480 },
+	{ 4,    2173, 241 },
+	{ 8,    1096, 121 },
+	{ 9,     916, 101 },
+	{ 16,    558, 61 },
+	{ 19,    468, 51 },
+	{ 24,    378, 41 },
+	{ 32,    288, 31 },
+	{ 64,    155, 16 },
+	{ 128,    88, 9 },
+	{ 192,    66, 6 },
+	{ 256,    40, 3 },
+#else
 	{ 0,   13130, 1028 },
 	{ 1,   6574,  514 },
 	{ 2,   3293,  257 },
@@ -538,24 +570,25 @@ __code static const struct {
 	{ 128, 66,    4 },
 	{ 192, 49,    3 },
 	{ 256, 30,    2 },
+#endif
 };
 
-#if 0
+#if 1
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
-        __xdata uint8_t pbuf[32];
+        __xdata uint8_t pbuf[TDM_MAX_PACKET_SIZE+3];
 	__idata uint8_t i, j;
 
 	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
 		__idata uint32_t latency_sum=0, per_byte_sum=0;
 		radio_configure(timing_table[i].air_rate*1000UL);
 		for (j=0; j<10; j++) {
-			__idata uint16_t time_0, time_32, t1, t2;
+			__idata uint16_t time_0, time_max, t1, t2;
 			radio_set_channel(1);
 			radio_receiver_on();
 			t1 = timer2_tick();
-			if (!radio_transmit(0, pbuf, 0xFFFF)) {
+			if (!tdm_transmit(0, pbuf, 0xFFFF)) {
 				j--;
 				continue;
 			}
@@ -566,7 +599,7 @@ static void tdm_build_timing_table(void)
 
 			radio_set_channel(2);
 			t1 = timer2_tick();
-			if (!radio_transmit(32, pbuf, 0xFFFF)) {
+			if (!tdm_transmit(TDM_MAX_PACKET_SIZE, pbuf, 0xFFFF)) {
 				j--;
 				continue;
 			}
@@ -574,9 +607,9 @@ static void tdm_build_timing_table(void)
 			t2 = timer2_tick();
 			radio_receiver_on();
 
-			time_32 = t2-t1;
+			time_max = t2-t1;
 			latency_sum += time_0;
-			per_byte_sum += (16 + (time_32 - time_0))/32;
+			per_byte_sum += ((TDM_MAX_PACKET_SIZE/2) + (time_max - time_0))/TDM_MAX_PACKET_SIZE;
 		}
 		printf("{ %u, %u, %u },\n",
 		       (unsigned)(radio_air_rate()/1000UL),
@@ -669,8 +702,8 @@ tdm_init(void)
 	// tell the packet subsystem our max packet size, which it
 	// needs to know for MAVLink packet boundary detection
 	i = (tx_window_width - packet_latency) / ticks_per_byte;
-	if (i > 64 - sizeof(trailer)) {
-		i = 64 - sizeof(trailer);
+	if (i > TDM_MAX_PACKET_SIZE - sizeof(trailer)) {
+		i = TDM_MAX_PACKET_SIZE - sizeof(trailer);
 	}
 	packet_set_max_xmit(i);
 
