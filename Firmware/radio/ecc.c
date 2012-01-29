@@ -35,6 +35,7 @@
 #include "radio.h"
 #include "golay.h"
 #include "ecc.h"
+#include "crc.h"
 
 static __xdata uint8_t ebuf[MAX_AIR_PACKET_LENGTH];
 
@@ -44,31 +45,98 @@ bool
 ecc_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
 {
 	uint8_t elen;
+	__pdata uint16_t crc;
 
-	elen = 3*((length+1+2)/3);
+	// round to a multiple of 3 bytes
+	elen = 3*((length+2)/3);
 
-	if (elen > MAX_AIR_PACKET_LENGTH/2) {
+	if (elen+3 > MAX_AIR_PACKET_LENGTH/2) {
 		panic("ecc packet too long");
 	}
-	buf[elen-1] = length;
-	golay_encode(elen, buf, ebuf);
-	return radio_transmit(elen*2, ebuf, timeout_ticks);
+	buf[elen] = length;
+	crc = crc16(elen+1, buf);
+	buf[elen+1] = crc & 0xFF;
+	buf[elen+2] = crc >> 8;
+	memset(ebuf, 'Z', (elen+3)*2);
+	{
+		uint8_t i;
+		for (i=0; i<elen+3; i++) {
+			ebuf[i*2] = (elen+3)-i;
+			ebuf[i*2+1] = buf[i];
+		}
+	}
+	//golay_encode(elen+3, buf, ebuf);
+	return radio_transmit((elen+3)*2, ebuf, timeout_ticks);
 }
 
+static uint8_t num_bytes_different(__xdata uint8_t * __pdata buf1, 
+				   __xdata uint8_t * __pdata buf2, 
+				   uint8_t n)
+{
+	uint8_t ret = 0;
+	while (n--) {
+		if (*buf1++ != *buf2++) ret++;
+	}
+	return ret;
+}
 
 bool
 ecc_receive(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
 	uint8_t elen;
+	__pdata uint16_t crc1, crc2;
 
 	if (!radio_receive_packet(&elen, ebuf)) {
 		return false;
 	}
-	if (elen > MAX_AIR_PACKET_LENGTH || (elen % 6) != 0) {
+	if (elen < 6 || elen > MAX_AIR_PACKET_LENGTH || (elen % 6) != 0) {
 		printf("invalid elen %u\n", (unsigned)elen);
 		return false;
 	}
-	golay_decode(elen, ebuf, buf);
-	*length = buf[(elen/2)-1];
+	{
+		uint8_t i;
+		for (i=0; i<elen/2; i++) {
+			buf[i] = ebuf[i*2+1];
+		}
+	}
+//	golay_decode(elen, ebuf, buf);
+
+	elen >>= 1;
+	crc1 = buf[elen-2] | (((uint16_t)buf[elen-1])<<8);
+	crc2 = crc16(elen-2, buf);
+	{
+		__xdata uint8_t ebuf2[MAX_AIR_PACKET_LENGTH];
+		uint8_t nfix;
+		memset(ebuf2, 'Z', elen*2);
+		{
+			uint8_t i;
+			for (i=0; i<elen; i++) {
+				ebuf2[i*2] = elen-i;
+				ebuf2[i*2+1] = buf[i];
+			}
+		}
+	//golay_encode(elen, buf, ebuf2);
+		nfix = num_bytes_different(ebuf, ebuf2, elen*2);
+		if (crc1 != crc2) {
+			uint8_t i;
+			printf("corrected %u bytes (crc1=%x crc2=%x len=%u)\n", 
+			       (unsigned)nfix, crc1, crc2, (unsigned)buf[elen-3]);
+			for (i=0; i<elen*2; i++) {
+				printf("%x/%x ", 
+				       (unsigned)ebuf[i], (unsigned)ebuf2[i]);
+			}
+			printf("\n");
+			for (i=0; i<elen-5; i++) {
+				printf("%c", buf[i]);
+			}
+			printf("\n");
+		}
+	}
+
+	if (crc1 != crc2) {
+		printf("crc1=%x crc2=%x\n", crc1, crc2);
+		return false;
+	}
+	*length = buf[elen-3];
 	return true;
 }

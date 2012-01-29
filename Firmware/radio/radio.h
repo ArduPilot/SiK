@@ -55,10 +55,10 @@
 
 // the biggest air packet length we will allow
 // (this should be a multiple of 6)
-#define MAX_AIR_PACKET_LENGTH 132
+#define MAX_AIR_PACKET_LENGTH 60
 
 // the biggest data packet length we will allow
-#define MAX_DATA_PACKET_LENGTH 64
+#define MAX_DATA_PACKET_LENGTH 24
 
 #include "board.h"
 #include "serial.h"
@@ -150,14 +150,6 @@ extern bool radio_preamble_detected(void);
 /// @return			true if packet sent successfully
 ///
 extern bool radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks);
-
-/// clear the radio transmit FIFO
-///
-extern void radio_clear_transmit_fifo(void);
-
-/// clear the radio receive FIFO
-///
-extern void radio_clear_receive_fifo(void);
 
 /// switch the radio to receive mode
 ///
@@ -255,5 +247,14 @@ uint8_t radio_get_transmit_power(void);
 ///
 ///
 bool radio_receive_in_progress(void);
+
+/// use the hardware CRC engine to calculate a 16 bit CRC on some data
+///
+/// @param n		number of bytes to CRC
+/// @param buf		data buffer
+///
+/// @return		16 bit CRC of data
+///
+uint16_t radio_crc(uint8_t n, __xdata uint8_t * __pdata buf);
 
 #endif // _RADIO_H_

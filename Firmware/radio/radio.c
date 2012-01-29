@@ -63,14 +63,15 @@ static void	clear_status_registers(void);
 #define EX0_RESTORE EX0 = EX0_saved
 
 #if USE_ECC_CODE
-#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENCRCERROR | EZRADIOPRO_ENRXFFAFULL)
+//#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENCRCERROR | EZRADIOPRO_ENRXFFAFULL | EZRADIOPRO_ENFFERR)
+#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENCRCERROR | EZRADIOPRO_ENFFERR)
 #else
-#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENRXFFAFULL)
+#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENPKVALID | EZRADIOPRO_ENRXFFAFULL | EZRADIOPRO_ENFFERR)
 #endif
 
 // FIFO thresholds to allow for packets larger than 64 bytes
-#define FIFO_THRESHOLD_LOW 4
-#define FIFO_THRESHOLD_HIGH 60
+#define FIFO_THRESHOLD_LOW 0
+#define FIFO_THRESHOLD_HIGH 64
 
 // return a received packet
 //
@@ -99,7 +100,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 // write to the radios transmit FIFO
 //
 static void
-radio_write_transmit_fifo(uint8_t n, __xdata uint8_t *buffer)
+radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 {
 	NSS1 = 0;
 	SPIF1 = 0;
@@ -167,6 +168,31 @@ radio_air_rate(void)
 	return settings.air_data_rate;
 }
 
+// clear the transmit FIFO
+//
+static void
+radio_clear_transmit_fifo(void)
+{
+	uint8_t control;
+	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRTX);
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRTX);
+}
+
+
+// clear the receive FIFO
+//
+static void
+radio_clear_receive_fifo(void) __reentrant
+{
+	register uint8_t control;
+	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRRX);
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRRX);
+}
+
+
+
 // start transmitting a packet from the transmit FIFO
 //
 // @param length		number of data bytes to send
@@ -190,6 +216,8 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	chunk = length;
 	if (chunk > 64) chunk = 64;
 
+	radio_clear_receive_fifo();
+	radio_clear_transmit_fifo();
 	radio_write_transmit_fifo(chunk, buf);
 	length -= chunk;
 	buf += chunk;
@@ -218,10 +246,10 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 		if (status & EZRADIOPRO_IFFERR) {
 			// darn, we underflowed the transmit fifo
+			printf("IFFERR\n");
 			if (errors.tx_errors != 255) {
 				errors.tx_errors++;
 			}
-			radio_clear_transmit_fifo();
 			register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 			register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
 			EX0_RESTORE;
@@ -247,7 +275,6 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 		if (transmit_started && (status & 0x02) == 0) {
 			// transmitter has finished, and is now in RX mode
 			clear_status_registers();
-			radio_clear_transmit_fifo();
 			if (length != 0) {
 				// we didn't send it all??
 				if (errors.tx_errors != 255) {
@@ -267,7 +294,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 
 	clear_status_registers();
 	// transmit timeout ... clear the FIFO
-#if 0
+#if 1
 	printf("%u ts=%u tn=%u len=%u\n",
 	       timeout_ticks,
 	       tstart,
@@ -277,42 +304,11 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	if (errors.tx_errors != 255) {
 		errors.tx_errors++;
 	}
-	radio_clear_transmit_fifo();
 
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
 	EX0_RESTORE;
 	return false;
-}
-
-
-// clear the transmit FIFO
-//
-void
-radio_clear_transmit_fifo(void)
-{
-	uint8_t control;
-	EX0_SAVE_DISABLE;
-
-	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRTX);
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRTX);
-
-	EX0_RESTORE;
-}
-
-
-// clear the receive FIFO
-//
-void
-radio_clear_receive_fifo(void) __reentrant
-{
-	uint8_t control;
-	EX0_SAVE_DISABLE;
-	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRRX);
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRRX);
-	EX0_RESTORE;
 }
 
 
@@ -333,11 +329,8 @@ radio_receiver_on(void)
 
 	clear_status_registers();
 
-	// clear EXMAC status
-	register_read(EZRADIOPRO_EZMAC_STATUS);
-
 	// put the radio in receive mode
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, (EZRADIOPRO_RXON | EZRADIOPRO_XTON));
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_RXON | EZRADIOPRO_XTON);
 
 	// enable receive interrupt
 	EX0 = 1;
@@ -519,7 +512,7 @@ __code static const uint8_t reg_table[NUM_RADIO_REGISTERS][1 + NUM_DATA_RATES] =
 	},
 	{
 		EZRADIOPRO_MODULATION_MODE_CONTROL_1,
-		0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,  0x2D,   0x0D,   0x0D,   0x0D,   0x0D,  0x0D
+		0x2C,  0x2C,  0x2C,  0x2C,  0x2C,  0x2C,  0x2C,  0x2C,  0x2C,   0x0C,   0x0C,   0x0C,   0x0C,  0x0C
 	},
 	{
 		EZRADIOPRO_MODULATION_MODE_CONTROL_2,
@@ -595,6 +588,8 @@ radio_configure(__pdata uint32_t air_rate)
 	// enable automatic packet handling, with no CRC
 	register_write(EZRADIOPRO_DATA_ACCESS_CONTROL,
 	               EZRADIOPRO_ENPACTX |
+	               EZRADIOPRO_ENCRC |
+	               EZRADIOPRO_CRC_16 |
 	               EZRADIOPRO_ENPACRX);
 #else
 	// enable automatic packet handling and CRC
@@ -615,9 +610,11 @@ radio_configure(__pdata uint32_t air_rate)
 	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 0x28); //  5 nibbles, 20 chips, 10 bits
 
 	// 2 sync bytes and 2 header bytes
-	register_write(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_2BYTE | EZRADIOPRO_SYNCLEN_2BYTE);
+	register_write(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_2BYTE | EZRADIOPRO_SYNCLEN_1BYTE);
 	register_write(EZRADIOPRO_SYNC_WORD_3, 0x2D);
 	register_write(EZRADIOPRO_SYNC_WORD_2, 0xD4);
+	register_write(EZRADIOPRO_SYNC_WORD_1, 0xC5);
+	register_write(EZRADIOPRO_SYNC_WORD_0, 0x1A);
 
 	// check 2 bytes of header (the network ID)
 	register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x0C);
@@ -737,7 +734,7 @@ register_read(uint8_t reg) __reentrant
 ///
 /// @param n			The number of bytes to read
 static void
-read_receive_fifo(uint8_t n, uint8_t ofs) __reentrant
+read_receive_fifo(register uint8_t n, register uint8_t ofs) __reentrant
 {
 	register uint8_t i;
 
@@ -852,6 +849,25 @@ set_frequency_registers(__pdata uint32_t frequency)
 	register_write(EZRADIOPRO_NOMINAL_CARRIER_FREQUENCY_0, carrier & 0xFF);
 }
 
+/// use the hardware CRC engine to calculate a 16 bit CRC on some data
+///
+/// @param n		number of bytes to CRC
+/// @param buf		data buffer
+///
+/// @return		16 bit CRC of data
+///
+uint16_t radio_crc(uint8_t n, __xdata uint8_t * __pdata buf)
+{
+	uint16_t ret;
+	CRC0CN = 0x00;
+	CRC0CN |= 0x08;
+	while (n--) {
+		CRC0IN = *buf++;
+	}
+	ret = CRC0DAT;
+	ret = (ret<<8) | CRC0DAT;
+	return ret;
+}
 
 /// the receiver interrupt
 ///
@@ -868,12 +884,24 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	status2 = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 
+#if 0
 	if (status & EZRADIOPRO_IRXFFAFULL) {
 		// a packet is filling the receive FIFO. Pull the
 		// first part of the packet out
 		read_receive_fifo(FIFO_THRESHOLD_HIGH, partial_packet_length);
 		partial_packet_length += FIFO_THRESHOLD_HIGH;
+		printf("PARTIAL %u\n", (unsigned)partial_packet_length);
 		return;
+	} else 
+#endif
+if (status & EZRADIOPRO_IFFERR) {
+		// fifo fill error
+		printf("RX FFERR\n");
+		preamble_detected = 0;
+		partial_packet_length = 0;
+		if (errors.rx_errors != 255) {
+			errors.rx_errors++;
+		}
 	} else if (status & EZRADIOPRO_IPKVALID) {
 		// we have received a valid packet
 		preamble_detected = 0;
@@ -907,13 +935,12 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	}
 
 	partial_packet_length = 0;
-	radio_clear_receive_fifo();
 
 	// enable packet valid and CRC error IRQ
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
 
 	// enable RX again
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, (EZRADIOPRO_RXON | EZRADIOPRO_XTON));
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_RXON | EZRADIOPRO_XTON);
 }
 

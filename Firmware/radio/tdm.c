@@ -41,13 +41,13 @@
 #include "ecc.h"
 #include "golay.h"
 #include "freq_hopping.h"
+#include "crc.h"
 
 // switch out receive and send routines based on whether we are using
 // ECC coding or not
 #if USE_ECC_CODE
 #define tdm_transmit ecc_transmit
 #define tdm_receive ecc_receive
-// leave room for golay coding with length byte
 #define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
 #else
 #define tdm_transmit radio_transmit
@@ -340,7 +340,8 @@ tdm_serial_loop(void)
 
 	for (;;) {
 		__pdata uint8_t	len;
-		__xdata uint8_t	pbuf[MAX_DATA_PACKET_LENGTH];
+		// add an extra 3 bytes to hold length and CRC in ecc.c
+		__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE+3];
 		__pdata uint16_t tnow, tdelta;
 		__pdata uint8_t max_xmit;
 
@@ -621,7 +622,7 @@ static void tdm_build_timing_table(void)
 /// test the timing table
 static void tdm_test_timing(void)
 {
-        __xdata uint8_t pbuf[MAX_DATA_PACKET_LENGTH];
+        __xdata uint8_t pbuf[MAX_DATA_PACKET_LENGTH+3];
 	__pdata uint8_t i, failures=0;
 	
 	memset(pbuf, 42, sizeof(pbuf));
@@ -652,7 +653,17 @@ static void tdm_test_timing(void)
 	}
 	printf("%u failures\n", (unsigned)failures);
 }
+
+// test hardware CRC code
+static void crc_test(void)
+{
+	__xdata uint8_t d[4] = { 0x01, 0x00, 0xbb, 0xcc };
+	__pdata uint16_t crc;
+	crc = crc16(4, &d[0]);
+	printf("CRC: %x %x\n", crc, 0xb166);	
+}
 #endif
+
 
 // initialise the TDM subsystem
 void
@@ -706,6 +717,8 @@ tdm_init(void)
 		i = TDM_MAX_PACKET_SIZE - sizeof(trailer);
 	}
 	packet_set_max_xmit(i);
+
+	// crc_test();
 
 	// tdm_test_timing();
 }

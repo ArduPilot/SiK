@@ -223,6 +223,7 @@ SFR16 (PCA0CP4, 0xFD);                 // PCA0 Module 4 Capture/Compare
 #define SFR_P0       0x80
 #define SFR_TCON     0x88
 #define SFR_P1       0x90
+#define SFR_CRC0CN   0x92
 #define SFR_SCON0    0x98
 #define SFR_P2       0xA0
 #define SFR_IE       0xA8
@@ -250,6 +251,11 @@ SBIT (IE1, SFR_TCON, 3);               // Ext. Interrupt 1 Edge Flag
 SBIT (IT1, SFR_TCON, 2);               // Ext. Interrupt 1 Type
 SBIT (IE0, SFR_TCON, 1);               // Ext. Interrupt 0 Edge Flag
 SBIT (IT0, SFR_TCON, 0);               // Ext. Interrupt 0 Type
+
+// CRC0CN 0x92
+SBIT (CRC0SEL,  SFR_CRC0CN, 4);
+SBIT (CRC0INIT, SFR_CRC0CN, 3);
+SBIT (CRC0VAL,  SFR_CRC0CN, 2);
 
 // SCON0 0x98
 SBIT (S0MODE, SFR_SCON0, 7);           // UART0 Mode
@@ -751,8 +757,10 @@ SBIT (SPI0EN, SFR_SPI0CN, 0);          // SPI0 Enable
 #define  EZRADIOPRO_SYNCLEN_MASK       0x06
 #define  EZRADIOPRO_FIXPKLEN           0x08
 #define  EZRADIOPRO_HDLEN_MASK         0x70
+#define  EZRADIOPRO_SYNCLEN_1BYTE      0x00
 #define  EZRADIOPRO_SYNCLEN_2BYTE      0x02
 #define  EZRADIOPRO_SYNCLEN_3BYTE      0x04
+#define  EZRADIOPRO_SYNCLEN_4BYTE      0x06
 #define  EZRADIOPRO_HDLEN_1BYTE        0x10
 #define  EZRADIOPRO_HDLEN_2BYTE        0x20
 #define  EZRADIOPRO_HDLEN_3BYTE        0x30
