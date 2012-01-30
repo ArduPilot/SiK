@@ -63,6 +63,7 @@ static __xdata uint8_t mav_max_xmit;
 
 #define PACKET_RESEND_THRESHOLD 256
 
+#define OPPORTUNISTIC_RESEND 1
 #define MAVLINK_PACKET_FRAMING 1
 
 #define MAVLINK09_STX 85 // 'U'
@@ -74,6 +75,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	__xdata uint16_t slen = serial_read_available();
 
+#if OPPORTUNISTIC_RESEND
 	if (force_resend ||
 	    (last_sent_is_resend == 0 && last_sent_len != 0 && 
 	     slen < PACKET_RESEND_THRESHOLD)) {
@@ -85,6 +87,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		xmemcpy(buf, last_sent, last_sent_len);
 		return last_sent_len;
 	}
+#endif
 
 	last_sent_is_resend = false;
 

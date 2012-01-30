@@ -55,10 +55,10 @@
 
 // the biggest air packet length we will allow
 // (this should be a multiple of 6)
-#define MAX_AIR_PACKET_LENGTH 60
+#define MAX_AIR_PACKET_LENGTH 132
 
 // the biggest data packet length we will allow
-#define MAX_DATA_PACKET_LENGTH 24
+#define MAX_DATA_PACKET_LENGTH 60
 
 #include "board.h"
 #include "serial.h"
@@ -87,6 +87,12 @@
 static inline void xmemcpy(__xdata uint8_t * __pdata dst, const __xdata uint8_t * __pdata src, register uint8_t n)
 {
 	while (n--) *dst++ = *src++;
+}
+
+// an inline memset() for __xdata arrays
+static inline void xmemset(__xdata uint8_t * __pdata dst, register uint8_t v, register uint8_t n)
+{
+	while (n--) *dst++ = v;
 }
 
 /// Print a message and halt, largely for debug purposes

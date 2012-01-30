@@ -46,8 +46,8 @@
 // switch out receive and send routines based on whether we are using
 // ECC coding or not
 #if USE_ECC_CODE
-#define tdm_transmit ecc_transmit
-#define tdm_receive ecc_receive
+#define tdm_transmit radio_transmit
+#define tdm_receive radio_receive_packet
 #define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
 #else
 #define tdm_transmit radio_transmit
@@ -341,7 +341,7 @@ tdm_serial_loop(void)
 	for (;;) {
 		__pdata uint8_t	len;
 		// add an extra 3 bytes to hold length and CRC in ecc.c
-		__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE+3];
+		__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE];
 		__pdata uint16_t tnow, tdelta;
 		__pdata uint8_t max_xmit;
 
@@ -543,18 +543,18 @@ __code static const struct {
 } timing_table[] = {
 #if USE_ECC_CODE
 	{ 0,   17000, 1918 },
-	{ 1,    8635, 959 },
-	{ 2,    4327, 480 },
-	{ 4,    2173, 241 },
-	{ 8,    1096, 121 },
-	{ 9,     916, 101 },
-	{ 16,    558, 61 },
-	{ 19,    468, 51 },
-	{ 24,    378, 41 },
-	{ 32,    288, 31 },
-	{ 64,    155, 16 },
-	{ 128,    88, 9 },
-	{ 192,    66, 6 },
+	{ 1, 10692, 1030 },
+	{ 2, 5355, 515 },
+	{ 4, 2687, 258 },
+	{ 8, 1352, 130 },
+	{ 9, 1130, 108 },
+	{ 16, 685, 65 },
+	{ 19, 574, 54 },
+	{ 24, 464, 44 },
+	{ 32, 352, 33 },
+	{ 64, 186, 17 },
+	{ 128, 103, 9 },
+	{ 192, 75, 6 },
 	{ 256,    40, 3 },
 #else
 	{ 0,   13130, 1028 },
@@ -574,15 +574,16 @@ __code static const struct {
 #endif
 };
 
-#if 0
+#if 1
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
-        __xdata uint8_t pbuf[TDM_MAX_PACKET_SIZE+3];
+        __xdata uint8_t pbuf[TDM_MAX_PACKET_SIZE];
 	__idata uint8_t i, j;
 
-	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
+	for (i=1; i<ARRAY_LENGTH(timing_table); i++) {
 		__idata uint32_t latency_sum=0, per_byte_sum=0;
+		uint8_t size = TDM_MAX_PACKET_SIZE;
 		radio_configure(timing_table[i].air_rate*1000UL);
 		for (j=0; j<10; j++) {
 			__idata uint16_t time_0, time_max, t1, t2;
@@ -590,6 +591,7 @@ static void tdm_build_timing_table(void)
 			radio_receiver_on();
 			t1 = timer2_tick();
 			if (!tdm_transmit(0, pbuf, 0xFFFF)) {
+				size /= 2;
 				j--;
 				continue;
 			}
@@ -600,7 +602,8 @@ static void tdm_build_timing_table(void)
 
 			radio_set_channel(2);
 			t1 = timer2_tick();
-			if (!tdm_transmit(TDM_MAX_PACKET_SIZE, pbuf, 0xFFFF)) {
+			if (!tdm_transmit(size, pbuf, 0xFFFF)) {
+				size /= 2;
 				j--;
 				continue;
 			}
@@ -610,7 +613,7 @@ static void tdm_build_timing_table(void)
 
 			time_max = t2-t1;
 			latency_sum += time_0;
-			per_byte_sum += ((TDM_MAX_PACKET_SIZE/2) + (time_max - time_0))/TDM_MAX_PACKET_SIZE;
+			per_byte_sum += ((size/2) + (time_max - time_0))/size;
 		}
 		printf("{ %u, %u, %u },\n",
 		       (unsigned)(radio_air_rate()/1000UL),
@@ -675,7 +678,7 @@ tdm_init(void)
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
 
-	//tdm_build_timing_table();
+	// tdm_build_timing_table();
 
 	// find the packet latency and time per byte from the timing
 	// table.
