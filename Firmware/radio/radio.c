@@ -117,7 +117,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
-		printf("rx len mixmatch %u %u\n",
+		printf("rx len mismatch1 %u %u\n",
 		       (unsigned)gout[2],
 		       (unsigned)receive_packet_length);		
 		goto failed;
@@ -128,7 +128,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
-		printf("rx len mixmatch %u %u\n",
+		printf("rx len mismatch2 %u %u\n",
 		       (unsigned)gout[2],
 		       (unsigned)receive_packet_length);		
 		goto failed;
@@ -274,7 +274,7 @@ radio_clear_receive_fifo(void) __reentrant
 // start transmitting a packet from the transmit FIFO
 //
 // @param length		number of data bytes to send
-// @param timeout_ticks		number of 25usec RTC ticks to allow
+// @param timeout_ticks		number of 16usec RTC ticks to allow
 //				for the send
 //
 // @return	    true if packet sent successfully
@@ -712,8 +712,8 @@ radio_configure(__pdata uint32_t air_rate)
 	register_write(EZRADIOPRO_RX_FIFO_CONTROL, FIFO_THRESHOLD_HIGH);
 
 	// preamble setup
-	register_write(EZRADIOPRO_PREAMBLE_LENGTH, 0x0A); // 40 bits
-	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 0x28); //  5 nibbles, 20 chips, 10 bits
+	register_write(EZRADIOPRO_PREAMBLE_LENGTH, 10); // 10 nibbles 
+	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 5<<3); //  5 nibbles
 
 	// 2 sync bytes and no header bytes
 	register_write(EZRADIOPRO_HEADER_CONTROL_2, EZRADIOPRO_HDLEN_0BYTE | EZRADIOPRO_SYNCLEN_2BYTE);

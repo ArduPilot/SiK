@@ -55,12 +55,16 @@
 #define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
 #endif
 
+#define USE_TICK_YIELD 1
 
 /// the state of the tdm system
 enum tdm_state { TDM_TRANSMIT=0, TDM_SILENCE1=1, TDM_RECEIVE=2, TDM_SILENCE2=3 };
 __pdata static enum tdm_state tdm_state;
 
-/// how many 25usec ticks are remaining in the current state
+/// a packet buffer for the TDM code
+__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE];
+
+/// how many 16usec ticks are remaining in the current state
 __pdata static uint16_t tdm_state_remaining;
 
 /// This is enough to hold at least 3 packets and is based
@@ -89,19 +93,19 @@ static __bit transmit_yield;
 static __bit blink_state;
 static __bit received_packet;
 
-/// the latency in 25usec RTC ticks for sending a zero length packet
+/// the latency in 16usec RTC ticks for sending a zero length packet
 __pdata static uint16_t packet_latency;
 
-/// the time in 25usec RTC ticks for sending one byte
+/// the time in 16usec RTC ticks for sending one byte
 __pdata static uint16_t ticks_per_byte;
 
-/// number of 25usec ticks to wait for a preamble to turn into a packet
+/// number of 16usec ticks to wait for a preamble to turn into a packet
 /// This is set when we get a preamble interrupt, and causes us to delay
 /// sending for a maximum packet latency. This is used to make it more likely
 /// that two radios that happen to be exactly in sync in their sends
 /// will eventually get a packet through and get their transmit windows
 /// sorted out
-__pdata static uint16_t preamble_wait;
+__pdata static uint16_t transmit_wait;
 
 
 /// test data to display in the main loop. Updated when the tick
@@ -112,7 +116,7 @@ __pdata static uint8_t test_display;
 static __bit send_statistics;
 
 /// packet and RSSI statistics
-__xdata static struct statistics {
+__pdata static struct statistics {
 	uint8_t average_rssi;
 	uint8_t remote_average_rssi;
 	uint8_t receive_count;
@@ -124,7 +128,7 @@ struct tdm_trailer {
 	uint8_t bonus:1;
 	uint8_t resend:1;
 };
-__xdata static struct tdm_trailer trailer;
+__pdata static struct tdm_trailer trailer;
 
 /// display test output
 ///
@@ -162,7 +166,7 @@ display_test_output(void)
 ///
 /// @param packet_len		payload length in bytes
 ///
-/// @return			flight time in 25usec ticks
+/// @return			flight time in 16usec ticks
 static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 {
 	return packet_latency + (packet_len * ticks_per_byte);
@@ -172,7 +176,7 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 /// synchronise tx windows
 ///
 /// we receive a 16 bit value with each packet which indicates how many
-/// more 25usec ticks the sender has in their transmit window. The
+/// more 16usec ticks the sender has in their transmit window. The
 /// sender has already adjusted the value for the flight time
 ///
 /// The job of this function is to adjust our own transmit window to
@@ -181,7 +185,7 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 static void
 sync_tx_windows(__pdata uint8_t packet_length)
 {
-	enum tdm_state old_state = tdm_state;
+	__data enum tdm_state old_state = tdm_state;
 	__pdata uint16_t old_remaining = tdm_state_remaining;
 
 	if (trailer.bonus) {
@@ -245,10 +249,10 @@ tdm_state_update(__pdata uint16_t tdelta)
 {
 	// update the amount of time we are waiting for a preamble
 	// to turn into a real packet
-	if (tdelta > preamble_wait) {
-		preamble_wait = 0;
+	if (tdelta > transmit_wait) {
+		transmit_wait = 0;
 	} else {
-		preamble_wait -= tdelta;
+		transmit_wait -= tdelta;
 	}
 
 	// have we passed the next transition point?
@@ -279,7 +283,7 @@ tdm_state_update(__pdata uint16_t tdelta)
 		transmit_yield = 0;
 
 		// no longer waiting for a packet
-		preamble_wait = 0;
+		transmit_wait = 0;
 
 		if (tdm_state == TDM_TRANSMIT) {
 			// update round statistics
@@ -341,7 +345,6 @@ tdm_serial_loop(void)
 	for (;;) {
 		__pdata uint8_t	len;
 		// add an extra 3 bytes to hold length and CRC in ecc.c
-		__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE];
 		__pdata uint16_t tnow, tdelta;
 		__pdata uint8_t max_xmit;
 
@@ -378,7 +381,7 @@ tdm_serial_loop(void)
 			
 			// we're not waiting for a preamble
 			// any more
-			preamble_wait = 0;
+			transmit_wait = 0;
 
 			if (len < 2) {
 				// not a valid packet. We always send
@@ -419,7 +422,7 @@ tdm_serial_loop(void)
 			continue;
 		}
 
-		// see how many 25usec ticks have passed and update
+		// see how many 16usec ticks have passed and update
 		// the tdm state machine
 		tnow = timer2_tick();
 		tdelta = tnow - last_t;
@@ -435,13 +438,19 @@ tdm_serial_loop(void)
 		// we are allowed to transmit in our transmit window
 		// or in the other radios transmit window if we have
 		// bonus ticks
+#if USE_TICK_YIELD
 		if (tdm_state != TDM_TRANSMIT &&
 		    !(bonus_transmit && tdm_state == TDM_RECEIVE)) {
 			// we cannot transmit now
 			continue;
 		}
+#else
+		if (tdm_state != TDM_TRANSMIT) {
+			continue;
+		}		
+#endif
 
-		if (preamble_wait != 0) {
+		if (transmit_wait != 0) {
 			// we're waiting for a preamble to turn into a packet
 			continue;
 		}
@@ -454,7 +463,7 @@ tdm_serial_loop(void)
 		if (radio_preamble_detected()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
-			preamble_wait = flight_time_estimate(TDM_MAX_PACKET_SIZE);
+			transmit_wait = flight_time_estimate(TDM_MAX_PACKET_SIZE);
 			continue;
 		}
 
@@ -516,6 +525,11 @@ tdm_serial_loop(void)
 			transmit_yield = 1;
 		}
 
+		// after sending a packet leave a bit of time before
+		// sending the next one. The receivers don't cope well
+		// with back to back packets
+		transmit_wait = packet_latency;
+
 		// start transmitting the packet
 		if (!tdm_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
 		    len != 0 && trailer.window != 0) {
@@ -535,7 +549,7 @@ tdm_serial_loop(void)
 }
 
 /// table mapping air rate to measured latency and per-byte
-/// timings in 25usec units
+/// timings in 16usec units
 __code static const struct {
 	uint32_t air_rate;
 	uint16_t latency;
@@ -581,7 +595,7 @@ static void tdm_build_timing_table(void)
         __xdata uint8_t pbuf[TDM_MAX_PACKET_SIZE];
 	__idata uint8_t i, j;
 
-	for (i=1; i<ARRAY_LENGTH(timing_table); i++) {
+	for (i=2; i<ARRAY_LENGTH(timing_table); i++) {
 		__idata uint32_t latency_sum=0, per_byte_sum=0;
 		uint8_t size = TDM_MAX_PACKET_SIZE;
 		radio_configure(timing_table[i].air_rate*1000UL);
@@ -589,11 +603,12 @@ static void tdm_build_timing_table(void)
 			__idata uint16_t time_0, time_max, t1, t2;
 			radio_set_channel(1);
 			radio_receiver_on();
+			if (serial_read_available() > 0) {
+				return;
+			}
 			t1 = timer2_tick();
 			if (!tdm_transmit(0, pbuf, 0xFFFF)) {
-				size /= 2;
-				j--;
-				continue;
+				break;
 			}
 			t2 = timer2_tick();
 			radio_receiver_on();
@@ -615,10 +630,12 @@ static void tdm_build_timing_table(void)
 			latency_sum += time_0;
 			per_byte_sum += ((size/2) + (time_max - time_0))/size;
 		}
-		printf("{ %u, %u, %u },\n",
-		       (unsigned)(radio_air_rate()/1000UL),
-		       (unsigned)(latency_sum/j),
-		       (unsigned)(per_byte_sum/j));
+		if (j > 0) {
+			printf("{ %u, %u, %u },\n",
+			       (unsigned)(radio_air_rate()/1000UL),
+			       (unsigned)(latency_sum/j),
+			       (unsigned)(per_byte_sum/j));
+		}
 	}
 }
 
@@ -666,6 +683,43 @@ static void crc_test(void)
 	printf("CRC: %x %x\n", crc, 0xb166);	
 }
 #endif
+
+// test golay encoding
+static void golay_test(void)
+{
+	uint8_t i;
+	uint16_t t1, t2;
+	__xdata uint8_t	buf[MAX_AIR_PACKET_LENGTH];
+	for (i=0; i<TDM_MAX_PACKET_SIZE; i++) {
+		pbuf[i] = i;
+	}
+	t1 = timer2_tick();
+	golay_encode(TDM_MAX_PACKET_SIZE, pbuf, buf);
+	t2 = timer2_tick();
+	printf("encode %u bytes took %u 16usec ticks\n",
+	       (unsigned)TDM_MAX_PACKET_SIZE,
+	       t2-t1);
+	// add an error in the middle
+	buf[TDM_MAX_PACKET_SIZE] ^= 0x23;
+	buf[1] ^= 0x70;
+	t1 = timer2_tick();
+	golay_decode(TDM_MAX_PACKET_SIZE*2, buf, pbuf);
+	t2 = timer2_tick();
+	printf("decode %u bytes took %u 16usec ticks\n",
+	       (unsigned)TDM_MAX_PACKET_SIZE*2,
+	       t2-t1);
+	for (i=0; i<TDM_MAX_PACKET_SIZE; i++) {
+		if (pbuf[i] != i) {
+			printf("golay error at %u\n", (unsigned)i);
+		}
+	}
+	t1 = timer2_tick();
+	crc16(TDM_MAX_PACKET_SIZE, pbuf);
+	t2 = timer2_tick();
+	printf("crc %u bytes took %u 16usec ticks\n",
+	       (unsigned)TDM_MAX_PACKET_SIZE,
+	       t2-t1);
+}
 
 
 // initialise the TDM subsystem
@@ -724,6 +778,8 @@ tdm_init(void)
 	// crc_test();
 
 	// tdm_test_timing();
+
+	// golay_test();
 }
 
 
