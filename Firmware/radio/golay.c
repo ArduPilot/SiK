@@ -39,28 +39,48 @@
 // intermediate arrays for encodeing/decoding. Using these
 // saves some interal memory that would otherwise be needed
 // for pointers
-static __xdata uint8_t g3[3], g6[6];
+static __pdata uint8_t g3[3], g6[6];
+
+#define GOLAY_POLY 0xc75UL
+
+static const __code uint32_t shift_table[12] = {
+	GOLAY_POLY<<0,
+	GOLAY_POLY<<1,
+	GOLAY_POLY<<2,
+	GOLAY_POLY<<3,
+	GOLAY_POLY<<4,
+	GOLAY_POLY<<5,
+	GOLAY_POLY<<6,
+	GOLAY_POLY<<7,
+	GOLAY_POLY<<8,
+	GOLAY_POLY<<9,
+	GOLAY_POLY<<10,
+	GOLAY_POLY<<11,
+};
 
 // calculate the golay syndrome value
-static uint16_t golay_syndrome(uint32_t codeword)
+static uint16_t golay_syndrome(__data uint32_t codeword)
 {
-	uint32_t shift = (1UL<<22);
+	__data uint32_t shift = (1UL<<22);
+	__data uint8_t shiftcount = 11;
 
 	while (codeword >= (1UL<<11)) {
 		while ((shift & codeword) == 0) {
 			shift >>= 1;
+			shiftcount--;
 		}
-		codeword ^= (shift>>11) * 0xc75UL;
+		codeword ^= shift_table[shiftcount];
 	}
 	return codeword;
 }
+
 
 // encode 3 bytes data into 6 bytes of coded data
 // input is in g3[], output in g6[]
 static void golay_encode24(void)
 {
-	uint16_t v;
-	uint32_t codeword;
+	__pdata uint16_t v;
+	__pdata uint32_t codeword;
 
 	v = g3[0] | ((uint16_t)g3[1]&0xF)<<8;
 	codeword = golay23_encode[v];
@@ -76,6 +96,7 @@ static void golay_encode24(void)
 }
 
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
+// encoding takes about 6 microseconds per input byte
 void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 3) {
@@ -93,8 +114,8 @@ void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __p
 // input is in g6[], output in g3[]
 static void golay_decode24(void)
 {
-	uint16_t v;
-	uint32_t codeword;
+	__data uint16_t v;
+	__data uint32_t codeword;
 
 	codeword = g6[0] | (((uint16_t)g6[1])<<8) | (((uint32_t)(g6[2]&0x7F))<<16);
 	v = golay_syndrome(codeword);
@@ -115,6 +136,7 @@ static void golay_decode24(void)
 
 // decode n bytes of coded data into n/2 bytes of original data
 // n must be a multiple of 6
+// decoding takes about 19 microseconds per input byte
 void golay_decode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 6) {
