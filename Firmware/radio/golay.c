@@ -112,41 +112,54 @@ void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __p
 
 // decode 6 bytes of coded data into 3 bytes of original data
 // input is in g6[], output in g3[]
-static void golay_decode24(void)
+// returns the number of words corrected (0, 1 or 2)
+static uint8_t golay_decode24(void)
 {
-	__data uint16_t v;
+	__data uint16_t v, v0;
 	__data uint32_t codeword;
+	__pdata uint8_t errcount = 0;
 
 	codeword = g6[0] | (((uint16_t)g6[1])<<8) | (((uint32_t)(g6[2]&0x7F))<<16);
+	v0 = codeword >> 11;
 	v = golay_syndrome(codeword);
 	codeword ^= golay23_decode[v];
 	v = codeword >> 11;
+	if (v != v0) {
+		errcount++;
+	}
 
 	g3[0] = v & 0xFF;
 	g3[1] = (v >> 8);
 
 	codeword = g6[3] | (((uint16_t)g6[4])<<8) | (((uint32_t)(g6[5]&0x7F))<<16);
+	v0 = codeword >> 11;
 	v = golay_syndrome(codeword);
 	codeword ^= golay23_decode[v];
 	v = codeword >> 11;
+	if (v != v0) {
+		errcount++;
+	}
 
 	g3[1] |= ((v >> 4)&0xF0);
 	g3[2] = v & 0xFF;
+	return errcount;
 }
 
 // decode n bytes of coded data into n/2 bytes of original data
 // n must be a multiple of 6
-// decoding takes about 19 microseconds per input byte
-void golay_decode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
+// decoding takes about 20 microseconds per input byte
+// the number of 12 bit words that required correction is returned
+uint8_t golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
+	__pdata uint8_t errcount = 0;
 	while (n >= 6) {
 		g6[0] = in[0]; g6[1] = in[1]; g6[2] = in[2];
 		g6[3] = in[3]; g6[4] = in[4]; g6[5] = in[5];
-		golay_decode24();
+		errcount += golay_decode24();
 		out[0] = g3[0]; out[1] = g3[1]; out[2] = g3[2];
 		in += 6;
 		out += 3;
 		n -= 6;
 	}
+	return errcount;
 }
-

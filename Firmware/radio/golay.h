@@ -39,4 +39,4 @@ void golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8
 
 /// decode n bytes of coded data into n/2 bytes of original data
 /// n must be a multiple of 6
-void golay_decode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
+uint8_t golay_decode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
