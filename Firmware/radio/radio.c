@@ -102,7 +102,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 
 	if (receive_packet_length < 12 || (receive_packet_length%6) != 0) {
 		// not a valid length
-		printf("rx len invalid %u\n",
+		debug("rx len invalid %u\n",
 		       (unsigned)receive_packet_length);
 		goto failed;
 	}
@@ -112,14 +112,14 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	if (gout[0] != netid[0] ||
 	    gout[1] != netid[1]) {
 		// its not for our network ID 
-		printf("netid %x %x\n",
+		debug("netid %x %x\n",
 		       (unsigned)gout[0],
 		       (unsigned)gout[1]);
 		goto failed;
 	}
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
-		printf("rx len mismatch1 %u %u\n",
+		debug("rx len mismatch1 %u %u\n",
 		       (unsigned)gout[2],
 		       (unsigned)receive_packet_length);		
 		goto failed;
@@ -130,7 +130,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
-		printf("rx len mismatch2 %u %u\n",
+		debug("rx len mismatch2 %u %u\n",
 		       (unsigned)gout[2],
 		       (unsigned)receive_packet_length);		
 		goto failed;
@@ -145,7 +145,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	crc2 = crc16(*length, buf);
 
 	if (crc1 != crc2) {
-		printf("crc1=%x crc2=%x len=%u [%x %x]\n",
+		debug("crc1=%x crc2=%x len=%u [%x %x]\n",
 		       (unsigned)crc1, 
 		       (unsigned)crc2, 
 		       (unsigned)*length,
@@ -404,7 +404,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	clear_status_registers();
 	// transmit timeout ... clear the FIFO
 #if 1
-	printf("%u ts=%u tn=%u len=%u\n",
+	debug("%u ts=%u tn=%u len=%u\n",
 	       timeout_ticks,
 	       tstart,
 	       timer2_tick(),
@@ -957,7 +957,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 
 	if (status & EZRADIOPRO_IRXFFAFULL) {
 		if (partial_packet_length + FIFO_THRESHOLD_HIGH > MAX_AIR_PACKET_LENGTH) {
-			printf("rx pplen=%u\n", (unsigned)partial_packet_length);
+			debug("rx pplen=%u\n", (unsigned)partial_packet_length);
 			goto rxfail;
 		}
 		read_receive_fifo(FIFO_THRESHOLD_HIGH, &receive_buffer[partial_packet_length]);
@@ -975,7 +975,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	if (status & EZRADIOPRO_IPKVALID) {
 		__data uint8_t len = register_read(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
 		if (len > MAX_AIR_PACKET_LENGTH || partial_packet_length > len) {
-			printf("rx len=%u\n", (unsigned)len);
+			debug("rx len=%u\n", (unsigned)len);
 			goto rxfail;
 		}
 		if (partial_packet_length < len) {
