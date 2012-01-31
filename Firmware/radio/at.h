@@ -50,7 +50,7 @@ extern void	at_timer(void);
 ///
 /// @param	c		Received character.
 ///
-extern void	at_plus_detector(uint8_t c) __using(1);
+extern void	at_plus_detector(uint8_t c);
 
 /// AT command character input method.
 ///
@@ -59,7 +59,7 @@ extern void	at_plus_detector(uint8_t c) __using(1);
 ///
 ///  @param	c		Received character.
 ///
-extern void	at_input(uint8_t c) __using(1);
+extern void	at_input(uint8_t c);
 
 /// Check for and execute AT commands
 ///

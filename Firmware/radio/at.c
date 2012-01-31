@@ -64,7 +64,7 @@ static void	at_ampersand(void);
 #pragma save
 #pragma nooverlay
 void
-at_input(uint8_t c) __using(1)
+at_input(uint8_t c)
 {
 	// AT mode is active and waiting for a command
 	switch (c) {
@@ -136,7 +136,7 @@ static __pdata uint8_t	at_plus_counter = ATP_COUNT_1S;
 #pragma save
 #pragma nooverlay
 void
-at_plus_detector(uint8_t c) __using(1)
+at_plus_detector(uint8_t c)
 {
 	// If we get a character that's not '+', unconditionally
 	// reset the state machine to wait-for-idle; this will

@@ -91,7 +91,7 @@ static void serial_device_set_speed(uint8_t speed);
 #define ES0_RESTORE ES0 = ES_saved
 
 void
-serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
+serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 {
 	register uint8_t	c;
 

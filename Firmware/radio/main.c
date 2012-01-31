@@ -51,7 +51,7 @@
 
 /// Serial rx/tx interrupt handler.
 ///
-extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0) __using(1);
+extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0);
 
 /// Radio event interrupt handler.
 ///
