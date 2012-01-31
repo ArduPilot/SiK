@@ -63,9 +63,6 @@ static __pdata uint8_t mav_max_xmit;
 
 #define PACKET_RESEND_THRESHOLD 256
 
-#define OPPORTUNISTIC_RESEND 1
-#define MAVLINK_PACKET_FRAMING 1
-
 #define MAVLINK09_STX 85 // 'U'
 #define MAVLINK10_STX 254
 
@@ -75,9 +72,10 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	register uint16_t slen = serial_read_available();
 
-#if OPPORTUNISTIC_RESEND
 	if (force_resend ||
-	    (last_sent_is_resend == 0 && last_sent_len != 0 && 
+	    (feature_opportunistic_resend &&
+	     last_sent_is_resend == 0 && 
+	     last_sent_len != 0 && 
 	     slen < PACKET_RESEND_THRESHOLD)) {
 		if (max_xmit < last_sent_len) {
 			return 0;
@@ -87,7 +85,6 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		xmemcpy(buf, last_sent, last_sent_len);
 		return last_sent_len;
 	}
-#endif
 
 	last_sent_is_resend = false;
 
@@ -104,7 +101,17 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		return 0;
 	}
 
-#if MAVLINK_PACKET_FRAMING
+	if (!feature_mavlink_framing) {
+		// simple framing
+		if (slen > 0 && serial_read_buf(buf, slen)) {
+			xmemcpy(last_sent, buf, slen);
+			last_sent_len = slen;
+		} else {
+			last_sent_len = 0;
+		}
+		return last_sent_len;
+	}
+
 	// try to align packet boundaries with MAVLink packets
 
 	if (mav_pkt_len == 1) {
@@ -141,7 +148,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			// whole MAVLink packet			
 			return 0;
 		}
-
+		
 		// the whole of the MAVLink packet is available
 		serial_read_buf(last_sent, mav_pkt_len);
 		last_sent_len = mav_pkt_len;
@@ -149,7 +156,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		mav_pkt_len = 0;
 		return last_sent_len;
 	}
-
+		
 	while (slen > 0) {
 		register uint8_t c = serial_peek();
 		if (c == MAVLINK09_STX || c == MAVLINK10_STX) {
@@ -178,7 +185,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			// the length byte doesn't include
 			// the header or CRC
 			mav_pkt_len += 8;
-
+			
 			if (last_sent_len != 0) {
 				// send what we've got so far,
 				// and send the MAVLink payload
@@ -210,15 +217,6 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 	xmemcpy(buf, last_sent, last_sent_len);
 	return last_sent_len;
-#else
-	if (slen > 0 && serial_read_buf(buf, slen)) {
-		xmemcpy(last_sent, buf, slen);
-		last_sent_len = slen;
-	} else {
-		last_sent_len = 0;
-	}
-	return last_sent_len;
-#endif // MAVLINK_PACKET_FRAMING
 }
 
 // return true if the packet currently being sent
