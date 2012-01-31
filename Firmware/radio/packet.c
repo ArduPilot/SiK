@@ -43,23 +43,23 @@ static __bit force_resend;
 
 static __xdata uint8_t last_received[MAX_DATA_PACKET_LENGTH];
 static __xdata uint8_t last_sent[MAX_DATA_PACKET_LENGTH];
-static __xdata uint8_t last_sent_len;
-static __xdata uint8_t last_recv_len;
+static __pdata uint8_t last_sent_len;
+static __pdata uint8_t last_recv_len;
 
 // serial speed in 16usecs/byte
-static __xdata uint16_t serial_rate;
+static __pdata uint16_t serial_rate;
 
 // the length of a pending MAVLink packet, or zero if no MAVLink
 // packet is expected
-static __xdata uint8_t mav_pkt_len;
+static __pdata uint8_t mav_pkt_len;
 
 // the timer2_tick time when the MAVLink header was seen
-static __xdata uint16_t mav_pkt_start_time;
+static __pdata uint16_t mav_pkt_start_time;
 
 // the number of timer2 ticks this packet should take on the serial link
-static __xdata uint16_t mav_pkt_max_time;
+static __pdata uint16_t mav_pkt_max_time;
 
-static __xdata uint8_t mav_max_xmit;
+static __pdata uint8_t mav_max_xmit;
 
 #define PACKET_RESEND_THRESHOLD 256
 
@@ -73,7 +73,7 @@ static __xdata uint8_t mav_max_xmit;
 uint8_t
 packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	__xdata uint16_t slen = serial_read_available();
+	register uint16_t slen = serial_read_available();
 
 #if OPPORTUNISTIC_RESEND
 	if (force_resend ||
@@ -151,7 +151,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	}
 
 	while (slen > 0) {
-		__xdata uint8_t c = serial_peek();
+		register uint8_t c = serial_peek();
 		if (c == MAVLINK09_STX || c == MAVLINK10_STX) {
 			if (slen == 1) {
 				// we got a bare MAVLink header byte
@@ -252,7 +252,7 @@ packet_set_serial_speed(uint16_t speed)
 }
 
 // determine if a received packet is a duplicate
-bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
+bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __data buf, bool is_resend)
 {
 	if (!is_resend) {
 		xmemcpy(last_received, buf, len);
