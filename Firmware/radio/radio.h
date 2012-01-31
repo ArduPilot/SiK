@@ -128,12 +128,13 @@ extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
 
 /// staticstics maintained by the radio code
 struct error_counts {
-	uint8_t rx_errors;		///< count of packet receive errors
-	uint8_t tx_errors;		///< count of packet transmit errors
-	uint8_t serial_tx_overflow;    ///< count of serial transmit overflows
-	uint8_t serial_rx_overflow;    ///< count of serial receive overflows
+	uint16_t rx_errors;		///< count of packet receive errors
+	uint16_t tx_errors;		///< count of packet transmit errors
+	uint16_t serial_tx_overflow;    ///< count of serial transmit overflows
+	uint16_t serial_rx_overflow;    ///< count of serial receive overflows
+	uint16_t corrected_errors;      ///< count of packets corrected by golay code
 };
-__xdata extern struct error_counts errors;
+__pdata extern struct error_counts errors;
 
 /// receives a packet from the radio
 ///

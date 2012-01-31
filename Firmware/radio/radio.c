@@ -161,7 +161,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	return true;
 
 failed:
-	if (errors.rx_errors != 255) {
+	if (errors.rx_errors != 0xFFFF) {
 		errors.rx_errors++;
 	}
 	EX0_RESTORE;
@@ -386,7 +386,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 				// we didn't send it all??
 				printf("short TX %u\n",
 				       (unsigned)length);
-				if (errors.tx_errors != 255) {
+				if (errors.tx_errors != 0xFFFF) {
 					errors.tx_errors++;
 				}
 				register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
@@ -410,7 +410,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	       timer2_tick(),
 	       (unsigned)length);
 #endif
-	if (errors.tx_errors != 255) {
+	if (errors.tx_errors != 0xFFFF) {
 		errors.tx_errors++;
 	}
 
@@ -996,7 +996,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	return;
 
 rxfail:
-	if (errors.rx_errors != 255) {
+	if (errors.rx_errors != 0xFFFF) {
 		errors.rx_errors++;
 	}
 	radio_receiver_on();

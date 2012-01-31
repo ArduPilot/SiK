@@ -153,11 +153,11 @@ display_test_output(void)
 		printf("REMOTE RSSI: %d pkts/round: %d%c",
 		       (int)remote_statistics.average_rssi,
 		       (int)remote_pkt_pct, '%');
-		printf("  txe=%d rxe=%d stx=%d srx=%d\n",
-		       (int)errors.tx_errors,
-		       (int)errors.rx_errors,
-		       (int)errors.serial_tx_overflow,
-		       (int)errors.serial_rx_overflow);
+		printf("  txe=%u rxe=%u stx=%u srx=%u\n",
+		       (unsigned)errors.tx_errors,
+		       (unsigned)errors.rx_errors,
+		       (unsigned)errors.serial_tx_overflow,
+		       (unsigned)errors.serial_rx_overflow);
 	}
 }
 

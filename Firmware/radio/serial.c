@@ -114,7 +114,7 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0) __using(1)
 			// and queue it for general reception
 			if (BUF_NOT_FULL(rx)) {
 				BUF_INSERT(rx, c);
-			} else if (errors.serial_rx_overflow != 255) {
+			} else if (errors.serial_rx_overflow != 0xFFFF) {
 				errors.serial_rx_overflow++;
 			}
 
@@ -189,7 +189,7 @@ _serial_write(uint8_t c) __reentrant
 		// if the transmitter is idle, restart it
 		if (tx_idle)
 			serial_restart();
-	} else if (errors.serial_tx_overflow != 255) {
+	} else if (errors.serial_tx_overflow != 0xFFFF) {
 		errors.serial_tx_overflow++;
 	}
 
@@ -203,7 +203,7 @@ serial_write_buf(__xdata uint8_t *buf, __pdata uint8_t count)
 	ES0_SAVE_DISABLE;
 
 	if (serial_write_space() < count) {
-		if (errors.serial_tx_overflow != 255) {
+		if (errors.serial_tx_overflow != 0xFFFF) {
 			errors.serial_tx_overflow++;
 		}
 		ES0_RESTORE;
