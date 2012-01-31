@@ -53,6 +53,9 @@ __code const struct parameter_info {
 	{"AIR_SPEED",		128},
 	{"NETID",		25},
 	{"TXPOWER",		20},
+	{"GOLAY",		0},
+	{"MAVLINK",		0},
+	{"OPPRESEND",		1},
 };
 
 /// In-RAM parameter store.
@@ -92,6 +95,14 @@ param_check(enum ParamID id, __pdata uint16_t val)
 
 	case PARAM_TXPOWER:
 		if (val > 20)
+			return false;
+		break;
+
+	case PARAM_ECC:
+	case PARAM_MAVLINK:
+	case PARAM_OPPRESEND:
+		// boolean 0/1 only
+		if (val > 1)
 			return false;
 		break;
 
