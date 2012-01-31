@@ -323,7 +323,6 @@ tdm_serial_loop(void)
 
 	for (;;) {
 		__pdata uint8_t	len;
-		// add an extra 3 bytes to hold length and CRC in ecc.c
 		__pdata uint16_t tnow, tdelta;
 		__pdata uint8_t max_xmit;
 
