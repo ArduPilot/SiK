@@ -32,10 +32,10 @@
 
 /// Counter used by delay_msec
 ///
-static __pdata volatile uint8_t delay_counter;
+static __data volatile uint8_t delay_counter;
 
 /// high 16 bits of timer2 SYSCLK/12 interrupt
-static __pdata volatile uint16_t timer2_high;
+static __data volatile uint16_t timer2_high;
 
 
 INTERRUPT(T3_ISR, INTERRUPT_TIMER3)
@@ -95,7 +95,7 @@ INTERRUPT(T2_ISR, INTERRUPT_TIMER2)
 // this call costs about 2 microseconds
 uint16_t timer2_16(void)
 {
-	uint8_t low, high;
+	register uint8_t low, high;
 	do {
 		// we need to make sure that the high byte hasn't changed
 		// between reading the high and low parts of the 16 bit timer
@@ -123,7 +123,7 @@ uint32_t micros(void)
 // one second intervals
 uint16_t timer2_tick(void)
 {
-	uint16_t low, high;
+	register uint16_t low, high;
 	do {
 		high = timer2_high;
 		low = timer2_16();
