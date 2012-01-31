@@ -44,14 +44,14 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata static uint8_t rx_buf[1024] = {0};
-__xdata static uint8_t tx_buf[512] = {0};
-static const uint16_t  rx_mask = sizeof(rx_buf) - 1;
-static const uint16_t  tx_mask = sizeof(tx_buf) - 1;
+__xdata uint8_t rx_buf[2048] = {0};
+__xdata uint8_t tx_buf[512] = {0};
+__pdata const uint16_t  rx_mask = sizeof(rx_buf) - 1;
+__pdata const uint16_t  tx_mask = sizeof(tx_buf) - 1;
 
 // FIFO insert/remove pointers
-static uint16_t				rx_insert, rx_remove;
-static uint16_t				tx_insert, tx_remove;
+static volatile __pdata uint16_t				rx_insert, rx_remove;
+static volatile __pdata uint16_t				tx_insert, tx_remove;
 
 
 
@@ -224,7 +224,7 @@ serial_write_buf(__xdata uint8_t *buf, __pdata uint8_t count)
 uint16_t
 serial_write_space(void)
 {
-	uint16_t ret;
+	register uint16_t ret;
 	ES0_SAVE_DISABLE;
 
 	// If we are in AT mode, discourage anyone from sending bytes.
@@ -313,7 +313,7 @@ serial_read_buf(__xdata uint8_t * __pdata buf, __pdata uint8_t count)
 uint16_t
 serial_read_available(void)
 {
-	uint16_t ret;
+	register uint16_t ret;
 	ES0_SAVE_DISABLE;
 	ret = BUF_USED(rx);
 	ES0_RESTORE;
