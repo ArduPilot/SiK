@@ -86,6 +86,11 @@ static void radio_init(void);
 /// statistics for radio and serial errors
 __pdata struct error_counts errors;
 
+/// optional features
+bool feature_golay;
+bool feature_opportunistic_resend;
+bool feature_mavlink_framing;
+
 void
 main(void)
 {
@@ -101,6 +106,11 @@ main(void)
 	//
 	if (!param_load())
 		param_default();
+
+	// setup boolean features
+	feature_mavlink_framing = param_get(PARAM_MAVLINK)?true:false;
+	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
+	feature_golay = param_get(PARAM_MAVLINK)?true:false;
 
 	// Do hardware initialisation.
 	hardware_init();

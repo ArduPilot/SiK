@@ -71,6 +71,11 @@
 // canary data for ram wrap
 extern __pdata uint8_t pdata_canary;
 
+/// optional features
+extern bool feature_golay;
+extern bool feature_opportunistic_resend;
+extern bool feature_mavlink_framing;
+
 /// System clock frequency
 ///
 /// @todo This is standard for the Si1000 if running off the internal
