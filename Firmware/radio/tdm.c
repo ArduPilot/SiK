@@ -352,6 +352,10 @@ tdm_serial_loop(void)
 			panic("stack blown\n");
 		}
 
+		if (pdata_canary != 0x41) {
+			panic("pdata canary changed\n");
+		}
+
 		// give the AT command processor a chance to handle a command
 		at_command();
 

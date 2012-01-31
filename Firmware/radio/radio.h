@@ -68,6 +68,9 @@
 #include "flash.h"
 #include "rtc.h"
 
+// canary data for ram wrap
+extern __pdata uint8_t pdata_canary;
+
 /// System clock frequency
 ///
 /// @todo This is standard for the Si1000 if running off the internal

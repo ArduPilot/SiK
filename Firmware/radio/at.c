@@ -38,7 +38,13 @@
 
 // AT command buffer
 #define AT_CMD_MAXLEN	16
-__pdata char	at_cmd[AT_CMD_MAXLEN + 1];
+
+// canary data for ram wrap. It is in at.c as the compiler
+// assigns addresses in alphabetial order and we want this at a low
+// address
+__pdata uint8_t pdata_canary = 0x41;
+
+__pdata char at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
 // mode flags
