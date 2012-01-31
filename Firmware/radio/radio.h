@@ -84,13 +84,13 @@
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
 
 // an inline memcpy() for __xdata arrays
-static inline void xmemcpy(__xdata uint8_t * __pdata dst, const __xdata uint8_t * __pdata src, register uint8_t n)
+static inline void xmemcpy(__xdata uint8_t * __data dst, const __xdata uint8_t * __pdata src, register uint8_t n)
 {
 	while (n--) *dst++ = *src++;
 }
 
 // an inline memset() for __xdata arrays
-static inline void xmemset(__xdata uint8_t * __pdata dst, register uint8_t v, register uint8_t n)
+static inline void xmemset(__xdata uint8_t * __data dst, register uint8_t v, register uint8_t n)
 {
 	while (n--) *dst++ = v;
 }

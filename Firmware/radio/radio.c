@@ -246,7 +246,7 @@ radio_air_rate(void)
 static void
 radio_clear_transmit_fifo(void)
 {
-	uint8_t control;
+	register uint8_t control;
 	control = register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control | EZRADIOPRO_FFCLRTX);
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, control & ~EZRADIOPRO_FFCLRTX);
