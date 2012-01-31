@@ -126,6 +126,11 @@ panic(char *fmt, ...)
 	vprintf(fmt, ap);
 	puts("");
 
+	EA = 1;
+	ES0 = 1;
+	
+	delay_msec(1000);
+
 	// generate a software reset
 	RSTSRC |= (1 << 4);
 	for (;;)
