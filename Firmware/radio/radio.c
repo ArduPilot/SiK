@@ -154,6 +154,14 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		goto failed;
 	}
 
+	if (errcount != 0) {
+		if ((uint16_t)(0xFFFF - errcount) > errors.corrected_errors) {
+			errors.corrected_errors += errcount;
+		} else {
+			errors.corrected_errors = 0xFFFF;
+		}
+	}
+
 	EX0_RESTORE;
 
 	// get ready for the next packet
