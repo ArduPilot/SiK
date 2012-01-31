@@ -945,26 +945,6 @@ set_frequency_registers(__pdata uint32_t frequency)
 	register_write(EZRADIOPRO_NOMINAL_CARRIER_FREQUENCY_0, carrier & 0xFF);
 }
 
-/// use the hardware CRC engine to calculate a 16 bit CRC on some data
-///
-/// @param n		number of bytes to CRC
-/// @param buf		data buffer
-///
-/// @return		16 bit CRC of data
-///
-uint16_t radio_crc(uint8_t n, __xdata uint8_t * __pdata buf)
-{
-	uint16_t ret;
-	CRC0CN = 0x00;
-	CRC0CN |= 0x08;
-	while (n--) {
-		CRC0IN = *buf++;
-	}
-	ret = CRC0DAT;
-	ret = (ret<<8) | CRC0DAT;
-	return ret;
-}
-
 /// the receiver interrupt
 ///
 /// We expect to get the following types of interrupt:

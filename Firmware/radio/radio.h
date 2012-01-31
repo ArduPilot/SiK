@@ -254,13 +254,4 @@ uint8_t radio_get_transmit_power(void);
 ///
 bool radio_receive_in_progress(void);
 
-/// use the hardware CRC engine to calculate a 16 bit CRC on some data
-///
-/// @param n		number of bytes to CRC
-/// @param buf		data buffer
-///
-/// @return		16 bit CRC of data
-///
-uint16_t radio_crc(uint8_t n, __xdata uint8_t * __pdata buf);
-
 #endif // _RADIO_H_
