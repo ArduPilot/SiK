@@ -91,6 +91,8 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
 	__xdata uint8_t gout[3];
 	__pdata uint16_t crc1, crc2;
+	__pdata uint8_t errcount = 0;
+
 	EX0_SAVE_DISABLE;
 
 	if (!packet_received) {
@@ -106,7 +108,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	// decode and check the header
-	golay_decode(6, receive_buffer, gout);
+	errcount += golay_decode(6, receive_buffer, gout);
 	if (gout[0] != netid[0] ||
 	    gout[1] != netid[1]) {
 		// its not for our network ID 
@@ -124,7 +126,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	// decode the CRC
-	golay_decode(6, &receive_buffer[6], gout);
+	errcount += golay_decode(6, &receive_buffer[6], gout);
 	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
@@ -135,14 +137,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	if (receive_packet_length != 12) {
-		__xdata uint8_t buf2[MAX_AIR_PACKET_LENGTH-12];
-		uint8_t n;
-		golay_decode(receive_packet_length-12, &receive_buffer[12], buf);
-		golay_encode((receive_packet_length-12)/2, buf, buf2);
-		n = num_bytes_different(&receive_buffer[12], buf2, receive_packet_length-12);
-		if (n != 0) {
-			printf("fixed %u bytes\n", (unsigned)n);
-		}
+		errcount += golay_decode(receive_packet_length-12, &receive_buffer[12], buf);
 	}
 
 	*length = gout[2];
