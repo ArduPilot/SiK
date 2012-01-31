@@ -479,7 +479,7 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 			clear_status_registers();
 			if (length != 0) {
 				// we didn't send it all??
-				printf("short TX %u\n",
+				debug("short TX %u\n",
 				       (unsigned)length);
 				if (errors.tx_errors != 0xFFFF) {
 					errors.tx_errors++;
