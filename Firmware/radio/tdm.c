@@ -38,22 +38,9 @@
 #include "tdm.h"
 #include "timer.h"
 #include "packet.h"
-#include "ecc.h"
 #include "golay.h"
 #include "freq_hopping.h"
 #include "crc.h"
-
-// switch out receive and send routines based on whether we are using
-// ECC coding or not
-#if USE_ECC_CODE
-#define tdm_transmit radio_transmit
-#define tdm_receive radio_receive_packet
-#define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
-#else
-#define tdm_transmit radio_transmit
-#define tdm_receive radio_receive_packet
-#define TDM_MAX_PACKET_SIZE MAX_DATA_PACKET_LENGTH
-#endif
 
 #define USE_TICK_YIELD 1
 
@@ -62,7 +49,7 @@ enum tdm_state { TDM_TRANSMIT=0, TDM_SILENCE1=1, TDM_RECEIVE=2, TDM_SILENCE2=3 }
 __pdata static enum tdm_state tdm_state;
 
 /// a packet buffer for the TDM code
-__xdata uint8_t	pbuf[TDM_MAX_PACKET_SIZE];
+__xdata uint8_t	pbuf[MAX_DATA_PACKET_LENGTH];
 
 /// how many 16usec ticks are remaining in the current state
 __pdata static uint16_t tdm_state_remaining;
@@ -105,18 +92,18 @@ __pdata static uint16_t ticks_per_byte;
 /// that two radios that happen to be exactly in sync in their sends
 /// will eventually get a packet through and get their transmit windows
 /// sorted out
-__pdata static uint16_t transmit_wait;
+__pdata uint16_t transmit_wait;
 
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
-__pdata static uint8_t test_display;
+__pdata uint8_t test_display;
 
 /// set when we should send a statistics packet on the next round
 static __bit send_statistics;
 
 /// packet and RSSI statistics
-__pdata static struct statistics {
+__pdata struct statistics {
 	uint8_t average_rssi;
 	uint8_t remote_average_rssi;
 	uint8_t receive_count;
@@ -128,7 +115,7 @@ struct tdm_trailer {
 	uint8_t bonus:1;
 	uint8_t resend:1;
 };
-__pdata static struct tdm_trailer trailer;
+__pdata struct tdm_trailer trailer;
 
 /// display test output
 ///
@@ -369,7 +356,7 @@ tdm_serial_loop(void)
 		radio_set_channel(fhop_receive_channel());
 
 		// see if we have received a packet
-		if (tdm_receive(&len, pbuf)) {
+		if (radio_receive_packet(&len, pbuf)) {
 
 			// update the activity indication
 			received_packet = 1;
@@ -413,7 +400,9 @@ tdm_serial_loop(void)
 				sync_tx_windows(len);
 				last_t = timer2_tick();
 
-				if (len != 0 && !packet_is_duplicate(len, pbuf, trailer.resend)) {
+				if (len != 0 && 
+				    !packet_is_duplicate(len, pbuf, trailer.resend) &&
+				    !at_mode_active) {
 					// its user data - send it out
 					// the serial port
 					//printf("rcv(%d,[", len);
@@ -467,7 +456,7 @@ tdm_serial_loop(void)
 		if (radio_preamble_detected()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
-			transmit_wait = flight_time_estimate(TDM_MAX_PACKET_SIZE);
+			transmit_wait = flight_time_estimate(MAX_DATA_PACKET_LENGTH);
 			continue;
 		}
 
@@ -483,8 +472,8 @@ tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit -= sizeof(trailer)+1;
-		if (max_xmit > TDM_MAX_PACKET_SIZE-sizeof(trailer)) {
-			max_xmit = TDM_MAX_PACKET_SIZE-sizeof(trailer);
+		if (max_xmit > MAX_DATA_PACKET_LENGTH-sizeof(trailer)) {
+			max_xmit = MAX_DATA_PACKET_LENGTH-sizeof(trailer);
 		}
 
 		// ask the packet system for the next packet to send
@@ -535,7 +524,7 @@ tdm_serial_loop(void)
 		transmit_wait = packet_latency;
 
 		// start transmitting the packet
-		if (!tdm_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
+		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
 		    len != 0 && trailer.window != 0) {
 			packet_force_resend();
 		}
@@ -596,12 +585,12 @@ __code static const struct {
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
-        __xdata uint8_t pbuf[TDM_MAX_PACKET_SIZE];
+        __xdata uint8_t pbuf[MAX_DATA_PACKET_LENGTH];
 	__idata uint8_t i, j;
 
 	for (i=2; i<ARRAY_LENGTH(timing_table); i++) {
 		__idata uint32_t latency_sum=0, per_byte_sum=0;
-		uint8_t size = TDM_MAX_PACKET_SIZE;
+		uint8_t size = MAX_DATA_PACKET_LENGTH;
 		radio_configure(timing_table[i].air_rate*1000UL);
 		for (j=0; j<10; j++) {
 			__idata uint16_t time_0, time_max, t1, t2;
@@ -611,7 +600,7 @@ static void tdm_build_timing_table(void)
 				return;
 			}
 			t1 = timer2_tick();
-			if (!tdm_transmit(0, pbuf, 0xFFFF)) {
+			if (!radio_transmit(0, pbuf, 0xFFFF)) {
 				break;
 			}
 			t2 = timer2_tick();
@@ -621,7 +610,7 @@ static void tdm_build_timing_table(void)
 
 			radio_set_channel(2);
 			t1 = timer2_tick();
-			if (!tdm_transmit(size, pbuf, 0xFFFF)) {
+			if (!radio_transmit(size, pbuf, 0xFFFF)) {
 				size /= 2;
 				j--;
 				continue;
@@ -686,7 +675,6 @@ static void crc_test(void)
 	crc = crc16(4, &d[0]);
 	printf("CRC: %x %x\n", crc, 0xb166);	
 }
-#endif
 
 // test golay encoding
 static void golay_test(void)
@@ -694,36 +682,37 @@ static void golay_test(void)
 	uint8_t i;
 	uint16_t t1, t2;
 	__xdata uint8_t	buf[MAX_AIR_PACKET_LENGTH];
-	for (i=0; i<TDM_MAX_PACKET_SIZE; i++) {
+	for (i=0; i<MAX_DATA_PACKET_LENGTH; i++) {
 		pbuf[i] = i;
 	}
 	t1 = timer2_tick();
-	golay_encode(TDM_MAX_PACKET_SIZE, pbuf, buf);
+	golay_encode(MAX_DATA_PACKET_LENGTH, pbuf, buf);
 	t2 = timer2_tick();
 	printf("encode %u bytes took %u 16usec ticks\n",
-	       (unsigned)TDM_MAX_PACKET_SIZE,
+	       (unsigned)MAX_DATA_PACKET_LENGTH,
 	       t2-t1);
 	// add an error in the middle
-	buf[TDM_MAX_PACKET_SIZE] ^= 0x23;
+	buf[MAX_DATA_PACKET_LENGTH] ^= 0x23;
 	buf[1] ^= 0x70;
 	t1 = timer2_tick();
-	golay_decode(TDM_MAX_PACKET_SIZE*2, buf, pbuf);
+	golay_decode(MAX_DATA_PACKET_LENGTH*2, buf, pbuf);
 	t2 = timer2_tick();
 	printf("decode %u bytes took %u 16usec ticks\n",
-	       (unsigned)TDM_MAX_PACKET_SIZE*2,
+	       (unsigned)MAX_DATA_PACKET_LENGTH*2,
 	       t2-t1);
-	for (i=0; i<TDM_MAX_PACKET_SIZE; i++) {
+	for (i=0; i<MAX_DATA_PACKET_LENGTH; i++) {
 		if (pbuf[i] != i) {
 			printf("golay error at %u\n", (unsigned)i);
 		}
 	}
 	t1 = timer2_tick();
-	crc16(TDM_MAX_PACKET_SIZE, pbuf);
+	crc16(MAX_DATA_PACKET_LENGTH, pbuf);
 	t2 = timer2_tick();
 	printf("crc %u bytes took %u 16usec ticks\n",
-	       (unsigned)TDM_MAX_PACKET_SIZE,
+	       (unsigned)MAX_DATA_PACKET_LENGTH,
 	       t2-t1);
 }
+#endif
 
 
 // initialise the TDM subsystem
@@ -774,8 +763,8 @@ tdm_init(void)
 	// tell the packet subsystem our max packet size, which it
 	// needs to know for MAVLink packet boundary detection
 	i = (tx_window_width - packet_latency) / ticks_per_byte;
-	if (i > TDM_MAX_PACKET_SIZE - sizeof(trailer)) {
-		i = TDM_MAX_PACKET_SIZE - sizeof(trailer);
+	if (i > MAX_DATA_PACKET_LENGTH - sizeof(trailer)) {
+		i = MAX_DATA_PACKET_LENGTH - sizeof(trailer);
 	}
 	packet_set_max_xmit(i);
 
