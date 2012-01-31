@@ -110,7 +110,7 @@ main(void)
 	// setup boolean features
 	feature_mavlink_framing = param_get(PARAM_MAVLINK)?true:false;
 	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
-	feature_golay = param_get(PARAM_MAVLINK)?true:false;
+	feature_golay = param_get(PARAM_ECC)?true:false;
 
 	// Do hardware initialisation.
 	hardware_init();
