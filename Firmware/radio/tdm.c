@@ -123,23 +123,14 @@ static void
 display_test_output(void)
 {
 	if (test_display & AT_TEST_RSSI) {
-		__pdata uint8_t pkt_pct, remote_pkt_pct;
-		if (statistics.round_count == 0) {
-			pkt_pct = 0;
-		} else {
-			pkt_pct = (100*(uint16_t)statistics.receive_count)/statistics.round_count;
-		}
-		if (remote_statistics.round_count == 0) {
-			remote_pkt_pct = 0;
-		} else {
-			remote_pkt_pct = (100*(uint16_t)remote_statistics.receive_count)/remote_statistics.round_count;
-		}
-		printf("LOCAL RSSI: %d  pkts/round: %d%c   ",
-		       (int)statistics.average_rssi,
-		       (int)pkt_pct, '%');
-		printf("REMOTE RSSI: %d pkts/round: %d%c",
+		printf("LOCAL RSSI: %d  pkts/rounds: %u/%u   ",
+		       (unsigned)statistics.average_rssi,
+		       (unsigned)statistics.receive_count,
+		       (unsigned)statistics.round_count);
+		printf("REMOTE RSSI: %d pkts/rounds: %u/%u",
 		       (int)remote_statistics.average_rssi,
-		       (int)remote_pkt_pct, '%');
+		       (unsigned)remote_statistics.receive_count,
+		       (unsigned)remote_statistics.round_count);
 		printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u\n",
 		       (unsigned)errors.tx_errors,
 		       (unsigned)errors.rx_errors,
