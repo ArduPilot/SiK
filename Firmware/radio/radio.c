@@ -279,7 +279,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 {
 	__pdata uint16_t tstart, crc;
 	bool transmit_started;
-	uint8_t fifo_count;
+	__data uint8_t fifo_count;
 	__xdata uint8_t gin[3];
 	__xdata uint8_t gout[6];
 
