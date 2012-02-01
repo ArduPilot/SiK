@@ -390,6 +390,12 @@ tdm_serial_loop(void)
 				// received header
 				sync_tx_windows(len);
 				last_t = timer2_tick();
+				if (feature_golay) {
+					// take into account the time
+					// it took to decode the
+					// packet
+					last_t -= (len * 3);
+				}
 
 				if (len != 0 && 
 				    !packet_is_duplicate(len, pbuf, trailer.resend) &&
@@ -513,6 +519,11 @@ tdm_serial_loop(void)
 		// sending the next one. The receivers don't cope well
 		// with back to back packets
 		transmit_wait = packet_latency;
+		if (feature_golay) {
+			// give the receiver some time to decode that
+			// packet
+			transmit_wait += 3*len;
+		}
 
 		// start transmitting the packet
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
@@ -539,22 +550,6 @@ __code static const struct {
 	uint16_t latency;
 	uint16_t per_byte;
 } timing_table[] = {
-#if USE_ECC_CODE
-	{ 0,   17000, 1918 },
-	{ 1, 10692, 1030 },
-	{ 2, 5355, 515 },
-	{ 4, 2687, 258 },
-	{ 8, 1352, 130 },
-	{ 9, 1130, 108 },
-	{ 16, 685, 65 },
-	{ 19, 574, 54 },
-	{ 24, 464, 44 },
-	{ 32, 352, 33 },
-	{ 64, 186, 17 },
-	{ 128, 103, 9 },
-	{ 192, 75, 6 },
-	{ 256,    40, 3 },
-#else
 	{ 0,   13130, 1028 },
 	{ 1,   6574,  514 },
 	{ 2,   3293,  257 },
@@ -569,10 +564,9 @@ __code static const struct {
 	{ 128, 66,    4 },
 	{ 192, 49,    3 },
 	{ 256, 30,    2 },
-#endif
 };
 
-#if 1
+#if 0
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
@@ -623,40 +617,6 @@ static void tdm_build_timing_table(void)
 	}
 }
 
-/// test the timing table
-static void tdm_test_timing(void)
-{
-        __xdata uint8_t pbuf[MAX_DATA_PACKET_LENGTH+3];
-	__pdata uint8_t i, failures=0;
-	
-	memset(pbuf, 42, sizeof(pbuf));
-
-	for (i=0; i<255; i++) {
-		__pdata uint8_t len = rand() & 0x3f;
-		__pdata uint16_t fte = flight_time_estimate(len);
-		__pdata int16_t diff;
-		__pdata uint16_t t1, t2;
-
-		radio_set_channel(1);
-		//radio_receiver_on();
-		t1 = timer2_tick();
-		if (!radio_transmit(len, pbuf, fte + silence_period)) {
-			printf("max timeout len=%u\n", 
-			       (unsigned)len);
-			failures++;
-			continue;
-		}
-		t2 = timer2_tick();
-		diff = (int16_t)(((uint16_t)(t2-t1)) - fte);
-		printf("i=%u len=%u fte=%u t=%u diff=%d\n",
-		       (unsigned)i, (unsigned)len, 
-		       fte, (uint16_t)(t2-t1), diff);
-		if (diff > (int16_t)silence_period || diff < -(int16_t)silence_period) {
-			failures++;
-		}
-	}
-	printf("%u failures\n", (unsigned)failures);
-}
 
 // test hardware CRC code
 static void crc_test(void)
@@ -731,6 +691,14 @@ tdm_init(void)
         // table.
 	packet_latency = timing_table[i].latency;
         ticks_per_byte = timing_table[i].per_byte;
+
+	if (feature_golay) {
+		// golay encoding doubles the cost per byte
+		ticks_per_byte *= 2;
+
+		// and adds 4 bytes
+		packet_latency += 4*ticks_per_byte;
+	}
 
 	// set the silence period to two times the packet latency
         silence_period = 2*packet_latency;
