@@ -285,22 +285,35 @@ tdm_state_update(__pdata uint16_t tdelta)
 static void
 link_update(void)
 {
+	static uint8_t unlock_count;
 	if (received_packet) {
 		LED_RADIO = LED_ON;
 		received_packet = 0;
+		unlock_count = 0;
 	} else {
+		__pdata uint16_t rounds_per_second;
+
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
 
-		// randomise the next transmit window using some
-		// entropy from the radio
-		if (timer_entropy() & 1) {
-			if (tdm_state_remaining > silence_period) {
-				tdm_state_remaining -= silence_period;
-			} else {
-				tdm_state_remaining = 1;
+		unlock_count++;
+
+		rounds_per_second = 0x8000UL / tx_window_width;
+
+		if (unlock_count*rounds_per_second >= NUM_FREQ_CHANNELS) {
+			unlock_count = 0;
+			// randomise the next transmit window using some
+			// entropy from the radio if we have waited
+			// for a full set of hops with this time base
+			if (timer_entropy() & 1) {
+				if (tdm_state_remaining > silence_period) {
+					tdm_state_remaining -= silence_period;
+				} else {
+					tdm_state_remaining = 1;
+				}
 			}
 		}
+
 		fhop_set_locked(false);
 
 		// reset statistics when unlocked
