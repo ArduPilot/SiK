@@ -41,8 +41,8 @@ static __bit last_sent_is_resend;
 static __bit last_recv_is_resend;
 static __bit force_resend;
 
-static __xdata uint8_t last_received[MAX_DATA_PACKET_LENGTH];
-static __xdata uint8_t last_sent[MAX_DATA_PACKET_LENGTH];
+static __xdata uint8_t last_received[MAX_PACKET_LENGTH];
+static __xdata uint8_t last_sent[MAX_PACKET_LENGTH];
 static __pdata uint8_t last_sent_len;
 static __pdata uint8_t last_recv_len;
 
