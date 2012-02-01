@@ -50,12 +50,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-// the biggest data packet length we will allow
-// this should be a multiple of 3
-#define MAX_DATA_PACKET_LENGTH 120
-
-// the biggest air packet length we will allow
-#define MAX_AIR_PACKET_LENGTH ((MAX_DATA_PACKET_LENGTH+6)*2)
+// the biggest packet length we will allow. To allow for golay
+// encoding this needs to be a multiple of 6
+#define MAX_PACKET_LENGTH 252
 
 
 #include "board.h"

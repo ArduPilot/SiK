@@ -26,22 +26,25 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+
+//#define DEBUG 1
+
 #include "board.h"
 #include "radio.h"
 #include "timer.h"
 #include "golay.h"
 #include "crc.h"
 
-__xdata static uint8_t radio_buffer[MAX_AIR_PACKET_LENGTH];
-__xdata static uint8_t receive_packet_length;
-__xdata static uint8_t partial_packet_length;
-__xdata static uint8_t last_rssi;
-__xdata static uint8_t netid[2];
+__xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
+__xdata uint8_t receive_packet_length;
+__xdata uint8_t partial_packet_length;
+__xdata uint8_t last_rssi;
+__xdata uint8_t netid[2];
 
 static volatile __bit packet_received;
 static volatile __bit preamble_detected;
 
-__xdata static struct {
+__xdata struct {
 	uint32_t frequency;
 	uint32_t channel_spacing;
 	uint32_t air_data_rate;
@@ -72,17 +75,6 @@ static void	clear_status_registers(void);
 #define TX_FIFO_THRESHOLD_HIGH 60
 #define RX_FIFO_THRESHOLD_HIGH 50
 
-static uint8_t num_bytes_different(__xdata uint8_t * __pdata buf1, 
-				   __xdata uint8_t * __pdata buf2, 
-				   uint8_t n)
-{
-	uint8_t ret = 0;
-	while (n--) {
-		if (*buf1++ != *buf2++) ret++;
-	}
-	return ret;
-}
-
 // return a received packet
 //
 // returns true on success, false on no packet available
@@ -101,11 +93,12 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		return false;
 	}
 
+	if (receive_packet_length > MAX_PACKET_LENGTH) {
+		goto failed;
+	}
+
 	if (!feature_golay) {
 		// simple unencoded packets
-		if (receive_packet_length > MAX_DATA_PACKET_LENGTH) {
-			goto failed;
-		}
 		*length = receive_packet_length;
 		xmemcpy(buf, radio_buffer, receive_packet_length);
 		radio_receiver_on();
@@ -299,6 +292,10 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	bool transmit_started;
 	__data uint8_t n;
 
+	if (length > sizeof(radio_buffer)) {
+		panic("oversized packet");
+	}
+
 	radio_clear_transmit_fifo();
 
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
@@ -420,6 +417,11 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 	__pdata uint16_t crc;
 	__xdata uint8_t gin[3];
 	__data uint8_t elen, rlen;
+
+	if (length > (sizeof(radio_buffer)/2)-6) {
+		debug("golay packet size %u\n", (unsigned)length);
+		panic("oversized golay packet");		
+	}
 
 	// rounded length
 	rlen = ((length+2)/3)*3;
@@ -1034,7 +1036,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 
 	if (status & EZRADIOPRO_IRXFFAFULL) {
-		if (partial_packet_length + RX_FIFO_THRESHOLD_HIGH > MAX_AIR_PACKET_LENGTH) {
+		if (RX_FIFO_THRESHOLD_HIGH + (uint16_t)partial_packet_length > MAX_PACKET_LENGTH) {
 			debug("rx pplen=%u\n", (unsigned)partial_packet_length);
 			goto rxfail;
 		}
@@ -1052,7 +1054,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 
 	if (status & EZRADIOPRO_IPKVALID) {
 		__data uint8_t len = register_read(EZRADIOPRO_RECEIVED_PACKET_LENGTH);
-		if (len > MAX_AIR_PACKET_LENGTH || partial_packet_length > len) {
+		if (len > MAX_PACKET_LENGTH || partial_packet_length > len) {
 			debug("rx len=%u\n", (unsigned)len);
 			goto rxfail;
 		}
