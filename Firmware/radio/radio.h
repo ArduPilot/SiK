@@ -50,15 +50,13 @@
 #include <stdbool.h>
 #include <string.h>
 
-// set to 1 to use a ECC code
-#define USE_ECC_CODE 1
+// the biggest data packet length we will allow
+// this should be a multiple of 3
+#define MAX_DATA_PACKET_LENGTH 120
 
 // the biggest air packet length we will allow
-// (this should be a multiple of 6)
-#define MAX_AIR_PACKET_LENGTH 132
+#define MAX_AIR_PACKET_LENGTH ((MAX_DATA_PACKET_LENGTH+6)*2)
 
-// the biggest data packet length we will allow
-#define MAX_DATA_PACKET_LENGTH 60
 
 #include "board.h"
 #include "serial.h"

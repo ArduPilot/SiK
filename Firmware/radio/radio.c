@@ -32,7 +32,7 @@
 #include "golay.h"
 #include "crc.h"
 
-__xdata static uint8_t receive_buffer[MAX_AIR_PACKET_LENGTH];
+__xdata static uint8_t radio_buffer[MAX_AIR_PACKET_LENGTH];
 __xdata static uint8_t receive_packet_length;
 __xdata static uint8_t partial_packet_length;
 __xdata static uint8_t last_rssi;
@@ -68,8 +68,9 @@ static void	clear_status_registers(void);
 #define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENRXFFAFULL|EZRADIOPRO_ENPKVALID)
 
 // FIFO thresholds to allow for packets larger than 64 bytes
-#define FIFO_THRESHOLD_LOW 50
-#define FIFO_THRESHOLD_HIGH 50
+#define TX_FIFO_THRESHOLD_LOW 32
+#define TX_FIFO_THRESHOLD_HIGH 60
+#define RX_FIFO_THRESHOLD_HIGH 50
 
 static uint8_t num_bytes_different(__xdata uint8_t * __pdata buf1, 
 				   __xdata uint8_t * __pdata buf2, 
@@ -106,7 +107,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 			goto failed;
 		}
 		*length = receive_packet_length;
-		xmemcpy(buf, receive_buffer, receive_packet_length);
+		xmemcpy(buf, radio_buffer, receive_packet_length);
 		radio_receiver_on();
 		return true;
 	}
@@ -119,7 +120,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	// decode and check the header
-	errcount += golay_decode(6, receive_buffer, gout);
+	errcount += golay_decode(6, radio_buffer, gout);
 	if (gout[0] != netid[0] ||
 	    gout[1] != netid[1]) {
 		// its not for our network ID 
@@ -137,7 +138,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	// decode the CRC
-	errcount += golay_decode(6, &receive_buffer[6], gout);
+	errcount += golay_decode(6, &radio_buffer[6], gout);
 	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
 
 	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
@@ -148,7 +149,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	if (receive_packet_length != 12) {
-		errcount += golay_decode(receive_packet_length-12, &receive_buffer[12], buf);
+		errcount += golay_decode(receive_packet_length-12, &radio_buffer[12], buf);
 	}
 
 	*length = gout[2];
@@ -292,25 +293,28 @@ radio_clear_receive_fifo(void) __reentrant
 // @return	    true if packet sent successfully
 //
 static bool
-radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
+radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
 {
 	__pdata uint16_t tstart;
 	bool transmit_started;
-
-	EX0_SAVE_DISABLE;
+	__data uint8_t n;
 
 	radio_clear_transmit_fifo();
 
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
 	// put packet in the FIFO
-	radio_write_transmit_fifo(length, buf);
+	n = length;
+	if (n > TX_FIFO_THRESHOLD_LOW) {
+		n = TX_FIFO_THRESHOLD_LOW;
+	}
+	radio_write_transmit_fifo(n, buf);
+	length -= n;
+	buf += n;
 
 	// no interrupts
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-
-	clear_status_registers();
 
 	preamble_detected = 0;
 	transmit_started = false;
@@ -318,46 +322,86 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
 
-	// to detect transmit completion, watch the chip power state
-	// wait for the radio to first go into TX state, then out
-	// again. This seems to be more reliable than waiting for the PKSENT
-	// interrupt. About 2% of the time we don't see the PKSENT
-	// interrupt at all even if the packet does get through
+	// wait for transmit complete or timeout
 	tstart = timer2_tick();
 	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
 		__data uint8_t status;
 
+		// see if we can put some more bytes into the FIFO
+		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
+		if (transmit_started && length != 0 && (status & EZRADIOPRO_ITXFFAEM)) {
+			// the FIFO is below the low threshold. We
+			// should be able to put in
+			// 64-TX_FIFO_THRESHOLD_LOW more bytes, but 
+			// it seems that this gives us an occasional
+			// fifo overflow error, so put in just 4 bytes
+			// at a time
+			n = 4;
+			if (n > length) {
+				n = length;
+			}
+			radio_write_transmit_fifo(n, buf);
+			length -= n;
+			buf += n;
+			continue;
+		}
+		if (transmit_started && length != 0 && (status & EZRADIOPRO_ITXFFAFULL) == 0) {
+			// the FIFO is below the high threshold. See
+			// comment above on how many bytes we add to
+			// the FIFO
+			n = 4;
+			if (n > length) {
+				n = length;
+			}
+			radio_write_transmit_fifo(n, buf);
+			length -= n;
+			buf += n;
+			continue;
+		}
+
+		if (status & EZRADIOPRO_IFFERR) {
+			// we ran out of bytes in the FIFO
+			radio_clear_transmit_fifo();
+			debug("FFERR %u\n", (unsigned)length);
+			if (errors.tx_errors != 0xFFFF) {
+				errors.tx_errors++;
+			}
+			return false;
+		}
+
+		// the interrupt status bits only become valid once
+		// the transmitter is in full tx state
 		status = register_read(EZRADIOPRO_DEVICE_STATUS);
 		if (status & 0x02) {
 			// the chip power status is in TX mode
 			transmit_started = true;
+			continue;
 		}
 		if (transmit_started && (status & 0x02) == 0) {
-			// transmitter has finished, and is now in RX mode
-			clear_status_registers();
-			register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-			register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-			EX0_RESTORE;
+			// transmitter has finished. See if we got the
+			// whole packet out
+			if (length != 0) {
+				debug("TX short %u\n", (unsigned)length);
+				if (errors.tx_errors != 0xFFFF) {
+					errors.tx_errors++;
+				}
+				return false;
+			}
 			return true;			
 		}
+
 	}
 
-	clear_status_registers();
 	// transmit timeout ... clear the FIFO
-#if 1
-	debug("%u ts=%u tn=%u len=%u\n",
+	debug("TX timeout %u ts=%u tn=%u len=%u\n",
 	       timeout_ticks,
 	       tstart,
 	       timer2_tick(),
 	       (unsigned)length);
-#endif
 	if (errors.tx_errors != 0xFFFF) {
 		errors.tx_errors++;
 	}
 
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-	EX0_RESTORE;
 	return false;
 }
 
@@ -373,16 +417,15 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 static bool
 radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
 {
-	__pdata uint16_t tstart, crc;
-	bool transmit_started;
-	__data uint8_t fifo_count;
+	__pdata uint16_t crc;
 	__xdata uint8_t gin[3];
-	__xdata uint8_t gout[6];
-	EX0_SAVE_DISABLE;
+	__data uint8_t elen, rlen;
 
-	radio_clear_transmit_fifo();
+	// rounded length
+	rlen = ((length+2)/3)*3;
 
-	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, ((length+2)/3+2)*6);
+	// encoded length
+	elen = (rlen+6)*2;
 
 	// start of packet is network ID and packet length
 	gin[0] = netid[0];
@@ -390,11 +433,7 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 	gin[2] = length;
 
 	// golay encode the header
-	golay_encode(3, gin, gout);
-
-	// put header in the FIFO
-	radio_write_transmit_fifo(6, gout);
-	fifo_count = 6;
+	golay_encode(3, gin, radio_buffer);
 
 	// next add a CRC, we round to 3 bytes for simplicity, adding 
 	// another copy of the length in the spare byte
@@ -404,115 +443,12 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 	gin[2] = length;
 
 	// golay encode the CRC
-	golay_encode(3, gin, gout);
+	golay_encode(3, gin, &radio_buffer[6]);
 
-	// put CRC in the FIFO
-	radio_write_transmit_fifo(6, gout);
-	fifo_count += 6;
+	// encode the rest of the payload
+	golay_encode(rlen, buf, &radio_buffer[12]);
 
-	// push as many multiples of 3 input bytes as we can into the FIFO
-	while (length > 0 && fifo_count < 60) {
-		if (length > 3) {
-			xmemcpy(gin, buf, 3);
-			length -= 3;
-		} else {
-			xmemset(gin, 0, 3);
-			xmemcpy(gin, buf, length);
-			length = 0;
-		}
-		golay_encode(3, gin, gout);
-		radio_write_transmit_fifo(6, gout);
-		fifo_count += 6;
-		buf += 3;
-	}
-
-	// enable the fifo low and error interrupts
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, EZRADIOPRO_ENTXFFAEM | EZRADIOPRO_ENFFERR);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-
-	clear_status_registers();
-
-	preamble_detected = 0;
-	transmit_started = false;
-
-	// start TX
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
-
-	// to detect transmit completion, watch the chip power state
-	// wait for the radio to first go into TX state, then out
-	// again. This seems to be more reliable than waiting for the PKSENT
-	// interrupt. About 2% of the time we don't see the PKSENT
-	// interrupt at all even if the packet does get through
-	tstart = timer2_tick();
-	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
-		__data uint8_t status;
-
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		if (length != 0 && (status & EZRADIOPRO_ITXFFAEM)) {
-			// the FIFO can fit some more bytes
-			// push as many multiples of 3 input bytes as we can into the FIFO
-			fifo_count = FIFO_THRESHOLD_LOW;
-			while (length > 0 && fifo_count < 60) {
-				if (length > 3) {
-					xmemcpy(gin, buf, 3);
-					length -= 3;
-				} else {
-					xmemset(gin, 0, 3);
-					xmemcpy(gin, buf, 3);
-					length = 0;
-				}
-				golay_encode(3, gin, gout);
-				radio_write_transmit_fifo(6, gout);
-				fifo_count += 6;
-				buf += 3;
-			}
-			continue;
-		}
-
-		status = register_read(EZRADIOPRO_DEVICE_STATUS);
-		if (status & 0x02) {
-			// the chip power status is in TX mode
-			transmit_started = true;
-		}
-		if (transmit_started && (status & 0x02) == 0) {
-			// transmitter has finished, and is now in RX mode
-			clear_status_registers();
-			if (length != 0) {
-				// we didn't send it all??
-				debug("short TX %u\n",
-				       (unsigned)length);
-				if (errors.tx_errors != 0xFFFF) {
-					errors.tx_errors++;
-				}
-				register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-				register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-				EX0_RESTORE;
-				return false;
-			}
-			register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-			register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-			EX0_RESTORE;
-			return true;			
-		}
-	}
-
-	clear_status_registers();
-	// transmit timeout ... clear the FIFO
-#if 1
-	debug("%u ts=%u tn=%u len=%u\n",
-	       timeout_ticks,
-	       tstart,
-	       timer2_tick(),
-	       (unsigned)length);
-#endif
-	if (errors.tx_errors != 0xFFFF) {
-		errors.tx_errors++;
-	}
-
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
-	EX0_RESTORE;
-	return false;
+	return radio_transmit_simple(elen, radio_buffer, timeout_ticks);
 }
 
 // start transmitting a packet from the transmit FIFO
@@ -526,10 +462,16 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 bool
 radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
 {
+	bool ret;
+	EX0_SAVE_DISABLE;
+	
 	if (!feature_golay) {
-		return radio_transmit_simple(length, buf, timeout_ticks);
+		ret = radio_transmit_simple(length, buf, timeout_ticks);
+	} else {
+		ret = radio_transmit_golay(length, buf, timeout_ticks);
 	}
-	return radio_transmit_golay(length, buf, timeout_ticks);
+	EX0_RESTORE;
+	return ret;
 }
 
 
@@ -836,9 +778,9 @@ radio_configure(__pdata uint32_t air_rate)
 
 
 	// set FIFO limits to allow for sending larger than 64 byte packets
-	register_write(EZRADIOPRO_TX_FIFO_CONTROL_1, 0x3F);
-	register_write(EZRADIOPRO_TX_FIFO_CONTROL_2, FIFO_THRESHOLD_LOW);
-	register_write(EZRADIOPRO_RX_FIFO_CONTROL, FIFO_THRESHOLD_HIGH);
+	register_write(EZRADIOPRO_TX_FIFO_CONTROL_1, TX_FIFO_THRESHOLD_HIGH);
+	register_write(EZRADIOPRO_TX_FIFO_CONTROL_2, TX_FIFO_THRESHOLD_LOW);
+	register_write(EZRADIOPRO_RX_FIFO_CONTROL, RX_FIFO_THRESHOLD_HIGH);
 
 	// preamble setup
 	register_write(EZRADIOPRO_PREAMBLE_LENGTH, 10); // 10 nibbles 
@@ -959,7 +901,7 @@ register_read(uint8_t reg) __reentrant
 	return value;
 }
 
-/// read some bytes from the receive FIFO into receive_buffer[]
+/// read some bytes from the receive FIFO into a buffer
 ///
 /// @param n			The number of bytes to read
 static void
@@ -1092,12 +1034,12 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 
 	if (status & EZRADIOPRO_IRXFFAFULL) {
-		if (partial_packet_length + FIFO_THRESHOLD_HIGH > MAX_AIR_PACKET_LENGTH) {
+		if (partial_packet_length + RX_FIFO_THRESHOLD_HIGH > MAX_AIR_PACKET_LENGTH) {
 			debug("rx pplen=%u\n", (unsigned)partial_packet_length);
 			goto rxfail;
 		}
-		read_receive_fifo(FIFO_THRESHOLD_HIGH, &receive_buffer[partial_packet_length]);
-		partial_packet_length += FIFO_THRESHOLD_HIGH;
+		read_receive_fifo(RX_FIFO_THRESHOLD_HIGH, &radio_buffer[partial_packet_length]);
+		partial_packet_length += RX_FIFO_THRESHOLD_HIGH;
 	}
 
 	if (status2 & EZRADIOPRO_IPREAVAL) {
@@ -1115,7 +1057,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 			goto rxfail;
 		}
 		if (partial_packet_length < len) {
-			read_receive_fifo(len-partial_packet_length, &receive_buffer[partial_packet_length]);
+			read_receive_fifo(len-partial_packet_length, &radio_buffer[partial_packet_length]);
 		}
 		receive_packet_length = len;
 
