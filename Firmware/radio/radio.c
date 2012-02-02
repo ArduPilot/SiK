@@ -36,15 +36,15 @@
 #include "crc.h"
 
 __xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
-__xdata uint8_t receive_packet_length;
-__xdata uint8_t partial_packet_length;
-__xdata uint8_t last_rssi;
-__xdata uint8_t netid[2];
+__pdata uint8_t receive_packet_length;
+__pdata uint8_t partial_packet_length;
+__pdata uint8_t last_rssi;
+__pdata uint8_t netid[2];
 
 static volatile __bit packet_received;
 static volatile __bit preamble_detected;
 
-__xdata struct {
+__pdata struct {
 	uint32_t frequency;
 	uint32_t channel_spacing;
 	uint32_t air_data_rate;
