@@ -647,7 +647,6 @@ __code static const struct {
 /// build the timing table
 static void tdm_build_timing_table(void)
 {
-        __xdata uint8_t pbuf[MAX_PACKET_LENGTH];
 	__idata uint8_t i, j;
 	bool golay_saved = feature_golay;
 	feature_golay = false;
@@ -704,8 +703,15 @@ static void crc_test(void)
 {
 	__xdata uint8_t d[4] = { 0x01, 0x00, 0xbb, 0xcc };
 	__pdata uint16_t crc;
+	uint16_t t1, t2;
 	crc = crc16(4, &d[0]);
 	printf("CRC: %x %x\n", crc, 0xb166);	
+	t1 = timer2_tick();
+	crc16(MAX_PACKET_LENGTH/2, pbuf);
+	t2 = timer2_tick();
+	printf("crc %u bytes took %u 16usec ticks\n",
+	       (unsigned)MAX_PACKET_LENGTH/2,
+	       t2-t1);
 }
 
 // test golay encoding
@@ -737,12 +743,6 @@ static void golay_test(void)
 			printf("golay error at %u\n", (unsigned)i);
 		}
 	}
-	t1 = timer2_tick();
-	crc16(MAX_PACKET_LENGTH/2, pbuf);
-	t2 = timer2_tick();
-	printf("crc %u bytes took %u 16usec ticks\n",
-	       (unsigned)MAX_PACKET_LENGTH/2,
-	       t2-t1);
 }
 #endif
 
