@@ -36,14 +36,12 @@
 #include "tdm.h"
 
 
-// AT command buffer
-#define AT_CMD_MAXLEN	16
-
 // canary data for ram wrap. It is in at.c as the compiler
 // assigns addresses in alphabetial order and we want this at a low
 // address
 __pdata uint8_t pdata_canary = 0x41;
 
+// AT command buffer
 __pdata char at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
@@ -211,6 +209,15 @@ at_command(void)
 {
 	// require a command with the AT prefix
 	if (at_cmd_ready) {
+		if ((at_cmd_len >= 2) && (at_cmd[0] == 'R') && (at_cmd[1] == 'T')) {
+			// remote AT command - send it to the tdm
+			// system to send to the remote radio
+			tdm_remote_at();
+			at_cmd_len = 0;
+			at_cmd_ready = false;
+			return;
+		}
+		
 		if ((at_cmd_len >= 2) && (at_cmd[0] == 'A') && (at_cmd[1] == 'T')) {
 
 			// look at the next byte to determine what to do
@@ -252,13 +259,13 @@ at_command(void)
 static void
 at_ok(void)
 {
-	puts("OK");
+	printf("%s\n", "OK");
 }
 
 static void
 at_error(void)
 {
-	puts("ERROR");
+	printf("%s\n", "ERROR");
 }
 
 static void
@@ -269,10 +276,10 @@ at_i(void)
 	switch (at_cmd[3]) {
 	case '\0':
 	case '0':
-		puts(g_banner_string);
+		printf("%s\n", g_banner_string);
 		return;
 	case '1':
-		puts(g_version_string);
+		printf("%s\n", g_version_string);
 		return;
 	case '2':
 		val = BOARD_ID;
@@ -292,14 +299,16 @@ at_i(void)
 			       param_name(id), 
 			       (unsigned)param_get(id));
 		}
-		tdm_report_timing();
 		return;
 	}
+	case '6':
+		tdm_report_timing();
+		return;
 	default:
 		at_error();
 		return;
 	}
-	printf("%d\n", val);
+	printf("%u\n", (unsigned)val);
 }
 
 static void
@@ -327,7 +336,7 @@ at_s(void)
 	switch (at_cmd[idx]) {
 	case '?':
 		val = param_get(sreg);
-		printf("%d\n", val);
+		printf("%u\n", val);
 		return;
 
 	case '=':
