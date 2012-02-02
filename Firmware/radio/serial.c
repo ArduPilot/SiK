@@ -226,18 +226,6 @@ serial_write_space(void)
 {
 	register uint16_t ret;
 	ES0_SAVE_DISABLE;
-
-	// If we are in AT mode, discourage anyone from sending bytes.
-	// We don't necessarily want to stall serial_write callers, or
-	// to block AT commands while their response bytes trickle out,
-	// so we maintain ordering for outbound serial bytes and assume
-	// that the receiver will drain the stream while waiting for the
-	// OK response on AT mode entry.
-	//
-	if (at_mode_active) {
-		ES0_RESTORE;
-		return 0;
-	}
 	ret = BUF_FREE(tx);
 	ES0_RESTORE;
 	return ret;
