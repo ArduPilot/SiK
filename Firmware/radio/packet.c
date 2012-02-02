@@ -121,13 +121,20 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 uint8_t
 packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	register uint16_t slen = serial_read_available();
+	register uint16_t slen;
 
 	if (injected_packet) {
 		// send a previously injected packet
-		if (max_xmit < last_sent_len) {
-			return 0;
+		slen = last_sent_len;
+		if (max_xmit < slen) {
+			// send as much as we can
+			xmemcpy(buf, last_sent, max_xmit);
+			xmemcpy(last_sent, &last_sent[max_xmit], slen - max_xmit);
+			last_sent_len = slen - max_xmit;
+			last_sent_is_injected = true;
+			return max_xmit;
 		}
+		// send the rest
 		xmemcpy(buf, last_sent, last_sent_len);
 		injected_packet = false;
 		last_sent_is_injected = true;
@@ -135,6 +142,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	}
 	last_sent_is_injected = false;
 
+	slen = serial_read_available();
 	if (force_resend ||
 	    (feature_opportunistic_resend &&
 	     last_sent_is_resend == 0 && 
@@ -341,8 +349,8 @@ bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_res
 void 
 packet_inject(__xdata uint8_t * __pdata buf, __pdata uint8_t len)
 {
-	if (len > mav_max_xmit) {
-		len = mav_max_xmit;
+	if (len > sizeof(last_sent)) {
+		len = sizeof(last_sent);
 	}
 	xmemcpy(last_sent, buf, len);
 	last_sent_len = len;
