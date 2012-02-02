@@ -52,7 +52,7 @@ extern uint8_t fhop_transmit_channel(void);
 ///
 /// @return		The channel that we should be receiving on.
 //
-uint8_t fhop_receive_channel(void);
+extern uint8_t fhop_receive_channel(void);
 
 /// called when the transmit window flips
 ///

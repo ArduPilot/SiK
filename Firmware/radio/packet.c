@@ -119,7 +119,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 // return the next packet to be sent
 uint8_t
-packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
+packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	register uint16_t slen;
 

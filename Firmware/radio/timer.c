@@ -52,7 +52,7 @@ INTERRUPT(T3_ISR, INTERRUPT_TIMER3)
 }
 
 void
-delay_set(__pdata uint16_t msec)
+delay_set(register uint16_t msec)
 {
 	if (msec >= 2550) {
 		delay_counter = 255;
@@ -61,19 +61,19 @@ delay_set(__pdata uint16_t msec)
 	}
 }
 
-void delay_set_ticks(uint8_t ticks)
+void delay_set_ticks(register uint8_t ticks)
 {
 	delay_counter = ticks;
 }
 
 bool
-delay_expired()
+delay_expired(void)
 {
 	return delay_counter == 0;
 }
 
 void
-delay_msec(__pdata uint16_t msec)
+delay_msec(register uint16_t msec)
 {
 	delay_set(msec);
 	while (!delay_expired())

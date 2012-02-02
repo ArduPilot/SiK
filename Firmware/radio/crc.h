@@ -32,7 +32,4 @@
 ///
 /// @return		CRC16 value
 ///
-uint16_t crc16(__data uint8_t n, __xdata uint8_t * __data buf);
-
-
-
+extern uint16_t crc16(__data uint8_t n, __xdata uint8_t * __data buf);

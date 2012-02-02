@@ -127,10 +127,10 @@ extern void	printfl(const char * fmt, ...) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)		///< avoid fighting with the library printf() prototype
 
 /// start a capture of printf data 
-void printf_start_capture(__xdata uint8_t *buf, uint8_t size);
+extern void printf_start_capture(__xdata uint8_t *buf, uint8_t size);
 
 /// end printf capture, returning number of bytes that have been captured
-uint8_t printf_end_capture(void);
+extern uint8_t printf_end_capture(void);
 
 // Macro evil for generating strings
 #define __stringify(_x)		#_x
@@ -213,7 +213,7 @@ extern void radio_set_channel(uint8_t value);
 ///
 /// @return			the current channel
 ///
-uint8_t radio_get_channel(void);
+extern uint8_t radio_get_channel(void);
 
 /// configure the radio for a given air data rate
 ///
@@ -258,20 +258,20 @@ extern uint32_t radio_air_rate();
 /// @param power		The desired transmit power in dBm
 ///				
 ///
-void radio_set_transmit_power(uint8_t power);
+extern void radio_set_transmit_power(uint8_t power);
 
 /// get the currend transmit power (in dBm)
 ///
 /// @return			The actual transmit power in dBm
 ///				
 ///
-uint8_t radio_get_transmit_power(void);
+extern uint8_t radio_get_transmit_power(void);
 
 /// check if a packet is coming in
 ///
 /// @return			true if a packet is being received
 ///
 ///
-bool radio_receive_in_progress(void);
+extern bool radio_receive_in_progress(void);
 
 #endif // _RADIO_H_
