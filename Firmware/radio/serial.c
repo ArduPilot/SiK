@@ -328,6 +328,9 @@ static const __code struct {
 	uint8_t th1;
 	uint8_t ckcon;
 } serial_rates[] = {
+	{1,   0x2C, 0x02}, // 1200
+	{2,   0x96, 0x02}, // 2400
+	{4,   0x2C, 0x00}, // 4800
 	{9,   0x96, 0x00}, // 9600
 	{19,  0x60, 0x01}, // 19200
 	{38,  0xb0, 0x01}, // 38400
