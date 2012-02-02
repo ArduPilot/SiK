@@ -45,13 +45,13 @@
 ///				to serial_device_set_speed at the appropriate
 ///				point during initialisation.
 ///
-extern void	serial_init(uint8_t speed);
+extern void	serial_init(register uint8_t speed);
 
 /// check if a serial speed is valid
 ///
 /// @param	speed		The serial speed to configure
 ///
-bool serial_device_valid_speed(uint8_t speed);
+bool serial_device_valid_speed(register uint8_t speed);
 
 /// Write a byte to the serial port.
 ///
@@ -59,7 +59,7 @@ bool serial_device_valid_speed(uint8_t speed);
 /// @return			True if the byte was written, false if the
 ///				FIFO is full.
 ///
-extern bool	serial_write(uint8_t c);
+extern bool	serial_write(register uint8_t c);
 
 /// Write bytes to the serial port.
 ///
@@ -70,7 +70,7 @@ extern bool	serial_write(uint8_t c);
 ///				buffer for @a count bytes (no bytes are
 ///				written in this case).
 ///
-extern bool	serial_write_buf(__xdata uint8_t *buf, __pdata uint8_t count);
+extern bool	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
 
 /// Check for space in the write FIFO
 ///
@@ -108,7 +108,7 @@ extern uint8_t	serial_peek2(void);
 ///				to satisfy the request (no bytes are read
 ///				in this case).
 ///
-extern bool	serial_read_buf(__xdata uint8_t * __pdata buf, __pdata uint8_t count);
+extern bool	serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
 
 /// Check for bytes in the read FIFO
 ///
