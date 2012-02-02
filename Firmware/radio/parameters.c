@@ -114,7 +114,7 @@ param_check(enum ParamID id, __pdata uint16_t val)
 }
 
 bool
-param_set(enum ParamID param, __pdata param_t value)
+param_set(__data enum ParamID param, __pdata param_t value)
 {
 	// Sanity-check the parameter value first.
 	if (!param_check(param, value))
@@ -138,7 +138,7 @@ param_set(enum ParamID param, __pdata param_t value)
 }
 
 param_t
-param_get(enum ParamID param)
+param_get(__data enum ParamID param)
 {
 	if (param >= PARAM_MAX)
 		return 0;
@@ -221,7 +221,7 @@ param_default(void)
 }
 
 enum ParamID
-param_id(char * __pdata name)
+param_id(__data char * __pdata name)
 {
 	__pdata uint8_t i;
 
@@ -233,7 +233,7 @@ param_id(char * __pdata name)
 }
 
 const char *__code
-param_name(enum ParamID param)
+param_name(__data enum ParamID param)
 {
 	if (param < PARAM_MAX) {
 		return parameter_info[param].name;

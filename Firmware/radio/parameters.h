@@ -73,7 +73,7 @@ typedef uint16_t	param_t;
 /// @param	value		The value to assign to the parameter.
 /// @return			True if the parameter's value is valid.
 ///
-extern bool param_set(enum ParamID param, __pdata param_t value);
+extern bool param_set(__data enum ParamID param, __pdata param_t value);
 
 /// Get a parameter
 ///
@@ -81,7 +81,7 @@ extern bool param_set(enum ParamID param, __pdata param_t value);
 /// @return			The parameter value, or zero if the param
 ///				argument is invalid.
 ///
-extern param_t param_get(enum ParamID param);
+extern param_t param_get(__data enum ParamID param);
 
 /// Look up a parameter by name
 ///
@@ -89,7 +89,7 @@ extern param_t param_get(enum ParamID param);
 /// @return			The parameter ID, or PARAM_MAX if the
 ///				parameter is not known.
 ///
-extern enum ParamID param_id(char * __pdata name);
+extern enum ParamID param_id(__data char * __pdata name);
 
 /// Return the name of a parameter.
 ///
@@ -97,7 +97,7 @@ extern enum ParamID param_id(char * __pdata name);
 /// @return			A pointer to the name of the parameter,
 ///				or NULL if the parameter is not known.
 ///
-extern const char *__code param_name(enum ParamID param);
+extern const char *__code param_name(__data enum ParamID param);
 
 /// Load parameters from the flash scratchpad.
 ///
