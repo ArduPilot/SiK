@@ -114,11 +114,16 @@ __pdata struct statistics {
 } statistics, remote_statistics;
 
 struct tdm_trailer {
-	uint16_t window:14;
+	uint16_t window:13;
+	uint8_t command:1;
 	uint8_t bonus:1;
 	uint8_t resend:1;
 };
 __pdata struct tdm_trailer trailer;
+
+/// buffer to hold a remote AT command before sending
+static bool send_at_command;
+static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
 /// display test output
 ///
@@ -324,6 +329,46 @@ link_update(void)
 	send_statistics = 1;
 }
 
+// dispatch an AT command to the remote system
+void
+tdm_remote_at(void)
+{
+	memcpy(remote_at_cmd, at_cmd, strlen(at_cmd)+1);
+	send_at_command = true;
+}
+
+// handle an incoming at command from the remote radio
+static void
+handle_at_command(__pdata uint8_t len)
+{
+	if (len < 2 || len > AT_CMD_MAXLEN || 
+	    pbuf[0] != 'R' || pbuf[1] != 'T') {
+		// assume its an AT command reply
+		register uint8_t i;
+		for (i=0; i<len; i++) {
+			putchar(pbuf[i]);
+		}
+		return;
+	}
+
+	// setup the command in the at_cmd buffer
+	memcpy(at_cmd, pbuf, len);
+	at_cmd[len] = 0;
+	at_cmd[0] = 'A'; // replace 'R'
+	at_cmd_len = len;
+	at_cmd_ready = true;
+
+	// run the AT command, capturing any output to the packet
+	// buffer
+	// this reply buffer will be sent at the next opportunity
+	printf_start_capture(pbuf, sizeof(pbuf));
+	at_command();
+	len = printf_end_capture();
+	if (len > 0) {
+		packet_inject(pbuf, len);
+	}
+}
+
 // a stack carary to detect a stack overflow
 __at(0xFF) uint8_t __idata _canary;
 
@@ -399,9 +444,7 @@ tdm_serial_loop(void)
 
 				// don't count control packets in the stats
 				statistics.receive_count--;
-			} else if (trailer.window == 0) {
-				panic("zero window recv");
-			} else {
+			} else if (trailer.window != 0) {
 				// sync our transmit windows based on
 				// received header
 				sync_tx_windows(len);
@@ -413,9 +456,11 @@ tdm_serial_loop(void)
 					last_t -= ((uint16_t)len) * 3;
 				}
 
-				if (len != 0 && 
-				    !packet_is_duplicate(len, pbuf, trailer.resend) &&
-				    !at_mode_active) {
+				if (trailer.command == 1) {
+					handle_at_command(len);
+				} else if (len != 0 && 
+					   !packet_is_duplicate(len, pbuf, trailer.resend) &&
+					   !at_mode_active) {
 					// its user data - send it out
 					// the serial port
 					//printf("rcv(%d,[", len);
@@ -491,7 +536,18 @@ tdm_serial_loop(void)
 		}
 
 		// ask the packet system for the next packet to send
-		len = packet_get_next(max_xmit, pbuf);
+		if (send_at_command && 
+		    max_xmit >= strlen(remote_at_cmd)) {
+			// send a remote AT command
+			len = strlen(remote_at_cmd);
+			memcpy(pbuf, remote_at_cmd, len);
+			trailer.command = 1;
+			send_at_command = false;
+		} else {
+			// get a packet from the serial port
+			len = packet_get_next(max_xmit, pbuf);
+			trailer.command = packet_is_injected();
+		}
 
 		if (len > max_data_packet_length) {
 			panic("oversized tdm packet");
@@ -548,7 +604,7 @@ tdm_serial_loop(void)
 
 		// start transmitting the packet
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
-		    len != 0 && trailer.window != 0) {
+		    len != 0 && trailer.window != 0 && trailer.command == 0) {
 			packet_force_resend();
 		}
 
@@ -741,9 +797,9 @@ tdm_init(void)
 		window_width = REGULATORY_MAX_WINDOW;
 	}
 
-	// make sure it fits in the 14 bits of the trailer window
-	if (window_width > 0x3FFF) {
-		window_width = 0x3FFF;
+	// make sure it fits in the 13 bits of the trailer window
+	while (window_width > 0x1FFF) {
+		window_width = 0x1FFF;
 	}
 
 	tx_window_width = window_width;
@@ -751,8 +807,8 @@ tdm_init(void)
 	// tell the packet subsystem our max packet size, which it
 	// needs to know for MAVLink packet boundary detection
 	i = (tx_window_width - packet_latency) / ticks_per_byte;
-	if (i > max_data_packet_length - sizeof(trailer)) {
-		i = max_data_packet_length - sizeof(trailer);
+	if (i > max_data_packet_length) {
+		i = max_data_packet_length;
 	}
 	packet_set_max_xmit(i);
 

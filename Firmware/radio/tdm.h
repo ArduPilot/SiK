@@ -47,4 +47,7 @@ extern void tdm_serial_loop(void);
 ///
 void tdm_report_timing(void);
 
+/// dispatch a remote AT command
+void tdm_remote_at(void);
+
 #endif // _TDM_H_
