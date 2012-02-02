@@ -85,15 +85,14 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	__xdata uint8_t gout[3];
 	__pdata uint16_t crc1, crc2;
 	__pdata uint8_t errcount = 0;
-
-	EX0_SAVE_DISABLE;
+	__pdata elen;
 
 	if (!packet_received) {
-		EX0_RESTORE;
 		return false;
 	}
 
 	if (receive_packet_length > MAX_PACKET_LENGTH) {
+		radio_receiver_on();
 		goto failed;
 	}
 
@@ -105,15 +104,24 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		return true;
 	}
 
-	if (receive_packet_length < 12 || (receive_packet_length%6) != 0) {
+	// decode it in the callers buffer. This relies on the
+	// in-place decode properties of the golay code. Decoding in
+	// this way allows us to overlap decoding with the next receive
+	xmemcpy(buf, radio_buffer, receive_packet_length);
+
+	// enable the receiver for the next packet. This also
+	// enables the EX0 interrupt
+	elen = receive_packet_length;
+	radio_receiver_on();	
+
+	if (elen < 12 || (elen%6) != 0) {
 		// not a valid length
-		debug("rx len invalid %u\n",
-		       (unsigned)receive_packet_length);
+		debug("rx len invalid %u\n", (unsigned)elen);
 		goto failed;
 	}
 
-	// decode and check the header
-	errcount += golay_decode(6, radio_buffer, gout);
+	// decode the header
+	errcount = golay_decode(6, buf, gout);
 	if (gout[0] != netid[0] ||
 	    gout[1] != netid[1]) {
 		// its not for our network ID 
@@ -123,26 +131,19 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		goto failed;
 	}
 
-	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
+	if (6*((gout[2]+2)/3+2) != elen) {
 		debug("rx len mismatch1 %u %u\n",
 		       (unsigned)gout[2],
-		       (unsigned)receive_packet_length);		
+		       (unsigned)elen);		
 		goto failed;
 	}
 
 	// decode the CRC
-	errcount += golay_decode(6, &radio_buffer[6], gout);
+	errcount += golay_decode(6, &buf[6], gout);
 	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
 
-	if (6*((gout[2]+2)/3+2) != receive_packet_length) {
-		debug("rx len mismatch2 %u %u\n",
-		       (unsigned)gout[2],
-		       (unsigned)receive_packet_length);		
-		goto failed;
-	}
-
-	if (receive_packet_length != 12) {
-		errcount += golay_decode(receive_packet_length-12, &radio_buffer[12], buf);
+	if (elen != 12) {
+		errcount += golay_decode(elen-12, &buf[12], buf);
 	}
 
 	*length = gout[2];
@@ -167,18 +168,12 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		}
 	}
 
-	EX0_RESTORE;
-
-	// get ready for the next packet
-	radio_receiver_on();
 	return true;
 
 failed:
 	if (errors.rx_errors != 0xFFFF) {
 		errors.rx_errors++;
 	}
-	EX0_RESTORE;
-	radio_receiver_on();
 	return false;
 }
 

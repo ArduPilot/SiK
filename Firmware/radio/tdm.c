@@ -407,6 +407,9 @@ tdm_serial_loop(void)
 		// set right receive channel
 		radio_set_channel(fhop_receive_channel());
 
+		// get the time before we check for a packet coming in
+		tnow = timer2_tick();
+
 		// see if we have received a packet
 		if (radio_receive_packet(&len, pbuf)) {
 
@@ -448,13 +451,7 @@ tdm_serial_loop(void)
 				// sync our transmit windows based on
 				// received header
 				sync_tx_windows(len);
-				last_t = timer2_tick();
-				if (feature_golay) {
-					// take into account the time
-					// it took to decode the
-					// packet
-					last_t -= ((uint16_t)len) * 3;
-				}
+				last_t = tnow;
 
 				if (trailer.command == 1) {
 					handle_at_command(len);
@@ -475,7 +472,6 @@ tdm_serial_loop(void)
 
 		// see how many 16usec ticks have passed and update
 		// the tdm state machine
-		tnow = timer2_tick();
 		tdelta = tnow - last_t;
 		tdm_state_update(tdelta);
 		last_t += tdelta;
@@ -596,11 +592,6 @@ tdm_serial_loop(void)
 		// sending the next one. The receivers don't cope well
 		// with back to back packets
 		transmit_wait = packet_latency;
-		if (feature_golay) {
-			// give the receiver some time to decode that
-			// packet
-			transmit_wait += 3*len;
-		}
 
 		// start transmitting the packet
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
