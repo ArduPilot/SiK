@@ -38,6 +38,7 @@
 #include "timer.h"
 
 static __bit last_sent_is_resend;
+static __bit last_sent_is_injected;
 static __bit last_recv_is_resend;
 static __bit force_resend;
 
@@ -60,6 +61,9 @@ static __pdata uint16_t mav_pkt_start_time;
 static __pdata uint16_t mav_pkt_max_time;
 
 static __pdata uint8_t mav_max_xmit;
+
+// true if we have a injected packet to send
+static bool injected_packet;
 
 #define PACKET_RESEND_THRESHOLD 256
 
@@ -118,6 +122,18 @@ uint8_t
 packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	register uint16_t slen = serial_read_available();
+
+	if (injected_packet) {
+		// send a previously injected packet
+		if (max_xmit < last_sent_len) {
+			return 0;
+		}
+		xmemcpy(buf, last_sent, last_sent_len);
+		injected_packet = false;
+		last_sent_is_injected = true;
+		return last_sent_len;
+	}
+	last_sent_is_injected = false;
 
 	if (force_resend ||
 	    (feature_opportunistic_resend &&
@@ -266,6 +282,14 @@ packet_is_resend(void)
 	return last_sent_is_resend;
 }
 
+// return true if the packet currently being sent
+// is an injected packet
+bool 
+packet_is_injected(void)
+{
+	return last_sent_is_injected;
+}
+
 // force the last packet to be resent. Used when transmit fails
 void
 packet_force_resend(void)
@@ -311,4 +335,17 @@ bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_res
 #endif
 	last_recv_is_resend = true;
 	return false;
+}
+
+// inject a packet to send when possible
+void 
+packet_inject(__xdata uint8_t * __pdata buf, __pdata uint8_t len)
+{
+	if (len > mav_max_xmit) {
+		len = mav_max_xmit;
+	}
+	xmemcpy(last_sent, buf, len);
+	last_sent_len = len;
+	last_sent_is_resend = false;
+	injected_packet = true;
 }
