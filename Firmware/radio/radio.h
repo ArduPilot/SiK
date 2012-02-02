@@ -116,6 +116,12 @@ extern void	vprintfl(const char * fmt, va_list ap) __reentrant;
 extern void	printfl(const char * fmt, ...) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)		///< avoid fighting with the library printf() prototype
 
+/// start a capture of printf data 
+void printf_start_capture(__xdata uint8_t *buf, uint8_t size);
+
+/// end printf capture, returning number of bytes that have been captured
+uint8_t printf_end_capture(void);
+
 // Macro evil for generating strings
 #define __stringify(_x)		#_x
 #define stringify(_x)		__stringify(_x)
