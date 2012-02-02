@@ -145,7 +145,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	slen = serial_read_available();
 	if (force_resend ||
 	    (feature_opportunistic_resend &&
-	     last_sent_is_resend == 0 && 
+	     last_sent_is_resend == false && 
 	     last_sent_len != 0 && 
 	     slen < PACKET_RESEND_THRESHOLD)) {
 		if (max_xmit < last_sent_len) {
@@ -331,7 +331,7 @@ bool packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_res
 	}
 	if (last_recv_is_resend == false && 
 	    len == last_recv_len &&
-	    memcmp(last_received, buf, len) == 0) {
+	    xmemcmp(last_received, buf, len) == 0) {
 		last_recv_is_resend = false;
 		return true;
 	}

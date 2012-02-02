@@ -98,6 +98,16 @@ static inline void xmemset(__xdata uint8_t * __data dst, register uint8_t v, reg
 	while (n--) *dst++ = v;
 }
 
+// an inline memcmp() for __xdata arrays
+static inline int xmemcmp(__xdata uint8_t * __data buf1, const __xdata uint8_t * __pdata buf2, register uint8_t n)
+{
+	while (n--) {
+		if (*buf1 != *buf2) return (*buf1 - *buf2);
+		buf1++; buf2++;
+	}
+	return 0;
+}
+
 /// Print a message and halt, largely for debug purposes
 ///
 /// @param	fmt		printf-style format string and argments
