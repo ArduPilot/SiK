@@ -66,6 +66,53 @@ static __pdata uint8_t mav_max_xmit;
 #define MAVLINK09_STX 85 // 'U'
 #define MAVLINK10_STX 254
 
+// return a complete MAVLink frame, possibly expanding
+// to include other complete frames that fit in the max_xmit limit
+static 
+uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
+{
+	__data uint16_t slen;
+
+	serial_read_buf(last_sent, mav_pkt_len);
+	last_sent_len = mav_pkt_len;
+	xmemcpy(buf, last_sent, last_sent_len);
+	mav_pkt_len = 0;
+
+	slen = serial_read_available();
+
+	// see if we have more complete MAVLink frames in the serial
+	// buffer that we can fit in this packet
+	while (slen >= 8) {
+		register uint8_t c = serial_peek();
+		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+			// its not a MAVLink packet
+			return last_sent_len;			
+		}
+		c = serial_peek2();
+		if (c >= 255 - 8 || 
+		    c+8 > max_xmit - last_sent_len) {
+			// it won't fit
+			break;
+		}
+		if (c+8 > slen) {
+			// we don't have the full MAVLink packet in
+			// the serial buffer
+			break;
+		}
+
+		c += 8;
+
+		// we can add another MAVLink frame to the packet
+		serial_read_buf(&last_sent[last_sent_len], c);
+		xmemcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
+		last_sent_len += c;
+		slen -= c;
+	}
+
+	return last_sent_len;
+}
+
+
 // return the next packet to be sent
 uint8_t
 packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
@@ -150,11 +197,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 		
 		// the whole of the MAVLink packet is available
-		serial_read_buf(last_sent, mav_pkt_len);
-		last_sent_len = mav_pkt_len;
-		xmemcpy(buf, last_sent, last_sent_len);
-		mav_pkt_len = 0;
-		return last_sent_len;
+		return mavlink_frame(max_xmit, buf);
 	}
 		
 	while (slen > 0) {
@@ -203,11 +246,7 @@ packet_get_next(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			} else {
 				// the whole packet is there
 				// and ready to be read
-				serial_read_buf(last_sent, mav_pkt_len);
-				last_sent_len = mav_pkt_len;
-				xmemcpy(buf, last_sent, last_sent_len);
-				mav_pkt_len = 0;
-				return last_sent_len;
+				return mavlink_frame(max_xmit, buf);
 			}
 		} else {
 			last_sent[last_sent_len++] = serial_read();
