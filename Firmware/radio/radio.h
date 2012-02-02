@@ -87,7 +87,7 @@ extern bool feature_mavlink_framing;
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
 
 // an inline memcpy() for __xdata arrays
-static inline void xmemcpy(__xdata uint8_t * __data dst, const __xdata uint8_t * __pdata src, register uint8_t n)
+static inline void xmemcpy(__xdata uint8_t * __data dst, const __xdata uint8_t * __data src, register uint8_t n)
 {
 	while (n--) *dst++ = *src++;
 }
@@ -99,7 +99,7 @@ static inline void xmemset(__xdata uint8_t * __data dst, register uint8_t v, reg
 }
 
 // an inline memcmp() for __xdata arrays
-static inline int xmemcmp(__xdata uint8_t * __data buf1, const __xdata uint8_t * __pdata buf2, register uint8_t n)
+static inline int xmemcmp(__xdata uint8_t * __pdata buf1, const __xdata uint8_t * __pdata buf2, register uint8_t n)
 {
 	while (n--) {
 		if (*buf1 != *buf2) return (*buf1 - *buf2);
