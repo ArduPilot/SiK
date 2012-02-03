@@ -343,7 +343,8 @@ static void
 handle_at_command(__pdata uint8_t len)
 {
 	if (len < 2 || len > AT_CMD_MAXLEN || 
-	    pbuf[0] != 'R' || pbuf[1] != 'T') {
+	    pbuf[0] != (uint8_t)'R' || 
+	    pbuf[1] != (uint8_t)'T') {
 		// assume its an AT command reply
 		register uint8_t i;
 		for (i=0; i<len; i++) {
