@@ -72,7 +72,8 @@ static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 }
 
 // initialise frequency hopping logic
-void fhop_init(uint16_t netid)
+void 
+fhop_init(uint16_t netid)
 {
 	uint8_t i;
 	// create a random mapping between virtual and physical channel
@@ -85,19 +86,22 @@ void fhop_init(uint16_t netid)
 }
 
 // tell the TDM code what channel to transmit on
-uint8_t fhop_transmit_channel(void)
+uint8_t 
+fhop_transmit_channel(void)
 {
 	return channel_map[transmit_channel];
 }
 
 // tell the TDM code what channel to receive on
-uint8_t fhop_receive_channel(void)
+uint8_t 
+fhop_receive_channel(void)
 {
 	return channel_map[receive_channel];
 }
 
 // called when the transmit windows changes owner
-void fhop_window_change(void)
+void 
+fhop_window_change(void)
 {
 	transmit_channel = (transmit_channel + 1) % NUM_FREQ_CHANNELS;
 	if (have_radio_lock) {
@@ -113,7 +117,8 @@ void fhop_window_change(void)
 }
 
 // called when we get or lose radio lock
-void fhop_set_locked(bool locked)
+void 
+fhop_set_locked(bool locked)
 {
 #if DEBUG
 	if (locked && !have_radio_lock) {

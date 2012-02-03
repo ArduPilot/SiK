@@ -81,7 +81,8 @@ static __code uint8_t crc_tab2[256] =
 
 // calculate the CRC16 of a buffer
 // this costs about 2.2 microseconds per byte
-uint16_t crc16(__data uint8_t n, __xdata uint8_t * __data buf)
+uint16_t 
+crc16(__data uint8_t n, __xdata uint8_t * __data buf)
 {
 	register uint8_t k;
 	register uint8_t high, low;

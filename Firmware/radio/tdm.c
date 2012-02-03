@@ -636,7 +636,8 @@ __code static const struct {
 
 #if 0
 /// build the timing table
-static void tdm_build_timing_table(void)
+static void 
+tdm_build_timing_table(void)
 {
 	__idata uint8_t i, j;
 	bool golay_saved = feature_golay;
@@ -690,7 +691,8 @@ static void tdm_build_timing_table(void)
 
 
 // test hardware CRC code
-static void crc_test(void)
+static void 
+crc_test(void)
 {
 	__xdata uint8_t d[4] = { 0x01, 0x00, 0xbb, 0xcc };
 	__pdata uint16_t crc;
@@ -706,7 +708,8 @@ static void crc_test(void)
 }
 
 // test golay encoding
-static void golay_test(void)
+static void 
+golay_test(void)
 {
 	uint8_t i;
 	uint16_t t1, t2;
@@ -813,7 +816,8 @@ tdm_init(void)
 
 /// report tdm timings
 ///
-void tdm_report_timing(void)
+void 
+tdm_report_timing(void)
 {
 	printf("silence_period: %u\n", (unsigned)silence_period); delay_msec(1);
 	printf("tx_window_width: %u\n", (unsigned)tx_window_width); delay_msec(1);

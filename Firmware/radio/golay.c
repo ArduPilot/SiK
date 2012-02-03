@@ -59,7 +59,8 @@ static const __code uint32_t shift_table[12] = {
 };
 
 // calculate the golay syndrome value
-static uint16_t golay_syndrome(__data uint32_t codeword)
+static uint16_t 
+golay_syndrome(__data uint32_t codeword)
 {
 	__data uint32_t shift = (1UL<<22);
 	__data uint8_t shiftcount = 11;
@@ -77,7 +78,8 @@ static uint16_t golay_syndrome(__data uint32_t codeword)
 
 // encode 3 bytes data into 6 bytes of coded data
 // input is in g3[], output in g6[]
-static void golay_encode24(void)
+static void 
+golay_encode24(void)
 {
 	__pdata uint16_t v;
 	__pdata uint32_t codeword;
@@ -97,7 +99,8 @@ static void golay_encode24(void)
 
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
 // encoding takes about 6 microseconds per input byte
-void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
+void 
+golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 3) {
 		g3[0] = in[0]; g3[1] = in[1]; g3[2] = in[2];
@@ -113,7 +116,8 @@ void golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __p
 // decode 6 bytes of coded data into 3 bytes of original data
 // input is in g6[], output in g3[]
 // returns the number of words corrected (0, 1 or 2)
-static uint8_t golay_decode24(void)
+static uint8_t 
+golay_decode24(void)
 {
 	__data uint16_t v, v0;
 	__data uint32_t codeword;
@@ -149,7 +153,8 @@ static uint8_t golay_decode24(void)
 // n must be a multiple of 6
 // decoding takes about 20 microseconds per input byte
 // the number of 12 bit words that required correction is returned
-uint8_t golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
+uint8_t 
+golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	__pdata uint8_t errcount = 0;
 	while (n >= 6) {

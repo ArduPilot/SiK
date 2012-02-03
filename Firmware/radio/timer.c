@@ -61,7 +61,8 @@ delay_set(register uint16_t msec)
 	}
 }
 
-void delay_set_ticks(register uint8_t ticks)
+void 
+delay_set_ticks(register uint8_t ticks)
 {
 	delay_counter = ticks;
 }
@@ -93,7 +94,8 @@ INTERRUPT(T2_ISR, INTERRUPT_TIMER2)
 
 // return the 16 bit timer2 counter
 // this call costs about 2 microseconds
-uint16_t timer2_16(void)
+uint16_t 
+timer2_16(void)
 {
 	register uint8_t low, high;
 	do {
@@ -108,7 +110,8 @@ uint16_t timer2_16(void)
 #if 0
 // return microseconds since boot
 // this call costs about 5usec
-uint32_t micros(void)
+uint32_t 
+micros(void)
 {
 	uint16_t low, high;
 	do {
@@ -121,7 +124,8 @@ uint32_t micros(void)
 
 // return a 16 bit value that rolls over in approximately
 // one second intervals
-uint16_t timer2_tick(void)
+uint16_t 
+timer2_tick(void)
 {
 	register uint16_t low, high;
 	do {
@@ -134,7 +138,8 @@ uint16_t timer2_tick(void)
 }
 
 // initialise timers
-void timer_init(void)
+void 
+timer_init(void)
 {
 	// 100Hz timer tick using timer3
 	// Derive timer values from SYSCLK, just for laughs.

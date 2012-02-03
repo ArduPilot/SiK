@@ -61,7 +61,8 @@ static __xdata uint8_t *capture_buffer;
 static __pdata uint8_t capture_buffer_size;
 static __pdata uint8_t captured_size;
 
-static void output_char(register char c)
+static void 
+output_char(register char c)
 {
 	if (!capture) {
 		putchar(c);
@@ -73,7 +74,8 @@ static void output_char(register char c)
 }
 
 // start capturing bytes from printf()
-void printf_start_capture(__xdata uint8_t *buf, uint8_t size)
+void 
+printf_start_capture(__xdata uint8_t *buf, uint8_t size)
 {
 	capture_buffer = buf;
 	captured_size = 0;
@@ -82,13 +84,15 @@ void printf_start_capture(__xdata uint8_t *buf, uint8_t size)
 }
 
 // end capture, returning number of bytes that have been captured
-uint8_t printf_end_capture(void)
+uint8_t 
+printf_end_capture(void)
 {
 	capture = false;
 	return captured_size;
 }
 
-void vprintfl(const char * fmt, va_list ap) __reentrant
+void 
+vprintfl(const char * fmt, va_list ap) __reentrant
 {
 
 	for (; *fmt; fmt++) {
@@ -178,7 +182,8 @@ void vprintfl(const char * fmt, va_list ap) __reentrant
 	}
 }
 
-void printfl(const char *fmt, ...) __reentrant
+void 
+printfl(const char *fmt, ...) __reentrant
 {
 	va_list ap;
 

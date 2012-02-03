@@ -591,7 +591,8 @@ radio_set_channel(uint8_t channel)
 
 // get the tx/rx frequency channel
 //
-uint8_t radio_get_channel(void)
+uint8_t 
+radio_get_channel(void)
 {
 	return settings.current_channel;
 }
@@ -800,7 +801,8 @@ __code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 1
 
 // set the radio transmit power (in dBm)
 //
-void radio_set_transmit_power(uint8_t power)
+void 
+radio_set_transmit_power(uint8_t power)
 {
 	uint8_t i;
 	for (i=0; i<NUM_POWER_LEVELS; i++) {
