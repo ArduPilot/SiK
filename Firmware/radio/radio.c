@@ -817,7 +817,8 @@ radio_set_transmit_power(uint8_t power)
 
 // get the currend transmit power (in dBm)
 //
-uint8_t radio_get_transmit_power(void)
+uint8_t 
+radio_get_transmit_power(void)
 {
 	return settings.transmit_power;
 }

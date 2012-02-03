@@ -100,7 +100,7 @@ golay_encode24(void)
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
 // encoding takes about 6 microseconds per input byte
 void 
-golay_encode(uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
+golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
 {
 	while (n >= 3) {
 		g3[0] = in[0]; g3[1] = in[1]; g3[2] = in[2];

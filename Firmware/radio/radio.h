@@ -123,7 +123,7 @@ extern void	vprintfl(const char * fmt, va_list ap) __reentrant;
 
 /// Alternate printf implementation
 ///
-extern void	printfl(const char * fmt, ...) __reentrant;
+extern void	printfl(const char *fmt, ...) __reentrant;
 #define printf(_fmt, args...)	printfl(_fmt, ##args)		///< avoid fighting with the library printf() prototype
 
 /// start a capture of printf data 
@@ -158,7 +158,7 @@ __pdata extern struct error_counts errors;
 /// @param buf			Pointer to storage for the packet
 /// @return			True if a packet was received
 ///
-extern bool radio_receive_packet(uint8_t *len, __xdata uint8_t * __pdata buf);
+extern bool radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf);
 
 /// test whether the radio has detected a packet preamble
 ///
@@ -207,7 +207,7 @@ extern bool radio_set_channel_spacing(__pdata uint32_t value);
 ///
 /// @param value		The channel number to select
 ///
-extern void radio_set_channel(uint8_t value);
+extern void radio_set_channel(uint8_t channel);
 
 /// get the tx/rx frequency channel
 ///
@@ -240,18 +240,12 @@ extern void radio_set_network_id(uint16_t id);
 ///				the last time a valid preamble was detected.
 extern uint8_t radio_last_rssi(void);
 
-/// fetch some entropy bits that the radio code accumulates
-///
-/// @return			An unpredictable value
-///
-extern uint8_t radio_entropy();
-
 /// return the air data rate
 ///
 /// @return			The value passed to the last successful call
 ///				to radio_configure
 ///
-extern uint32_t radio_air_rate();
+extern uint32_t radio_air_rate(void);
 
 /// set the radio transmit power (in dBm)
 ///

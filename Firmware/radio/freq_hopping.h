@@ -64,11 +64,4 @@ extern void fhop_window_change(void);
 ///
 extern void fhop_set_locked(bool locked);
 
-/// called when a frequency hopping control packet comes in.
-///
-/// @param len		Length of the packet as received
-/// @param rbuf		Pointer to the packet data
-///
-extern void fhop_control_packet(uint8_t len, __xdata uint8_t *rbuf);
-
 #endif // _FREQ_HOPPING_H_

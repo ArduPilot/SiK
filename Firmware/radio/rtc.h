@@ -79,4 +79,4 @@ extern void	rtc_init(void);
 extern uint32_t	rtc_read_count(void);
 extern uint16_t rtc_read_count16(void);
 extern uint8_t	rtc_read_low(void);
-extern void	rtc_write_count(uint32_t val);
+extern void	rtc_write_count(uint32_t count);
