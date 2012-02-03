@@ -74,19 +74,19 @@ static __bit bonus_transmit;
 static __bit transmit_yield;
 
 // activity indication
-// when the 16 bit RTC ticks wrap we  check if we have received a
-// packet since the last wrap (ie. every 1.6 seconds)
+// when the 16 bit timer2_tick() value wraps we check if we have received a
+// packet since the last wrap (ie. every second)
 // If we have the green radio LED is held on.
-// Otherwise it blinks every 1.6 seconds. The received_packet flag
+// Otherwise it blinks every 1 seconds. The received_packet flag
 // is set for any received packet, whether it contains user data or
 // not.
 static __bit blink_state;
 static __bit received_packet;
 
-/// the latency in 16usec RTC ticks for sending a zero length packet
+/// the latency in 16usec timer2 ticks for sending a zero length packet
 __pdata static uint16_t packet_latency;
 
-/// the time in 16usec RTC ticks for sending one byte
+/// the time in 16usec ticks for sending one byte
 __pdata static uint16_t ticks_per_byte;
 
 /// number of 16usec ticks to wait for a preamble to turn into a packet
@@ -245,7 +245,7 @@ tdm_state_update(__pdata uint16_t tdelta)
 	// have we passed the next transition point?
 	while (tdelta >= tdm_state_remaining) {
 		// advance the tdm state machine
-		tdm_state = (tdm_state+1)%4;
+		tdm_state = (tdm_state+1) % 4;
 
 		// work out the time remaining in this state
 		tdelta -= tdm_state_remaining;
@@ -566,7 +566,7 @@ tdm_serial_loop(void)
 			trailer.resend = 0;
 		} else {
 			// calculate the control word as the number of
-			// 16usec RTC ticks that will be left in this
+			// 16usec ticks that will be left in this
 			// tdm state after this packet is transmitted
 			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
 		}
