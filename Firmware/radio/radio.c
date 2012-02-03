@@ -166,6 +166,9 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		} else {
 			errors.corrected_errors = 0xFFFF;
 		}
+		if (errors.corrected_packets != 0xFFFF) {
+			errors.corrected_packets++;
+		}
 	}
 
 	return true;

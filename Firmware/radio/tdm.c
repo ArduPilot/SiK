@@ -139,12 +139,13 @@ display_test_output(void)
 		       (int)remote_statistics.average_rssi,
 		       (unsigned)remote_statistics.receive_count,
 		       (unsigned)remote_statistics.round_count);
-		printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u\n",
+		printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
 		       (unsigned)errors.tx_errors,
 		       (unsigned)errors.rx_errors,
 		       (unsigned)errors.serial_tx_overflow,
 		       (unsigned)errors.serial_rx_overflow,
-		       (unsigned)errors.corrected_errors);
+		       (unsigned)errors.corrected_errors,
+		       (unsigned)errors.corrected_packets);
 	}
 }
 
