@@ -286,6 +286,15 @@ tdm_state_update(__pdata uint16_t tdelta)
 	tdm_state_remaining -= tdelta;
 }
 
+/// change tdm phase
+///
+void
+tdm_change_phase(void)
+{
+	tdm_state = (tdm_state+2) % 4;
+}
+
+
 /// blink the radio LED if we have not received any packets
 ///
 static void
