@@ -802,7 +802,7 @@ tdm_init(void)
 	}
 
 	// set the silence period to two times the packet latency
-        silence_period = 2*packet_latency;
+        silence_period = 3*packet_latency;
 
         // set the transmit window to allow for 3 full sized packets
 	window_width = 3*(packet_latency+(max_data_packet_length*(uint32_t)ticks_per_byte));
