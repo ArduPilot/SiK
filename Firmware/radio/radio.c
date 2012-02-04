@@ -207,7 +207,8 @@ radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 bool
 radio_receive_in_progress(void)
 {
-	if (packet_received) {
+	if (packet_received ||
+	    partial_packet_length != 0) {
 		return true;
 	}
 
