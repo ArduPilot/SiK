@@ -68,7 +68,7 @@ static void	clear_status_registers(void);
 #define EX0_SAVE_DISABLE __bit EX0_saved = EX0; EX0 = 0
 #define EX0_RESTORE EX0 = EX0_saved
 
-#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENRXFFAFULL|EZRADIOPRO_ENPKVALID)
+#define RADIO_RX_INTERRUPTS (EZRADIOPRO_ENRXFFAFULL|EZRADIOPRO_ENPKVALID|EZRADIOPRO_ENCRCERROR)
 
 // FIFO thresholds to allow for packets larger than 64 bytes
 #define TX_FIFO_THRESHOLD_LOW 32
@@ -1043,6 +1043,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 
 		// read the RSSI register for logging
 		last_rssi = register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
+	}
+
+	if (feature_golay == false && (status & EZRADIOPRO_ICRCERROR)) {
+		goto rxfail;
 	}
 
 	if (status & EZRADIOPRO_IPKVALID) {
