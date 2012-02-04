@@ -766,6 +766,7 @@ SBIT (SPI0EN, SFR_SPI0CN, 0);          // SPI0 Enable
 #define  EZRADIOPRO_HDLEN_2BYTE        0x20
 #define  EZRADIOPRO_HDLEN_3BYTE        0x30
 #define  EZRADIOPRO_HDLEN_4BYTE        0x40
+#define  EZRADIOPRO_SKIPSYN            0x80
 
 // EZRADIOPRO_PREAMBLE_LENGTH                                  0x34
 // no bits or mask
