@@ -487,7 +487,9 @@ tdm_serial_loop(void)
 		}
 
 		// see how many 16usec ticks have passed and update
-		// the tdm state machine
+		// the tdm state machine. We re-fetch tnow as a bad
+		// packet could have cost us a lot of time.
+		tnow = timer2_tick();
 		tdelta = tnow - last_t;
 		tdm_state_update(tdelta);
 		last_t += tdelta;
