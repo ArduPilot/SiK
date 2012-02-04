@@ -336,8 +336,12 @@ link_update(void)
 
 		fhop_set_locked(false);
 
+		statistics.average_rssi = (radio_last_rssi() + 3*(uint16_t)statistics.average_rssi)/4;
+
 		// reset statistics when unlocked
-		memset(&statistics, 0, sizeof(statistics));
+		statistics.receive_count = 0;
+		statistics.round_count = 0;
+		statistics.remote_average_rssi = 0;
 	}
 
 	test_display = at_testmode;

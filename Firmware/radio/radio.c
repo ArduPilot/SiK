@@ -1036,6 +1036,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		}
 		read_receive_fifo(RX_FIFO_THRESHOLD_HIGH, &radio_buffer[partial_packet_length]);
 		partial_packet_length += RX_FIFO_THRESHOLD_HIGH;
+		last_rssi = register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
 	}
 
 	if (status2 & EZRADIOPRO_IPREAVAL) {
