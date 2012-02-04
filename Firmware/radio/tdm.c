@@ -213,21 +213,20 @@ sync_tx_windows(__pdata uint8_t packet_length)
 		transmit_yield = 0;
 	}
 
-#if 0
-	{
-		int16_t delta;
+	if (at_testmode & AT_TEST_TDM) {
+		__pdata int16_t delta;
 		delta = old_remaining - tdm_state_remaining;
 		if (old_state != tdm_state ||
-		    delta > (int16_t)silence_period ||
-		    delta < -(int16_t)silence_period) {
-			printf("TDM: %d/%d ",
-			       (int)old_state,
-			       (int)tdm_state);
+		    delta > (int16_t)packet_latency/2 ||
+		    delta < -(int16_t)packet_latency/2) {
+			printf("TDM: %u/%u len=%u ",
+			       (unsigned)old_state,
+			       (unsigned)tdm_state,
+			       (unsigned)packet_length);
 			printf(" delta: %d\n",
 			       (int)delta);
 		}
 	}
-#endif
 }
 
 /// update the TDM state machine
@@ -321,10 +320,16 @@ link_update(void)
 			// entropy from the radio if we have waited
 			// for a full set of hops with this time base
 			if (timer_entropy() & 1) {
+				register uint16_t old_remaining = tdm_state_remaining;
 				if (tdm_state_remaining > silence_period) {
 					tdm_state_remaining -= silence_period;
 				} else {
 					tdm_state_remaining = 1;
+				}
+				if (at_testmode & AT_TEST_TDM) {
+					printf("TDM: change timing %u/%u\n",
+					       (unsigned)old_remaining,
+					       (unsigned)tdm_state_remaining);
 				}
 			}
 		}
