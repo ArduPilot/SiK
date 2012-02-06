@@ -317,7 +317,7 @@ link_update(void)
 		// if we have been unlocked for 20 seconds
 		// then start frequency scanning again
 
-		unlock_count = 0;
+		unlock_count = 5;
 		// randomise the next transmit window using some
 		// entropy from the radio if we have waited
 		// for a full set of hops with this time base
