@@ -125,27 +125,35 @@ __pdata struct tdm_trailer trailer;
 static bool send_at_command;
 static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
+/// display RSSI output
+///
+void
+tdm_show_rssi(void)
+{
+	printf("LOCAL RSSI: %d  pkts/rounds: %u/%u   ",
+	       (unsigned)statistics.average_rssi,
+	       (unsigned)statistics.receive_count,
+	       (unsigned)statistics.round_count);
+	printf("REMOTE RSSI: %d pkts/rounds: %u/%u",
+	       (int)remote_statistics.average_rssi,
+	       (unsigned)remote_statistics.receive_count,
+	       (unsigned)remote_statistics.round_count);
+	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
+	       (unsigned)errors.tx_errors,
+	       (unsigned)errors.rx_errors,
+	       (unsigned)errors.serial_tx_overflow,
+	       (unsigned)errors.serial_rx_overflow,
+	       (unsigned)errors.corrected_errors,
+	       (unsigned)errors.corrected_packets);
+}
+
 /// display test output
 ///
 static void
 display_test_output(void)
 {
 	if (test_display & AT_TEST_RSSI) {
-		printf("LOCAL RSSI: %d  pkts/rounds: %u/%u   ",
-		       (unsigned)statistics.average_rssi,
-		       (unsigned)statistics.receive_count,
-		       (unsigned)statistics.round_count);
-		printf("REMOTE RSSI: %d pkts/rounds: %u/%u",
-		       (int)remote_statistics.average_rssi,
-		       (unsigned)remote_statistics.receive_count,
-		       (unsigned)remote_statistics.round_count);
-		printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
-		       (unsigned)errors.tx_errors,
-		       (unsigned)errors.rx_errors,
-		       (unsigned)errors.serial_tx_overflow,
-		       (unsigned)errors.serial_rx_overflow,
-		       (unsigned)errors.corrected_errors,
-		       (unsigned)errors.corrected_packets);
+		tdm_show_rssi();
 	}
 }
 
