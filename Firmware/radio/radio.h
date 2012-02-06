@@ -86,28 +86,6 @@ extern bool feature_mavlink_framing;
 // useful macro for array sizes
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
 
-// an inline memcpy() for __xdata arrays
-static inline void xmemcpy(__xdata uint8_t * __data dst, const __xdata uint8_t * __data src, register uint8_t n)
-{
-	while (n--) *dst++ = *src++;
-}
-
-// an inline memset() for __xdata arrays
-static inline void xmemset(__xdata uint8_t * __data dst, register uint8_t v, register uint8_t n)
-{
-	while (n--) *dst++ = v;
-}
-
-// an inline memcmp() for __xdata arrays
-static inline int xmemcmp(__xdata uint8_t * __pdata buf1, const __xdata uint8_t * __pdata buf2, register uint8_t n)
-{
-	while (n--) {
-		if (*buf1 != *buf2) return (*buf1 - *buf2);
-		buf1++; buf2++;
-	}
-	return 0;
-}
-
 /// Print a message and halt, largely for debug purposes
 ///
 /// @param	fmt		printf-style format string and argments

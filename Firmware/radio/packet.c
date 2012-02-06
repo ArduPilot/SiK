@@ -79,7 +79,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
-	xmemcpy(buf, last_sent, last_sent_len);
+	memcpy(buf, last_sent, last_sent_len);
 	mav_pkt_len = 0;
 
 	slen = serial_read_available();
@@ -108,7 +108,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 		// we can add another MAVLink frame to the packet
 		serial_read_buf(&last_sent[last_sent_len], c);
-		xmemcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
+		memcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
 		last_sent_len += c;
 		slen -= c;
 	}
@@ -128,14 +128,14 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		slen = last_sent_len;
 		if (max_xmit < slen) {
 			// send as much as we can
-			xmemcpy(buf, last_sent, max_xmit);
-			xmemcpy(last_sent, &last_sent[max_xmit], slen - max_xmit);
+			memcpy(buf, last_sent, max_xmit);
+			memcpy(last_sent, &last_sent[max_xmit], slen - max_xmit);
 			last_sent_len = slen - max_xmit;
 			last_sent_is_injected = true;
 			return max_xmit;
 		}
 		// send the rest
-		xmemcpy(buf, last_sent, last_sent_len);
+		memcpy(buf, last_sent, last_sent_len);
 		injected_packet = false;
 		last_sent_is_injected = true;
 		return last_sent_len;
@@ -153,7 +153,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 		last_sent_is_resend = true;
 		force_resend = false;
-		xmemcpy(buf, last_sent, last_sent_len);
+		memcpy(buf, last_sent, last_sent_len);
 		return last_sent_len;
 	}
 
@@ -175,7 +175,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	if (!feature_mavlink_framing) {
 		// simple framing
 		if (slen > 0 && serial_read_buf(buf, slen)) {
-			xmemcpy(last_sent, buf, slen);
+			memcpy(last_sent, buf, slen);
 			last_sent_len = slen;
 		} else {
 			last_sent_len = 0;
@@ -191,7 +191,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			if ((uint16_t)(timer2_tick() - mav_pkt_start_time) > mav_pkt_max_time) {
 				// we didn't get the length byte in time
 				last_sent[last_sent_len++] = serial_read();
-				xmemcpy(buf, last_sent, last_sent_len);				
+				memcpy(buf, last_sent, last_sent_len);				
 				mav_pkt_len = 0;
 				return last_sent_len;
 			}
@@ -211,7 +211,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 				// it. Send what we have now.
 				serial_read_buf(last_sent, slen);
 				last_sent_len = slen;
-				xmemcpy(buf, last_sent, last_sent_len);
+				memcpy(buf, last_sent, last_sent_len);
 				mav_pkt_len = 0;
 				return last_sent_len;
 			}
@@ -257,7 +257,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 				// send what we've got so far,
 				// and send the MAVLink payload
 				// in the next packet
-				xmemcpy(buf, last_sent, last_sent_len);
+				memcpy(buf, last_sent, last_sent_len);
 				mav_pkt_start_time = timer2_tick();
 				mav_pkt_max_time = mav_pkt_len * serial_rate;
 				return last_sent_len;
@@ -278,7 +278,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 	}
 
-	xmemcpy(buf, last_sent, last_sent_len);
+	memcpy(buf, last_sent, last_sent_len);
 	return last_sent_len;
 }
 
@@ -325,14 +325,14 @@ bool
 packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
 {
 	if (!is_resend) {
-		xmemcpy(last_received, buf, len);
+		memcpy(last_received, buf, len);
 		last_recv_len = len;
 		last_recv_is_resend = false;
 		return false;
 	}
 	if (last_recv_is_resend == false && 
 	    len == last_recv_len &&
-	    xmemcmp(last_received, buf, len) == 0) {
+	    memcmp(last_received, buf, len) == 0) {
 		last_recv_is_resend = false;
 		return true;
 	}
@@ -353,7 +353,7 @@ packet_inject(__xdata uint8_t * __pdata buf, __pdata uint8_t len)
 	if (len > sizeof(last_sent)) {
 		len = sizeof(last_sent);
 	}
-	xmemcpy(last_sent, buf, len);
+	memcpy(last_sent, buf, len);
 	last_sent_len = len;
 	last_sent_is_resend = false;
 	injected_packet = true;
