@@ -261,6 +261,7 @@ tdm_state_update(__pdata uint16_t tdelta)
 		// to match the other radio
 		if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE1) {
 			fhop_window_change();
+			radio_receiver_on();
 		}
 
 		// we lose the bonus on all state changes
@@ -301,41 +302,45 @@ link_update(void)
 {
 	static uint8_t unlock_count;
 	if (received_packet) {
-		LED_RADIO = LED_ON;
-		received_packet = 0;
 		unlock_count = 0;
+		received_packet = false;
 	} else {
-		__pdata uint16_t rounds_per_second;
-
+		unlock_count++;
+	}
+	if (unlock_count < 6) {
+		LED_RADIO = LED_ON;
+	} else {
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
+	}
+	if (unlock_count > 40) {
+		// if we have been unlocked for 20 seconds
+		// then start frequency scanning again
 
-		unlock_count++;
-
-		rounds_per_second = 0x8000UL / tx_window_width;
-
-		if (unlock_count*rounds_per_second >= NUM_FREQ_CHANNELS) {
-			unlock_count = 0;
-			// randomise the next transmit window using some
-			// entropy from the radio if we have waited
-			// for a full set of hops with this time base
-			if (timer_entropy() & 1) {
-				register uint16_t old_remaining = tdm_state_remaining;
-				if (tdm_state_remaining > silence_period) {
-					tdm_state_remaining -= silence_period;
-				} else {
-					tdm_state_remaining = 1;
-				}
-				if (at_testmode & AT_TEST_TDM) {
-					printf("TDM: change timing %u/%u\n",
-					       (unsigned)old_remaining,
-					       (unsigned)tdm_state_remaining);
-				}
+		unlock_count = 0;
+		// randomise the next transmit window using some
+		// entropy from the radio if we have waited
+		// for a full set of hops with this time base
+		if (timer_entropy() & 1) {
+			register uint16_t old_remaining = tdm_state_remaining;
+			if (tdm_state_remaining > silence_period) {
+				tdm_state_remaining -= packet_latency;
+			} else {
+				tdm_state_remaining = 1;
+			}
+			if (at_testmode & AT_TEST_TDM) {
+				printf("TDM: change timing %u/%u\n",
+				       (unsigned)old_remaining,
+				       (unsigned)tdm_state_remaining);
 			}
 		}
-
+		if (at_testmode & AT_TEST_TDM) {
+			printf("TDM: scanning\n");
+		}
 		fhop_set_locked(false);
+	}
 
+	if (unlock_count != 0) {
 		statistics.average_rssi = (radio_last_rssi() + 3*(uint16_t)statistics.average_rssi)/4;
 
 		// reset statistics when unlocked
@@ -496,7 +501,7 @@ tdm_serial_loop(void)
 		tnow = timer2_tick();
 		tdelta = tnow - last_t;
 		tdm_state_update(tdelta);
-		last_t += tdelta;
+		last_t = tnow;
 
 		// update link status every 0.5s
 		if (tnow - last_link_update > 32768) {

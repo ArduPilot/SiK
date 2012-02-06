@@ -96,6 +96,14 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		goto failed;
 	}
 
+#if 0
+	// useful for testing high packet loss
+	if ((timer_entropy() & 0x7) != 0) {
+		radio_receiver_on();
+		goto failed;		
+	}
+#endif
+
 	if (!feature_golay) {
 		// simple unencoded packets
 		*length = receive_packet_length;
