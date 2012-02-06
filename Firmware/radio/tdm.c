@@ -439,7 +439,7 @@ tdm_serial_loop(void)
 		if (radio_receive_packet(&len, pbuf)) {
 
 			// update the activity indication
-			received_packet = 1;
+			received_packet = true;
 			fhop_set_locked(true);
 			
 			// update filtered RSSI value and packet stats
@@ -534,7 +534,8 @@ tdm_serial_loop(void)
 			continue;
 		}
 
-		if (radio_preamble_detected() ||
+		if (!received_packet &&
+		    radio_preamble_detected() ||
 		    radio_receive_in_progress()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
@@ -807,7 +808,7 @@ tdm_init(void)
 	}
 
 	// set the silence period to two times the packet latency
-        silence_period = 3*packet_latency;
+        silence_period = 2*packet_latency;
 
         // set the transmit window to allow for 3 full sized packets
 	window_width = 3*(packet_latency+(max_data_packet_length*(uint32_t)ticks_per_byte));
