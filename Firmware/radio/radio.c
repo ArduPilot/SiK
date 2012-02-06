@@ -946,7 +946,7 @@ clear_status_registers(void)
 static uint32_t
 scale_uint32(__pdata uint32_t value, __pdata uint32_t scale)
 {
-	return (value + (value >> 1)) / scale;
+	return (value + (scale >> 1)) / scale;
 }
 
 
