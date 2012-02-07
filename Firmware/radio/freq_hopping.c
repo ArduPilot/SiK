@@ -132,7 +132,8 @@ fhop_set_locked(bool locked)
 		// channel
 		transmit_channel = receive_channel;
 	} else {
-		debug("FH unlock\n");
+		// try the next receive channel
+		receive_channel = (receive_channel+1) % NUM_FREQ_CHANNELS;
 	}
 }
 
