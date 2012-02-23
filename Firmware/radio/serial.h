@@ -65,12 +65,8 @@ extern bool	serial_write(register uint8_t c);
 ///
 /// @param	buf		Pointer to the data to write.
 /// @param	count		The number of bytes to write.
-/// @return			True if all of the data was written.
-///				False if there is not enough room in the
-///				buffer for @a count bytes (no bytes are
-///				written in this case).
 ///
-extern bool	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
+extern void	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
 
 /// Check for space in the write FIFO
 ///

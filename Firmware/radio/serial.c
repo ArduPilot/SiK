@@ -196,29 +196,52 @@ _serial_write(register uint8_t c) __reentrant
 	ES0_RESTORE;
 }
 
-bool
+// write as many bytes as will fit into the serial transmit buffer
+void
 serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 {
-	register uint8_t n = count;
-	ES0_SAVE_DISABLE;
+	__pdata uint16_t space;
+	__pdata uint8_t n1;
 
-	if (serial_write_space() < count) {
+	if (count == 0) {
+		return;
+	}
+
+	// discard any bytes that don't fit. We can't afford to
+	// wait for the buffer to train as we could miss a frequency
+	// hopping transition
+	space = serial_write_space();	
+	if (count > space) {
+		count = space;
 		if (errors.serial_tx_overflow != 0xFFFF) {
 			errors.serial_tx_overflow++;
 		}
-		ES0_RESTORE;
-		return false;
 	}
 
-	while (n--)
-		BUF_INSERT(tx, *buf++);
+	// write to the end of the ring buffer
+	n1 = count;
+	if (n1 > sizeof(tx_buf) - tx_insert) {
+		n1 = sizeof(tx_buf) - tx_insert;
+	}
+	memcpy(&tx_buf[tx_insert], buf, n1);
+	buf += n1;
+	count -= n1;
+	__critical {
+		tx_insert = (tx_insert + n1) & tx_mask;
+	}
 
-	// if the transmitter is idle, restart it
-	if (tx_idle)
-		serial_restart();
-
-	ES0_RESTORE;
-	return true;
+	// add any leftover bytes to the start of the ring buffer
+	if (count != 0) {
+		memcpy(&tx_buf[0], buf, count);
+		__critical {
+			tx_insert = count;
+		}		
+	}
+	__critical {
+		if (tx_idle) {
+			serial_restart();
+		}
+	}
 }
 
 uint16_t
@@ -283,18 +306,37 @@ serial_peek2(void)
 	return c;
 }
 
+// read count bytes from the serial buffer. This implementation
+// tries to be as efficient as possible, while disabling interrupts
+// for as short a time as possible
 bool
 serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 {
-	register uint8_t n = count;
-	ES0_SAVE_DISABLE;
-	if (BUF_USED(rx) < count) {
-		ES0_RESTORE;
+	__pdata uint16_t n1;
+	// the caller should have already checked this, 
+	// but lets be sure
+	if (count > serial_read_available()) {
 		return false;
 	}
-	while (n--)
-		BUF_REMOVE(rx, *buf++);
-	ES0_RESTORE;
+	// see how much we can copy from the tail of the buffer
+	n1 = count;
+	if (n1 > sizeof(rx_buf) - rx_remove) {
+		n1 = sizeof(rx_buf) - rx_remove;
+	}
+	memcpy(buf, &rx_buf[rx_remove], n1);
+	count -= n1;
+	buf += n1;
+	// update the remove marker with interrupts disabled
+	__critical {
+		rx_remove = (rx_remove + n1) & rx_mask;
+	}
+	// any more bytes to do?
+	if (count > 0) {
+		memcpy(buf, &rx_buf[0], count);
+		__critical {
+			rx_remove = count;
+		}		
+	}
 	return true;
 }
 
