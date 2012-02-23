@@ -235,11 +235,23 @@ radio_init(void)
 		break;
 	}
 
+	// add half of the channel spacing, to ensure that we are well
+	// away from the edges
+	freq += CHANNEL_SPACING/2;
+
+	// add another offset based on network ID. This means that
+	// with different network IDs we will have much lower
+	// interference
+	srand(param_get(PARAM_NETID));
+	freq += (((unsigned long)(rand()*625)) % CHANNEL_SPACING);
+	// printf("freq low=%lu high=%lu\n", freq, freq+50*CHANNEL_SPACING);
+
 	// set the frequency and channel spacing
+	// change base freq based on netid
 	radio_set_frequency(freq);
 
-	// set channel spacing to use 12.5MHz total frequency width
-	radio_set_channel_spacing(250000UL);
+	// set channel spacing
+	radio_set_channel_spacing(CHANNEL_SPACING);
 
 	// start on a channel chosen by network ID
 	radio_set_channel(param_get(PARAM_NETID) % NUM_FREQ_CHANNELS);

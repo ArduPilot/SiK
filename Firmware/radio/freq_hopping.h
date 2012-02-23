@@ -37,6 +37,10 @@
 /// how many channels to hop over
 #define NUM_FREQ_CHANNELS 50
 
+/// the channel spacing. This is not a round number
+/// as the radios don't like being tuned to multiples of 3MHz
+#define CHANNEL_SPACING   239000UL
+
 /// initialise frequency hopping logic
 ///
 /// @param netid	Our assigned network ID.
