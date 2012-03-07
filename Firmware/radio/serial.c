@@ -208,7 +208,7 @@ serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 	}
 
 	// discard any bytes that don't fit. We can't afford to
-	// wait for the buffer to train as we could miss a frequency
+	// wait for the buffer to drain as we could miss a frequency
 	// hopping transition
 	space = serial_write_space();	
 	if (count > space) {
