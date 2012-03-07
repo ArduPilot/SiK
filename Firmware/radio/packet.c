@@ -65,7 +65,7 @@ static __pdata uint8_t mav_max_xmit;
 // true if we have a injected packet to send
 static bool injected_packet;
 
-#define PACKET_RESEND_THRESHOLD 256
+#define PACKET_RESEND_THRESHOLD 32
 
 #define MAVLINK09_STX 85 // 'U'
 #define MAVLINK10_STX 254
