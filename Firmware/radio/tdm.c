@@ -115,9 +115,9 @@ __pdata struct statistics {
 
 struct tdm_trailer {
 	uint16_t window:13;
-	uint8_t command:1;
-	uint8_t bonus:1;
-	uint8_t resend:1;
+	uint16_t command:1;
+	uint16_t bonus:1;
+	uint16_t resend:1;
 };
 __pdata struct tdm_trailer trailer;
 
