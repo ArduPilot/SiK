@@ -53,8 +53,8 @@ __code const struct parameter_info {
 	{"AIR_SPEED",		128},
 	{"NETID",		25},
 	{"TXPOWER",		20},
-	{"ECC",			0},
-	{"MAVLINK",		0},
+	{"ECC",			1},
+	{"MAVLINK",		1},
 	{"OPPRESEND",		1},
 };
 
