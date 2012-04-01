@@ -141,8 +141,6 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		slen -= c;
 	}
 
-	seen_mavlink = true;
-
 	return last_sent_len;
 }
 

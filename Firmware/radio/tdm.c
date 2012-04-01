@@ -107,7 +107,6 @@ static __bit send_statistics;
 
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
-static __bit send_mavlink;
 
 struct tdm_trailer {
 	uint16_t window:13;
@@ -344,10 +343,6 @@ link_update(void)
 
 	test_display = at_testmode;
 	send_statistics = 1;
-	if (feature_mavlink_framing && seen_mavlink && !at_mode_active) {
-		send_mavlink = true;
-		seen_mavlink = false;
-	}
 }
 
 // dispatch an AT command to the remote system
@@ -426,8 +421,8 @@ tdm_serial_loop(void)
 			test_display = 0;
 		}
 
-		if (send_mavlink) {
-			send_mavlink = false;
+		if (seen_mavlink && feature_mavlink_framing && !at_mode_active) {
+			seen_mavlink = false;
 			MAVLink_report();
 		}
 
