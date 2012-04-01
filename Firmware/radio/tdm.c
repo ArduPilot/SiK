@@ -655,9 +655,10 @@ __code static const struct {
 	{ 24,  286,   21 },
 	{ 32,  219,   16 },
 	{ 64,  117,   8 },
+	{ 96,  91,    6 },
 	{ 128, 66,    4 },
 	{ 192, 49,    3 },
-	{ 256, 30,    2 },
+	{ 250, 30,    2 },
 };
 
 #if 0
@@ -785,7 +786,8 @@ tdm_init(void)
 		if (timing_table[i].air_rate == air_rate) break;
 	}
 	if (i == ARRAY_LENGTH(timing_table)) {
-		panic("missing rate in timing_table");
+		printf("missing rate %u in timing_table\n", (unsigned)air_rate);
+		i = ARRAY_LENGTH(timing_table) - 1;
 	}
 
         // find the packet latency and time per byte from the timing
