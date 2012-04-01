@@ -350,6 +350,12 @@ serial_read_available(void)
 	return ret;
 }
 
+uint16_t
+serial_read_space(void)
+{
+	return sizeof(rx_buf) - serial_read_available();
+}
+
 void
 putchar(char c) __reentrant
 {

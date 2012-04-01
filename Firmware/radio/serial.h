@@ -74,6 +74,12 @@ extern void	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count
 ///
 extern uint16_t	serial_write_space(void);
 
+/// Check for space in the read FIFO. Used to allow for software flow control
+///
+/// @return			The number of bytes free in the rx buffer
+///
+extern uint16_t	serial_read_space(void);
+
 /// Read a byte from the serial port.
 ///
 /// @return			The next byte in the receive FIFO.
