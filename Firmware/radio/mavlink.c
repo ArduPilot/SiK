@@ -150,5 +150,11 @@ void MAVLink_report(void)
 		swap_bytes(6+2, 8);
 	}
 	mavlink_crc();
+
+	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {
+		// don't cause an overflow
+		return;
+	}
+
 	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v09)+8);
 }
