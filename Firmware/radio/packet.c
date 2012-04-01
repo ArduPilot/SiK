@@ -65,10 +65,33 @@ static __pdata uint8_t mav_max_xmit;
 // true if we have a injected packet to send
 static bool injected_packet;
 
+// have we seen a mavlink packet?
+bool seen_mavlink;
+bool using_mavlink_10;
+
 #define PACKET_RESEND_THRESHOLD 32
 
 #define MAVLINK09_STX 85 // 'U'
 #define MAVLINK10_STX 254
+
+// check if a buffer looks like a MAVLink heartbeat packet - this
+// is used to determine if we will inject RADIO status MAVLink
+// messages into the serial stream for ground station and aircraft
+// monitoring of link quality
+static void check_heartbeat(__xdata uint8_t * __pdata buf)
+{
+	if (buf[0] == MAVLINK09_STX &&
+	    buf[1] == 3 && buf[5] == 0) {
+		// looks like a MAVLink 0.9 heartbeat
+		using_mavlink_10 = false;
+		seen_mavlink = true;
+	} else if (buf[0] == MAVLINK10_STX &&
+		   buf[1] == 9 && buf[5] == 0) {
+		// looks like a MAVLink 1.0 heartbeat
+		using_mavlink_10 = true;
+		seen_mavlink = true;
+	}
+}
 
 // return a complete MAVLink frame, possibly expanding
 // to include other complete frames that fit in the max_xmit limit
@@ -81,6 +104,8 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	last_sent_len = mav_pkt_len;
 	memcpy(buf, last_sent, last_sent_len);
 	mav_pkt_len = 0;
+
+	check_heartbeat(buf);
 
 	slen = serial_read_available();
 
@@ -109,9 +134,14 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		// we can add another MAVLink frame to the packet
 		serial_read_buf(&last_sent[last_sent_len], c);
 		memcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
+
+		check_heartbeat(buf+last_sent_len);
+
 		last_sent_len += c;
 		slen -= c;
 	}
+
+	seen_mavlink = true;
 
 	return last_sent_len;
 }

@@ -85,6 +85,7 @@ static void radio_init(void);
 
 /// statistics for radio and serial errors
 __pdata struct error_counts errors;
+__pdata struct statistics statistics, remote_statistics;
 
 /// optional features
 bool feature_golay;

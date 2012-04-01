@@ -105,13 +105,9 @@ __pdata uint8_t test_display;
 /// set when we should send a statistics packet on the next round
 static __bit send_statistics;
 
-/// packet and RSSI statistics
-__pdata struct statistics {
-	uint8_t average_rssi;
-	uint8_t remote_average_rssi;
-	uint8_t receive_count;
-	uint8_t round_count;
-} statistics, remote_statistics;
+/// set when we should send a MAVLink report pkt
+extern bool seen_mavlink;
+static __bit send_mavlink;
 
 struct tdm_trailer {
 	uint16_t window:13;
@@ -130,14 +126,10 @@ static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 void
 tdm_show_rssi(void)
 {
-	printf("LOCAL RSSI: %d  pkts/rounds: %u/%u   ",
+	printf("L/R RSSI: %d/%d  pkts: %u   ",
 	       (unsigned)statistics.average_rssi,
-	       (unsigned)statistics.receive_count,
-	       (unsigned)statistics.round_count);
-	printf("REMOTE RSSI: %d pkts/rounds: %u/%u",
-	       (int)remote_statistics.average_rssi,
-	       (unsigned)remote_statistics.receive_count,
-	       (unsigned)remote_statistics.round_count);
+	       (unsigned)remote_statistics.average_rssi,
+	       (unsigned)statistics.receive_count);
 	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
@@ -145,6 +137,7 @@ tdm_show_rssi(void)
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets);
+	statistics.receive_count = 0;
 }
 
 /// display test output
@@ -280,15 +273,6 @@ tdm_state_update(__pdata uint16_t tdelta)
 
 		// no longer waiting for a packet
 		transmit_wait = 0;
-
-		if (tdm_state == TDM_TRANSMIT) {
-			// update round statistics
-			statistics.round_count++;
-			if (statistics.round_count == 255) {
-				statistics.receive_count >>= 1;
-				statistics.round_count >>= 1;
-			}
-		}
 	}
 
 	tdm_state_remaining -= tdelta;
@@ -353,12 +337,17 @@ link_update(void)
 
 		// reset statistics when unlocked
 		statistics.receive_count = 0;
-		statistics.round_count = 0;
-		statistics.remote_average_rssi = 0;
+	}
+	if (unlock_count > 5) {
+		memset(&remote_statistics, 0, sizeof(remote_statistics));
 	}
 
 	test_display = at_testmode;
 	send_statistics = 1;
+	if (feature_mavlink_framing && seen_mavlink && !at_mode_active) {
+		send_mavlink = true;
+		seen_mavlink = false;
+	}
 }
 
 // dispatch an AT command to the remote system
@@ -437,6 +426,11 @@ tdm_serial_loop(void)
 			test_display = 0;
 		}
 
+		if (send_mavlink) {
+			send_mavlink = false;
+			MAVLink_report();
+		}
+
 		// set right receive channel
 		radio_set_channel(fhop_receive_channel());
 
@@ -453,10 +447,6 @@ tdm_serial_loop(void)
 			// update filtered RSSI value and packet stats
 			statistics.average_rssi = (radio_last_rssi() + 7*(uint16_t)statistics.average_rssi)/8;
 			statistics.receive_count++;
-			if (statistics.receive_count == 255) {
-				statistics.receive_count >>= 1;
-				statistics.round_count >>= 1;
-			}
 			
 			// we're not waiting for a preamble
 			// any more
@@ -675,16 +665,16 @@ __code static const struct {
 static void 
 tdm_build_timing_table(void)
 {
-	__idata uint8_t i, j;
+	__pdata uint8_t i, j;
 	bool golay_saved = feature_golay;
 	feature_golay = false;
 
 	for (i=2; i<ARRAY_LENGTH(timing_table); i++) {
-		__idata uint32_t latency_sum=0, per_byte_sum=0;
+		__pdata uint32_t latency_sum=0, per_byte_sum=0;
 		uint8_t size = MAX_PACKET_LENGTH;
 		radio_configure(timing_table[i].air_rate*1000UL);
 		for (j=0; j<10; j++) {
-			__idata uint16_t time_0, time_max, t1, t2;
+			__pdata uint16_t time_0, time_max, t1, t2;
 			radio_set_channel(1);
 			radio_receiver_on();
 			if (serial_read_available() > 0) {
