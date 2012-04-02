@@ -207,6 +207,14 @@ hardware_init(void)
 	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
 
+// constraint for frequencies
+static uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max)
+{
+	if (v < min) v = min;
+	if (v > max) v = max;
+	return v;
+}
+
 static void
 radio_init(void)
 {
@@ -265,13 +273,38 @@ radio_init(void)
 		txpower = param_get(PARAM_TXPOWER);
 	}
 
+	// constrain power and channels
+	txpower = constrain(txpower, 0, 20);
+	num_fh_channels = constrain(num_fh_channels, 1, MAX_FREQ_CHANNELS);
+
+	// double check ranges the board can do
+	switch (g_board_frequency) {
+	case FREQ_433:
+		freq_min = constrain(freq_min, 414000000UL, 454000000UL);
+		freq_max = constrain(freq_max, 414000000UL, 454000000UL);
+		break;
+	case FREQ_470:
+		freq_min = constrain(freq_min, 450000000UL, 490000000UL);
+		freq_max = constrain(freq_max, 450000000UL, 490000000UL);
+		break;
+	case FREQ_868:
+		freq_min = constrain(freq_min, 849000000UL, 889000000UL);
+		freq_max = constrain(freq_max, 849000000UL, 889000000UL);
+		break;
+	case FREQ_915:
+		freq_min = constrain(freq_min, 895000000UL, 935000000UL);
+		freq_max = constrain(freq_max, 895000000UL, 935000000UL);
+		break;
+	default:
+		panic("bad board frequency %d", g_board_frequency);
+		break;
+	}
+
+	if (freq_max == freq_min) {
+		freq_max = freq_min + 1000000UL;
+	}
+
 	// sanity checks
-	if (num_fh_channels < 1) {
-		num_fh_channels = 1;
-	}
-	if (num_fh_channels > MAX_FREQ_CHANNELS) {
-		num_fh_channels = MAX_FREQ_CHANNELS;
-	}
 	param_set(PARAM_MIN_FREQ, freq_min/1000);
 	param_set(PARAM_MAX_FREQ, freq_max/1000);
 	param_set(PARAM_NUM_CHANNELS, num_fh_channels);
