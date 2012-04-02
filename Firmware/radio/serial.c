@@ -350,10 +350,13 @@ serial_read_available(void)
 	return ret;
 }
 
-uint16_t
+// return available space in rx buffer as a percentage
+uint8_t
 serial_read_space(void)
 {
-	return sizeof(rx_buf) - serial_read_available();
+	uint16_t space = sizeof(rx_buf) - serial_read_available();
+	space = (100 * (space/8)) / (sizeof(rx_buf)/8);
+	return space;
 }
 
 void
