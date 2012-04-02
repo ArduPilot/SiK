@@ -52,10 +52,13 @@ __code const struct parameter_info {
 	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
 	{"NETID",		25},
-	{"TXPOWER",		20},
+	{"TXPOWER",		0},
 	{"ECC",			1},
 	{"MAVLINK",		1},
 	{"OPPRESEND",		1},
+	{"MIN_FREQ",		0},
+	{"MAX_FREQ",		0},
+	{"NUM_CHANNELS",	0}
 };
 
 /// In-RAM parameter store.
@@ -71,7 +74,7 @@ union param_private {
 __xdata union param_private	parameter_values[PARAM_MAX];
 
 static bool
-param_check(enum ParamID id, __pdata uint16_t val)
+param_check(enum ParamID id, __pdata uint32_t val)
 {
 	// parameter value out of range - fail
 	if (id >= PARAM_MAX)

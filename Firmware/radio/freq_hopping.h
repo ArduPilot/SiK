@@ -34,12 +34,7 @@
 #ifndef _FREQ_HOPPING_H_
 #define _FREQ_HOPPING_H_
 
-/// how many channels to hop over
-#define NUM_FREQ_CHANNELS 50
-
-/// the channel spacing. This is not a round number
-/// as the radios don't like being tuned to multiples of 3MHz
-#define CHANNEL_SPACING   239000UL
+#define MAX_FREQ_CHANNELS 50
 
 /// initialise frequency hopping logic
 ///
@@ -67,5 +62,8 @@ extern void fhop_window_change(void);
 /// @param locked	True if we have gained lock, false if we have lost it.
 ///
 extern void fhop_set_locked(bool locked);
+
+/// how many channels are we hopping over
+extern __pdata uint8_t num_fh_channels;
 
 #endif // _FREQ_HOPPING_H_

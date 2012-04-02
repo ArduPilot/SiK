@@ -210,7 +210,9 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	__pdata uint32_t	freq;
+	__pdata uint32_t freq_min, freq_max;
+	__pdata uint32_t channel_spacing;
+	__pdata uint8_t txpower;
 
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
@@ -219,46 +221,90 @@ radio_init(void)
 
 	switch (g_board_frequency) {
 	case FREQ_433:
-		freq = 433000000UL;
+		freq_min = 433050000UL;
+		freq_max = 434790000UL;
+		txpower = 10;
+		num_fh_channels = 10;
 		break;
 	case FREQ_470:
-		freq = 470000000UL;
+		freq_min = 470000000UL;
+		freq_max = 471000000UL;
+		txpower = 10;
+		num_fh_channels = 10;
 		break;
 	case FREQ_868:
-		freq = 868000000UL;
+		freq_min = 868000000UL;
+		freq_max = 869000000UL;
+		txpower = 10;
+		num_fh_channels = 10;
 		break;
 	case FREQ_915:
-		freq = 915000000UL;
+		freq_min = 915000000UL;
+		freq_max = 928000000UL;
+		txpower = 20;
+		num_fh_channels = MAX_FREQ_CHANNELS;
 		break;
 	default:
+		freq_min = 0;
+		freq_max = 0;
+		txpower = 0;
 		panic("bad board frequency %d", g_board_frequency);
-		freq = 0;	// keep the compiler happy
 		break;
 	}
 
+	if (param_get(PARAM_NUM_CHANNELS) != 0) {
+		num_fh_channels = param_get(PARAM_NUM_CHANNELS);
+	}
+	if (param_get(PARAM_MIN_FREQ) != 0) {
+		freq_min        = param_get(PARAM_MIN_FREQ) * 1000UL;
+	}
+	if (param_get(PARAM_MAX_FREQ) != 0) {
+		freq_max        = param_get(PARAM_MAX_FREQ) * 1000UL;
+	}
+	if (param_get(PARAM_TXPOWER) != 0) {
+		txpower = param_get(PARAM_TXPOWER);
+	}
+
+	// sanity checks
+	if (num_fh_channels < 1) {
+		num_fh_channels = 1;
+	}
+	if (num_fh_channels > MAX_FREQ_CHANNELS) {
+		num_fh_channels = MAX_FREQ_CHANNELS;
+	}
+	param_set(PARAM_MIN_FREQ, freq_min/1000);
+	param_set(PARAM_MAX_FREQ, freq_max/1000);
+	param_set(PARAM_NUM_CHANNELS, num_fh_channels);
+
+	channel_spacing = (freq_max - freq_min) / (num_fh_channels+2);
+
 	// add half of the channel spacing, to ensure that we are well
-	// away from the edges
-	freq += CHANNEL_SPACING/2;
+	// away from the edges of the allowed range
+	freq_min += channel_spacing/2;
 
 	// add another offset based on network ID. This means that
 	// with different network IDs we will have much lower
 	// interference
 	srand(param_get(PARAM_NETID));
-	freq += (((unsigned long)(rand()*625)) % CHANNEL_SPACING);
-	// printf("freq low=%lu high=%lu\n", freq, freq+50*CHANNEL_SPACING);
+	freq_min += ((unsigned long)(rand()*625)) % channel_spacing;
+	printf("freq low=%lu high=%lu spacing=%lu\n", 
+	       freq_min, freq_min+(num_fh_channels*channel_spacing), 
+	       channel_spacing);
 
 	// set the frequency and channel spacing
 	// change base freq based on netid
-	radio_set_frequency(freq);
+	radio_set_frequency(freq_min);
 
 	// set channel spacing
-	radio_set_channel_spacing(CHANNEL_SPACING);
+	radio_set_channel_spacing(channel_spacing);
 
 	// start on a channel chosen by network ID
-	radio_set_channel(param_get(PARAM_NETID) % NUM_FREQ_CHANNELS);
+	radio_set_channel(param_get(PARAM_NETID) % num_fh_channels);
 
 	// And intilise the radio with them.
-	if (!radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL)) {
+	if (!radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL) &&
+	    !radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL) &&
+	    !radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL)) {
 		panic("radio_configure failed");
 	}
 
@@ -269,7 +315,7 @@ radio_init(void)
 	radio_set_network_id(param_get(PARAM_NETID));
 
 	// setup transmit power
-	radio_set_transmit_power(param_get(PARAM_TXPOWER));
+	radio_set_transmit_power(txpower);
 	
 	// report the real transmit power in settings
 	param_set(PARAM_TXPOWER, radio_get_transmit_power());

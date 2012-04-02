@@ -54,16 +54,19 @@ enum ParamID {
         PARAM_ECC,			// ECC using golay encoding
 	PARAM_MAVLINK,			// MAVLink framing
 	PARAM_OPPRESEND,		// opportunistic resend
+	PARAM_MIN_FREQ,			// min frequency in MHz
+	PARAM_MAX_FREQ,			// max frequency in MHz
+	PARAM_NUM_CHANNELS,		// number of hopping channels
         PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x16UL				///< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x17UL				///< current parameter format ID
 
 /// Parameter type.
 ///
 /// All parameters have this type.
 ///
-typedef uint16_t	param_t;
+typedef uint32_t	param_t;
 
 /// Set a parameter
 ///

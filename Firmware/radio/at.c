@@ -294,10 +294,10 @@ at_i(void)
 		enum ParamID id;
 		// convenient way of showing all parameters
 		for (id = 0; id < PARAM_MAX; id++) {
-			printf("S%u: %s=%u\n", 
+			printf("S%u: %s=%lu\n", 
 			       (unsigned)id, 
 			       param_name(id), 
-			       (unsigned)param_get(id));
+			       (unsigned long)param_get(id));
 		}
 		return;
 	}
@@ -319,7 +319,7 @@ at_s(void)
 {
 	__pdata uint8_t		idx;
 	__pdata uint8_t		sreg;
-	__pdata uint16_t	val;
+	__pdata uint32_t	val;
 	__pdata uint8_t		c;
 
 	// get the register number first
@@ -339,7 +339,7 @@ at_s(void)
 	switch (at_cmd[idx]) {
 	case '?':
 		val = param_get(sreg);
-		printf("%u\n", val);
+		printf("%lu\n", val);
 		return;
 
 	case '=':
