@@ -287,7 +287,7 @@ radio_init(void)
 	// interference
 	srand(param_get(PARAM_NETID));
 	freq_min += ((unsigned long)(rand()*625)) % channel_spacing;
-	printf("freq low=%lu high=%lu spacing=%lu\n", 
+	debug("freq low=%lu high=%lu spacing=%lu\n", 
 	       freq_min, freq_min+(num_fh_channels*channel_spacing), 
 	       channel_spacing);
 
