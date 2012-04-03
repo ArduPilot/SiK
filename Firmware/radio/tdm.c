@@ -703,7 +703,7 @@ tdm_build_timing_table(void)
 		}
 		if (j > 0) {
 			printf("{ %u, %u, %u },\n",
-			       (unsigned)(radio_air_rate()/1000UL),
+			       (unsigned)(radio_air_rate()),
 			       (unsigned)(latency_sum/j),
 			       (unsigned)(per_byte_sum/j));
 		}
@@ -768,7 +768,7 @@ void
 tdm_init(void)
 {
 	__pdata uint16_t i;
-	__pdata uint8_t air_rate = radio_air_rate() / 1000UL;
+	__pdata uint8_t air_rate = radio_air_rate();
 	__pdata uint32_t window_width;
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)

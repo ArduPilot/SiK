@@ -337,14 +337,14 @@ radio_init(void)
 	radio_set_channel(param_get(PARAM_NETID) % num_fh_channels);
 
 	// And intilise the radio with them.
-	if (!radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL) &&
-	    !radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL) &&
-	    !radio_configure(param_get(PARAM_AIR_SPEED) * 1000UL)) {
+	if (!radio_configure(param_get(PARAM_AIR_SPEED)) &&
+	    !radio_configure(param_get(PARAM_AIR_SPEED)) &&
+	    !radio_configure(param_get(PARAM_AIR_SPEED))) {
 		panic("radio_configure failed");
 	}
 
 	// report the real air data rate in parameters
-	param_set(PARAM_AIR_SPEED, radio_air_rate()/1000);
+	param_set(PARAM_AIR_SPEED, radio_air_rate());
 
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));

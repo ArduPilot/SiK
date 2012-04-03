@@ -207,7 +207,7 @@ extern uint8_t radio_get_channel(void);
 ///				the next supported value
 /// @return			True if the radio was successfully configured.
 ///
-extern bool radio_configure(__pdata uint32_t air_rate);
+extern bool radio_configure(__pdata uint8_t air_rate);
 
 /// configure the radio network ID
 ///
@@ -230,7 +230,7 @@ extern uint8_t radio_last_rssi(void);
 /// @return			The value passed to the last successful call
 ///				to radio_configure
 ///
-extern uint32_t radio_air_rate(void);
+extern uint8_t radio_air_rate(void);
 
 /// set the radio transmit power (in dBm)
 ///
