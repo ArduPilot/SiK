@@ -1,5 +1,9 @@
 # SiK - Firmware for SiLabs Si1000 ISM radios
 
+For user documentation please see this site:
+
+ http://code.google.com/p/ardupilot-mega/wiki/3DRadio
+
 SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
 
 Currently, it supports the following boards:
@@ -12,9 +16,9 @@ Adding support for additional boards should not be difficult.
 Currently the firmware components include:
 
  - A bootloader with support for firmware upgrades over the serial interface.
- - Radio firmware with support for parsing AT commands, storing parameters and basic radio initialisation.
+ - Radio firmware with support for parsing AT commands, storing parameters and FHSS/TDM functionality
 
-In the short term, the radio firmware will be expanded to do simple transparent serial data exchange, but longer term plans include link reliability and proper link scheduling.
+See the user documentation above for a list of current firmware features
 
 ## What You Will Need
 
