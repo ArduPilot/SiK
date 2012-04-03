@@ -27,8 +27,8 @@
 # Makefile for the Si1000 radio application
 #
 
-VERSION_MAJOR	 =	0
-VERSION_MINOR	 =	9
+VERSION_MAJOR	 =	1
+VERSION_MINOR	 =	0
 
 PRODUCT		 =	radio.$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
