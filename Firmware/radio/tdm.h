@@ -56,4 +56,7 @@ extern void tdm_change_phase(void);
 /// show RSSI information
 extern void tdm_show_rssi(void);
 
+/// the long term duty cycle we are aiming for
+extern uint8_t duty_cycle;
+
 #endif // _TDM_H_

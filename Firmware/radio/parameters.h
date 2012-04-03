@@ -57,6 +57,7 @@ enum ParamID {
 	PARAM_MIN_FREQ,			// min frequency in MHz
 	PARAM_MAX_FREQ,			// max frequency in MHz
 	PARAM_NUM_CHANNELS,		// number of hopping channels
+	PARAM_DUTY_CYCLE,		// duty cycle (percentage)
         PARAM_MAX			// must be last
 };
 
@@ -117,3 +118,7 @@ extern void param_save(void);
 /// Note that this just resets - it does not save.
 ///
 extern void param_default(void);
+
+/// convenient routine to constrain parameter values
+uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max);
+

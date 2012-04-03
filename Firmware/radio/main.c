@@ -207,14 +207,6 @@ hardware_init(void)
 	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
 
-// constraint for frequencies
-static uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max)
-{
-	if (v < min) v = min;
-	if (v > max) v = max;
-	return v;
-}
-
 static void
 radio_init(void)
 {
@@ -303,6 +295,11 @@ radio_init(void)
 	if (freq_max == freq_min) {
 		freq_max = freq_min + 1000000UL;
 	}
+
+	// get the duty cycle we will use
+	duty_cycle = param_get(PARAM_DUTY_CYCLE);
+	duty_cycle = constrain(duty_cycle, 0, 100);
+	param_set(PARAM_DUTY_CYCLE, duty_cycle);
 
 	// sanity checks
 	param_set(PARAM_MIN_FREQ, freq_min/1000);

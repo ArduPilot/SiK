@@ -41,6 +41,7 @@
 
 
 #include "radio.h"
+#include "tdm.h"
 
 /// In-ROM parameter info table.
 ///
@@ -58,7 +59,8 @@ __code const struct parameter_info {
 	{"OPPRESEND",		1},
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
-	{"NUM_CHANNELS",	0}
+	{"NUM_CHANNELS",	0},
+	{"DUTY_CYCLE",		100}
 };
 
 /// In-RAM parameter store.
@@ -131,6 +133,10 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		// useful to update power level immediately when range
 		// testing in RSSI mode		
 		radio_set_transmit_power(value);
+		break;
+	case PARAM_DUTY_CYCLE:
+		// update duty cycle immediately
+		duty_cycle = constrain(value, 0, 100);
 		break;
 
 	default:
@@ -243,3 +249,12 @@ param_name(__data enum ParamID param)
 	}
 	return 0;
 }
+
+// constraint for parameter values
+uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max)
+{
+	if (v < min) v = min;
+	if (v > max) v = max;
+	return v;
+}
+

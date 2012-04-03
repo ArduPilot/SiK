@@ -97,6 +97,17 @@ __pdata static uint16_t ticks_per_byte;
 /// sorted out
 __pdata uint16_t transmit_wait;
 
+/// the long term duty cycle we are aiming for
+uint8_t duty_cycle;
+
+/// the average duty cycle we have been transmitting
+static float average_duty_cycle;
+
+/// set to true if we need to wait for our duty cycle average to drop
+static bool duty_cycle_wait;
+
+/// how many ticks we have transmitted for in this TDM round
+static uint16_t transmitted_ticks;
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
@@ -262,6 +273,13 @@ tdm_state_update(__pdata uint16_t tdelta)
 		if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE1) {
 			fhop_window_change();
 			radio_receiver_on();
+		}
+
+		if (tdm_state == TDM_TRANSMIT && duty_cycle != 100) {
+			// update duty cycle averages
+			average_duty_cycle = (0.95*average_duty_cycle) + (0.05*(100.0*transmitted_ticks)/(2*(silence_period+tx_window_width)));
+			transmitted_ticks = 0;
+			duty_cycle_wait = (average_duty_cycle >= duty_cycle);
 		}
 
 		// we lose the bonus on all state changes
@@ -517,6 +535,11 @@ tdm_serial_loop(void)
 		}		
 #endif
 
+		if (duty_cycle_wait) {
+			// we're waiting for our duty cycle to drop
+			continue;
+		}
+
 		if (transmit_wait != 0) {
 			// we're waiting for a preamble to turn into a packet
 			continue;
@@ -613,6 +636,12 @@ tdm_serial_loop(void)
 		// sending the next one. The receivers don't cope well
 		// with back to back packets
 		transmit_wait = packet_latency;
+
+		// if we're implementing a duty cycle, add the
+		// transmit time to the number of ticks we've been transmitting
+		if (duty_cycle != 100) {
+			transmitted_ticks += flight_time_estimate(len+sizeof(trailer));
+		}
 
 		// start transmitting the packet
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
