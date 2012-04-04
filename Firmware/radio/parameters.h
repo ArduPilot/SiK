@@ -58,10 +58,11 @@ enum ParamID {
 	PARAM_MAX_FREQ,			// max frequency in MHz
 	PARAM_NUM_CHANNELS,		// number of hopping channels
 	PARAM_DUTY_CYCLE,		// duty cycle (percentage)
+	PARAM_LBT_RSSI,			// listen before talk threshold
         PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x17UL				///< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x18UL				///< current parameter format ID
 
 /// Parameter type.
 ///

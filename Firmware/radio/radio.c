@@ -253,6 +253,14 @@ radio_last_rssi(void)
 	return last_rssi;
 }
 
+// return the current signal strength, for LBT
+//
+uint8_t
+radio_current_rssi(void)
+{
+	return register_read(EZRADIOPRO_RECEIVED_SIGNAL_STRENGTH_INDICATOR);
+}
+
 // return the actual air data rate in BPS
 //
 uint8_t

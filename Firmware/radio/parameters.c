@@ -60,7 +60,8 @@ __code const struct parameter_info {
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
 	{"NUM_CHANNELS",	0},
-	{"DUTY_CYCLE",		100}
+	{"DUTY_CYCLE",		100},
+	{"LBT_RSSI",		0}
 };
 
 /// In-RAM parameter store.

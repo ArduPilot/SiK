@@ -301,6 +301,14 @@ radio_init(void)
 	duty_cycle = constrain(duty_cycle, 0, 100);
 	param_set(PARAM_DUTY_CYCLE, duty_cycle);
 
+	// get the LBT threshold we will use
+	lbt_rssi = param_get(PARAM_LBT_RSSI);
+	if (lbt_rssi != 0) {
+		// limit to the RSSI valid range
+		lbt_rssi = constrain(lbt_rssi, 25, 220);
+	}
+	param_set(PARAM_LBT_RSSI, lbt_rssi);
+
 	// sanity checks
 	param_set(PARAM_MIN_FREQ, freq_min/1000);
 	param_set(PARAM_MAX_FREQ, freq_max/1000);

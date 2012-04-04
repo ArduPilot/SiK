@@ -225,6 +225,12 @@ extern void radio_set_network_id(uint16_t id);
 ///				the last time a valid preamble was detected.
 extern uint8_t radio_last_rssi(void);
 
+/// fetch the current signal strength for LBT
+///
+/// @return			The RSSI register as reported by the radio
+///
+extern uint8_t radio_current_rssi(void);
+
 /// return the air data rate
 ///
 /// @return			The value passed to the last successful call

@@ -109,6 +109,18 @@ static bool duty_cycle_wait;
 /// how many ticks we have transmitted for in this TDM round
 static uint16_t transmitted_ticks;
 
+/// the LDB (listen before talk) RSSI threshold
+uint8_t lbt_rssi;
+
+/// how long we have listened for for LBT
+static uint16_t lbt_listen_time;
+
+/// how long we have to listen for before LBT is OK
+static uint16_t lbt_min_time;
+
+/// random addition to LBT listen time (see European regs)
+static uint16_t lbt_rand;
+
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
 __pdata uint8_t test_display;
@@ -273,6 +285,12 @@ tdm_state_update(__pdata uint16_t tdelta)
 		if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE1) {
 			fhop_window_change();
 			radio_receiver_on();
+
+			if (num_fh_channels > 1) {
+				// reset the LBT listen time
+				lbt_listen_time = 0;
+				lbt_rand = 0;
+			}
 		}
 
 		if (tdm_state == TDM_TRANSMIT && duty_cycle != 100) {
@@ -520,6 +538,22 @@ tdm_serial_loop(void)
 			last_link_update = tnow;
 		}
 
+		if (lbt_rssi != 0) {
+			// implement listen before talk
+			if (radio_current_rssi() < lbt_rssi) {
+				lbt_listen_time += tdelta;
+			} else {
+				lbt_listen_time = 0;
+				if (lbt_rand == 0) {
+					lbt_rand = ((uint16_t)rand()) % lbt_min_time;
+				}
+			}
+			if (lbt_listen_time < lbt_min_time + lbt_rand) {
+				// we need to listen some more
+				continue;
+			}
+		}
+
 		// we are allowed to transmit in our transmit window
 		// or in the other radios transmit window if we have
 		// bonus ticks
@@ -647,6 +681,12 @@ tdm_serial_loop(void)
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
 		    len != 0 && trailer.window != 0 && trailer.command == 0) {
 			packet_force_resend();
+		}
+
+		if (lbt_rssi != 0) {
+			// reset the LBT listen time
+			lbt_listen_time = 0;
+			lbt_rand = 0;
 		}
 
 		// set right receive channel
@@ -801,6 +841,7 @@ tdm_init(void)
 	__pdata uint32_t window_width;
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
+#define LBT_MIN_TIME_USEC 5000
 
 	// tdm_build_timing_table();
 
@@ -836,6 +877,13 @@ tdm_init(void)
 
         // set the transmit window to allow for 3 full sized packets
 	window_width = 3*(packet_latency+(max_data_packet_length*(uint32_t)ticks_per_byte));
+
+	// if LBT is enabled, we need at least 3*5ms of window width
+	if (lbt_rssi != 0) {
+		// min listen time is 5ms
+		lbt_min_time = LBT_MIN_TIME_USEC/16;
+		window_width = constrain(window_width, 3*lbt_min_time, window_width);
+	}
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
