@@ -829,7 +829,11 @@ tdm_init(void)
 	ticks_per_byte = (8+(8000000UL/(air_rate*1000UL)))/16;
 
 	// calculate the minimum packet latency in 16 usec units
-	packet_latency = (8+(settings.preamble_length/2)) * ticks_per_byte + 13;
+	// we initially assume a preamble length of 40 bits, then
+	// adjust later based on actual preamble length. This is done
+	// so that if one radio has antenna diversity and the other
+	// doesn't, then they will both using the same TDM round timings
+	packet_latency = (8+(10/2)) * ticks_per_byte + 13;
 
 	if (feature_golay) {
 		max_data_packet_length = (MAX_PACKET_LENGTH/2) - (6+sizeof(trailer));
@@ -868,6 +872,11 @@ tdm_init(void)
 	}
 
 	tx_window_width = window_width;
+
+	// now adjust the packet_latency for the actual preamble
+	// length, so we get the right flight time estimates, while
+	// not changing the round timings
+	packet_latency += ((settings.preamble_length-10)/2) * ticks_per_byte;
 
 	// tell the packet subsystem our max packet size, which it
 	// needs to know for MAVLink packet boundary detection
