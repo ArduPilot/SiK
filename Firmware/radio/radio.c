@@ -693,12 +693,11 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// TX state (output)
 	//set GPIO2 to GND
 #elif ENABLE_RFD900_SWITCH
-	// below hacked in while no diversity implemented
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
 #if RFD900_DIVERSITY
 	// with antenna diversity
-	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x17);
+	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
 	// see table 23.8, page 279
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, 
 		       (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
