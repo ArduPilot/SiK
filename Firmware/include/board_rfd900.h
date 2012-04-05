@@ -124,7 +124,7 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// ** TBD: Value to be confirmed **
 #define ENABLE_RFD900_SWITCH	1	// Define RF switches on the module
-#define RFD900_DIVERSITY 0		// Enable/Disable Diversity on RFD900
+#define RFD900_DIVERSITY 1		// Enable/Disable Diversity on RFD900
 SBIT(IRQ,  SFR_P0, 7);			  // Per schematic
 SBIT(NSS1, SFR_P1, 4);			  // SI100x Internal Connection
 //SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50

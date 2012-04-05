@@ -681,9 +681,6 @@ radio_configure(__pdata uint8_t air_rate)
 
 	clear_status_registers();
 
-	// use 10 nibbles preamble, which is recommended for AFC
-	settings.preamble_length = 10;
-
 #ifdef ENABLE_RF_SWITCH
 	//set GPIO0 to GND
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)
@@ -699,8 +696,17 @@ radio_configure(__pdata uint8_t air_rate)
 	// below hacked in while no diversity implemented
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
+#if RFD900_DIVERSITY
+	// with antenna diversity
+	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x17);
+	// see table 23.8, page 279
+	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, 
+		       (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
+#else
+	// without antenna diversity
 	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
 	register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
+#endif
 #else
 	//set GPIOx to GND
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)
@@ -752,9 +758,16 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_TX_FIFO_CONTROL_2, TX_FIFO_THRESHOLD_LOW);
 	register_write(EZRADIOPRO_RX_FIFO_CONTROL, RX_FIFO_THRESHOLD_HIGH);
 
-	// preamble setup
+#if RFD900_DIVERSITY
+	// with antenna diversity a longer preamble is recommended
+	settings.preamble_length = 16;
+#else
+	// use 10 nibbles preamble, which is recommended for AFC
+	settings.preamble_length = 10;
+#endif
+
 	register_write(EZRADIOPRO_PREAMBLE_LENGTH, settings.preamble_length); // nibbles 
-	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 7<<3); // 7 nibbles
+	register_write(EZRADIOPRO_PREAMBLE_DETECTION_CONTROL, 5<<3); // 5 nibbles
 
 	// setup minimum output power during startup
 	radio_set_transmit_power(0);
