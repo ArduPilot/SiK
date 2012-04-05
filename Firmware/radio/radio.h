@@ -262,4 +262,15 @@ extern bool radio_receive_in_progress(void);
 /// send a MAVLink status report packet
 void MAVLink_report(void);
 
+struct radio_settings {
+	uint32_t frequency;
+	uint32_t channel_spacing;
+	uint8_t air_data_rate;
+	uint8_t current_channel;
+	uint8_t transmit_power;
+	uint8_t preamble_length; // in nibbles
+};
+
+extern __pdata struct radio_settings settings;
+
 #endif // _RADIO_H_
