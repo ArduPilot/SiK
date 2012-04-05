@@ -44,6 +44,9 @@
 #define BOARD_ID	0x4d
 #define BOARD_NAME	"RF50_DEMO"
 
+#define BOARD_MINTXPOWER 0		// Minimum transmit power level
+#define BOARD_MAXTXPOWER 20		// Maximum transmit power level
+
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P2, 0);
 SBIT(LED_GREEN,	   SFR_P2, 5);

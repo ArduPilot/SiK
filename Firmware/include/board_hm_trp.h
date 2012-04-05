@@ -96,6 +96,9 @@
 #define BOARD_ID	0x4e
 #define BOARD_NAME	"HM-TRP"
 
+#define BOARD_MINTXPOWER 0		// Minimum transmit power level
+#define BOARD_MAXTXPOWER 20		// Maximum transmit power level
+
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P1, 6);
 SBIT(LED_GREEN,	   SFR_P1, 5);

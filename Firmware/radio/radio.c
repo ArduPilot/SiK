@@ -816,7 +816,12 @@ radio_configure(__pdata uint8_t air_rate)
 }
 
 #define NUM_POWER_LEVELS 8
-__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
+
+#ifdef _BOARD_RFD900
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 9, 12, 15, 18, 21, 24, 27, 30 };
+#else
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
+#endif
 
 // set the radio transmit power (in dBm)
 //
@@ -834,7 +839,7 @@ radio_set_transmit_power(uint8_t power)
 	register_write(EZRADIOPRO_TX_POWER, i);
 }
 
-// get the currend transmit power (in dBm)
+// get the current transmit power (in dBm)
 //
 uint8_t 
 radio_get_transmit_power(void)

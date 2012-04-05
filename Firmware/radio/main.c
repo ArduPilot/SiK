@@ -266,7 +266,7 @@ radio_init(void)
 	}
 
 	// constrain power and channels
-	txpower = constrain(txpower, 0, 20);
+	txpower = constrain(txpower, BOARD_MINTXPOWER, BOARD_MAXTXPOWER);
 	num_fh_channels = constrain(num_fh_channels, 1, MAX_FREQ_CHANNELS);
 
 	// double check ranges the board can do

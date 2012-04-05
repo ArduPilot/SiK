@@ -32,12 +32,10 @@
 ///
 /// Board-specific definitions and documentation for the RFD900 board.
 ///
-///
-///
-/// @page hm_trp_programming Programming the HM-TRP Board
-///
-/// The RFD900 board conveniently provides pads for programming
-/// the Si1000.  They are on the bottom layer.
+/// The RFD900 board provides pads for programming
+/// the Si1000 via the debug port.
+/// The pads are on the single horizontal header on the bottom of the board.
+/// Pin 1 = GND, Pin 2 = +5V, Pin 3 = C2D, Pin 4 = C2CK
 ///
 /// The SiLabs programmer has a 10-pin ribbon cable, for which you will
 /// need to make an adapter.  The User Guide, linked from the page here:
@@ -45,17 +43,14 @@
 /// http://www.silabs.com/products/mcu/Pages/USBDebug.aspx
 /// describes the pinout of the cable.
 ///
-/// WARNING: The SiLabs adapter provides 5V on the USB Power pin.  DO NOT
-/// connect this pinto the RFD900 board.
-///
 /// Connect the SiLabs debug adapter to the RFD900 as follows:
 ///
-/// Debug Adapter Pin:                 HM-TRP pin
+/// Debug Adapter Pin:                 		RFD900 pin
 ///
-///        2 <--------------------------> GND
-///        4 <--------------------------> C2D
-///        7 <--------------------------> C2CK
-///       10 <-> 5V to 3.3V converter <-> 
+///        2 <--------------------------> GND 	(Pin 1)
+///        4 <--------------------------> C2D 	(Pin 3)
+///        7 <--------------------------> C2CK	(Pin 4)
+///       10 <--------------------------> +5V		(Pin 2)
 ///
 ///
 ///
@@ -76,6 +71,9 @@
 
 #define BOARD_ID	  0x42
 #define BOARD_NAME	"RFD900"
+
+#define BOARD_MINTXPOWER 9		// Minimum transmit power level
+#define BOARD_MAXTXPOWER 30		// Maximum transmit power level
 
 // GPIO definitions (not exported)
 SBIT(LED_RED,	     SFR_P1, 6);
@@ -123,10 +121,9 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 // Radio Definitions
 
 #define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// ** TBD: Value to be confirmed **
-#define ENABLE_RFD900_SWITCH	1	// Define RF switches on the module
-#define RFD900_DIVERSITY 1		// Enable/Disable Diversity on RFD900
-SBIT(IRQ,  SFR_P0, 7);			  // Per schematic
-SBIT(NSS1, SFR_P1, 4);			  // SI100x Internal Connection
-//SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50
+#define ENABLE_RFD900_SWITCH	1		// Define RF switches on the module
+#define RFD900_DIVERSITY 1				// Enable/Disable diversity on RFD900
+SBIT(IRQ,  SFR_P0, 7);			  		// Connection within RFD900 module, P0.7 is connected to nIRQ
+SBIT(NSS1, SFR_P1, 4);			  		// SI100x Internal Connection
 
 #endif // _BOARD_RFD900

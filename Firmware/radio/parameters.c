@@ -100,7 +100,7 @@ param_check(enum ParamID id, __pdata uint32_t val)
 		return true;
 
 	case PARAM_TXPOWER:
-		if (val > 20)
+		if (val > BOARD_MAXTXPOWER)
 			return false;
 		break;
 
