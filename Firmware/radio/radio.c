@@ -523,8 +523,6 @@ radio_initialise(void)
 {
 	uint8_t status;
 
-	SDN = 0;
-
 	delay_msec(25);
 
 	// make sure there is a radio on the SPI bus
@@ -697,7 +695,12 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX state (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// TX state (output)
 	//set GPIO2 to GND
-	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x14);	// RX data (output)
+#elif ENABLE_RFD900_SWITCH
+	// below hacked in while no diversity implemented
+	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
+	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
+	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
+	register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
 #else
 	//set GPIOx to GND
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)

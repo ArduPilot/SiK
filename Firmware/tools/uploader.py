@@ -210,7 +210,7 @@ class uploader(object):
 		for i in range(5):
 			ser.send('\r\nATI\r\n')
 			try:
-				ser.expect('SiK .* on HM-TRP', timeout=0.5)
+				ser.expect('SiK .* on', timeout=0.5)
 				ser.send('\r\n')
 				time.sleep(0.2)
 				ser.send('AT&UPDATE\r\n')
