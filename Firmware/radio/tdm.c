@@ -701,44 +701,21 @@ tdm_serial_loop(void)
 	}
 }
 
-/// table mapping air rate to measured latency and per-byte
-/// timings in 16usec units
-__code static const struct {
-	uint32_t air_rate;
-	uint16_t latency;
-	uint16_t per_byte;
-} timing_table[] = {
-	{ 0,   13130, 1028 },
-	{ 1,   6574,  514 },
-	{ 2,   3293,  257 },
-	{ 4,   1653,  128 },
-	{ 8,   833,   64 },
-	{ 9,   697,   53 },
-	{ 16,  423,   32 },
-	{ 19,  354,   27 },
-	{ 24,  286,   21 },
-	{ 32,  219,   16 },
-	{ 64,  117,   8 },
-	{ 96,  91,    6 },
-	{ 128, 66,    4 },
-	{ 192, 49,    3 },
-	{ 250, 30,    2 },
-};
-
 #if 0
 /// build the timing table
 static void 
 tdm_build_timing_table(void)
 {
-	__pdata uint8_t i, j;
+	__pdata uint8_t j;
+	__pdata uint16_t rate;
 	bool golay_saved = feature_golay;
 	feature_golay = false;
 
-	for (i=2; i<ARRAY_LENGTH(timing_table); i++) {
+	for (rate=2; rate<256; rate=(rate*3)/2) {
 		__pdata uint32_t latency_sum=0, per_byte_sum=0;
 		uint8_t size = MAX_PACKET_LENGTH;
-		radio_configure(timing_table[i].air_rate*1000UL);
-		for (j=0; j<10; j++) {
+		radio_configure(rate);
+		for (j=0; j<50; j++) {
 			__pdata uint16_t time_0, time_max, t1, t2;
 			radio_set_channel(1);
 			radio_receiver_on();
@@ -758,7 +735,10 @@ tdm_build_timing_table(void)
 			radio_set_channel(2);
 			t1 = timer2_tick();
 			if (!radio_transmit(size, pbuf, 0xFFFF)) {
-				size /= 2;
+				if (size == 0) {
+					break;
+				}
+				size /= 4;
 				j--;
 				continue;
 			}
@@ -845,20 +825,11 @@ tdm_init(void)
 
 	// tdm_build_timing_table();
 
-	// find the packet latency and time per byte from the timing
-	// table.
-	for (i=0; i<ARRAY_LENGTH(timing_table); i++) {
-		if (timing_table[i].air_rate == air_rate) break;
-	}
-	if (i == ARRAY_LENGTH(timing_table)) {
-		printf("missing rate %u in timing_table\n", (unsigned)air_rate);
-		i = ARRAY_LENGTH(timing_table) - 1;
-	}
+	// calculate how many 16usec ticks it takes to send each byte
+	ticks_per_byte = (8+(8000000UL/(air_rate*1000UL)))/16;
 
-        // find the packet latency and time per byte from the timing
-        // table.
-	packet_latency = timing_table[i].latency;
-        ticks_per_byte = timing_table[i].per_byte;
+	// calculate the minimum packet latency in 16 usec units
+	packet_latency = (8+(settings.preamble_length/2)) * ticks_per_byte + 13;
 
 	if (feature_golay) {
 		max_data_packet_length = (MAX_PACKET_LENGTH/2) - (6+sizeof(trailer));
@@ -909,7 +880,7 @@ tdm_init(void)
 	// crc_test();
 
 	// tdm_test_timing();
-
+	
 	// golay_test();
 }
 
