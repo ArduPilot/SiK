@@ -120,10 +120,10 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 
 // Radio Definitions
 
-#define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// ** TBD: Value to be confirmed **
-#define ENABLE_RFD900_SWITCH	1		// Define RF switches on the module
-#define RFD900_DIVERSITY 1				// Enable/Disable diversity on RFD900
-SBIT(IRQ,  SFR_P0, 7);			  		// Connection within RFD900 module, P0.7 is connected to nIRQ
-SBIT(NSS1, SFR_P1, 4);			  		// SI100x Internal Connection
+#define EZRADIOPRO_OSC_CAP_VALUE 0xB6 // Measured on RFD900 V1.1
+#define ENABLE_RFD900_SWITCH 1        // Define RF switches on the module
+#define RFD900_DIVERSITY 1            // Enable/Disable diversity on RFD900
+SBIT(IRQ,  SFR_P0, 7);                // Connection within RFD900 module, P0.7 is connected to nIRQ
+SBIT(NSS1, SFR_P1, 4);                // SI100x Internal Connection
 
 #endif // _BOARD_RFD900
