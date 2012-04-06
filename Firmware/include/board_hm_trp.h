@@ -145,10 +145,10 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 // EzRadio / rtPhy definitions
 // Note that the HM-TRP deviates from SiLabs' appnotes in the wiring of the RF switch
 //
-#define EZRADIOPRO_OSC_CAP_VALUE 0xb4	// XXX cribbed from RF50, probably wrong
-#define ENABLE_RFM50_SWITCH	1	// verified presence of RF switch on the module
-SBIT(IRQ,  SFR_P0, 7);			// Per board inspection
-SBIT(NSS1, SFR_P1, 4);			// SI100x Internal Connection
-SBIT(SDN,  SFR_P2, 6);			// XXX not actually the case on the HM-TRP... HRF set it this way on the RF50
+#define EZRADIOPRO_OSC_CAP_VALUE 0xCC   // Measured value on 3DR/HM-TRP 900MHz modules
+#define ENABLE_RFM50_SWITCH 1           // verified presence of RF switch on the module
+SBIT(IRQ,  SFR_P0, 7);                  // Per board inspection
+SBIT(NSS1, SFR_P1, 4);                  // SI100x Internal Connection
+SBIT(SDN,  SFR_P2, 6);                  // XXX not actually the case on the HM-TRP... HRF set it this way on the RF50
 
 #endif // _BOARD_HM_TRP_H_
