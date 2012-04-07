@@ -673,7 +673,7 @@ __code static const uint8_t reg_table_915[NUM_RADIO_REGISTERS][NUM_DATA_RATES] =
 bool
 radio_configure(__pdata uint8_t air_rate)
 {
-	uint8_t i, rate_selection;
+	__pdata uint8_t i, rate_selection, control;
 
 	// disable interrupts
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
@@ -780,10 +780,15 @@ radio_configure(__pdata uint8_t air_rate)
 	settings.air_data_rate = air_data_rates[rate_selection];
 
 	if (settings.air_data_rate >= 32) {
-		register_write(EZRADIOPRO_MODULATION_MODE_CONTROL_1, 0x0D);
+		control = 0x0D;
 	} else {
-		register_write(EZRADIOPRO_MODULATION_MODE_CONTROL_1, 0x2D);
+		control = 0x2D;
 	}
+	if (param_get(PARAM_MANCHESTER) && settings.air_data_rate <= 128) {
+		// manchester encoding is not possible at above 128kbps
+		control |= EZRADIOPRO_ENMANCH;
+	}
+	register_write(EZRADIOPRO_MODULATION_MODE_CONTROL_1, control);
 
 	register_write(EZRADIOPRO_MODULATION_MODE_CONTROL_2, 0x23);
 
