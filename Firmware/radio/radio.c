@@ -567,7 +567,7 @@ radio_initialise(void)
 bool
 radio_set_frequency(__pdata uint32_t value)
 {
-	if (value < 240000000L || value > 930000000L) {
+	if (value < 240000000UL || value > 935000000UL) {
 		return false;
 	}
 	settings.frequency = value;
