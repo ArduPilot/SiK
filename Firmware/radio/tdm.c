@@ -592,8 +592,8 @@ tdm_serial_loop(void)
 
 		// sample the background noise when it is out turn to
 		// transmit, but we are not transmitting,
-		// averaged over around 32 samples
-		statistics.average_noise = (radio_current_rssi() + 31*(uint16_t)statistics.average_noise)/32;
+		// averaged over around 4 samples
+		statistics.average_noise = (radio_current_rssi() + 3*(uint16_t)statistics.average_noise)/4;
 
 		if (duty_cycle_wait) {
 			// we're waiting for our duty cycle to drop
