@@ -73,7 +73,7 @@ __code const struct parameter_info {
 ///
 union param_private {
 	param_t		val;
-	uint8_t		bytes[2];
+	uint8_t		bytes[4];
 };
 __xdata union param_private	parameter_values[PARAM_MAX];
 
@@ -162,19 +162,30 @@ __critical {
 	__pdata uint8_t		d;
 	__pdata uint8_t		i;
 	__pdata uint8_t		sum;
+	__pdata uint8_t         count;
+
+	// start with defaults
+	for (i = 0; i < sizeof(parameter_values); i++) {
+		parameter_values[i].val = parameter_info[i].default_value;
+	}
 
 	// initialise checksum
 	sum = 0;
+	count = flash_read_scratch(0);
+	if (count > sizeof(parameter_values) ||
+	    count < 12*sizeof(param_t)) {
+		return false;
+	}
 
 	// loop reading the parameters array
-	for (i = 0; i < sizeof(parameter_values); i ++) {
-		d = flash_read_scratch(i);
+	for (i = 0; i < count; i ++) {
+		d = flash_read_scratch(i+1);
 		parameter_values[0].bytes[i] = d;
 		sum ^= d;
 	}
 
 	// verify checksum
-	d = flash_read_scratch(i);
+	d = flash_read_scratch(i+1);
 	if (sum != d)
 		return false;
 
@@ -184,7 +195,7 @@ __critical {
 		return false;
 	}
 
-	for (i = 0; i < sizeof(parameter_values); i ++) {
+	for (i = 0; i < sizeof(parameter_values); i++) {
 		if (!param_check(i, parameter_values[i].val)) {
 			parameter_values[i].val = parameter_info[i].default_value;
 		}
@@ -208,16 +219,17 @@ __critical {
 
 	// initialise checksum
 	sum = 0;
+	flash_write_scratch(0, sizeof(parameter_values));
 
 	// save parameters to the scratch page
 	for (i = 0; i < sizeof(parameter_values); i++) {
 		d = parameter_values[0].bytes[i];	// byte we are going to write
 		sum ^= d;
-		flash_write_scratch(i, d);
+		flash_write_scratch(i+1, d);
 	}
 
 	// write checksum
-	flash_write_scratch(i, sum);
+	flash_write_scratch(i+1, sum);
 }
 
 void
