@@ -42,7 +42,7 @@ static __pdata uint8_t seqnum;
 extern bool using_mavlink_10;
 
 #define MAVLINK_MSG_ID_RADIO 166
-#define MAVLINK_RADIO_CRC_EXTRA 244
+#define MAVLINK_RADIO_CRC_EXTRA 21
 
 // use '3D' for 3DRadio
 #define RADIO_SOURCE_SYSTEM '3'
@@ -89,8 +89,9 @@ static void mavlink_crc(void)
             <field type="uint8_t" name="rssi">local signal strength</field>
             <field type="uint8_t" name="remrssi">remote signal strength</field>
 	    <field type="uint8_t" name="txbuf">percentage free space in transmit buffer</field>
+	    <field type="uint8_t" name="noise">background noise level</field>
+	    <field type="uint8_t" name="remnoise">remote background noise level</field>
 	    <field type="uint16_t" name="rxerrors">receive errors</field>
-	    <field type="uint16_t" name="serrors">serial errors</field>
 	    <field type="uint16_t" name="fixed">count of error corrected packets</field>
 	  </message>
 */
@@ -98,17 +99,19 @@ struct mavlink_RADIO_v09 {
 	uint8_t rssi;
 	uint8_t remrssi;
 	uint8_t txbuf;
+	uint8_t noise;
+	uint8_t remnoise;
 	uint16_t rxerrors;
-	uint16_t serrors;
 	uint16_t fixed;
 };
 struct mavlink_RADIO_v10 {
 	uint16_t rxerrors;
-	uint16_t serrors;
 	uint16_t fixed;
 	uint8_t rssi;
 	uint8_t remrssi;
 	uint8_t txbuf;
+	uint8_t noise;
+	uint8_t remnoise;
 };
 
 static void swap_bytes(__pdata uint8_t ofs, __pdata uint8_t len)
@@ -134,20 +137,22 @@ void MAVLink_report(void)
 	if (using_mavlink_10) {
 		struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
 		m->rxerrors = errors.rx_errors;
-		m->serrors  = errors.serial_rx_overflow;
 		m->fixed    = errors.corrected_packets;
 		m->txbuf    = serial_read_space();
 		m->rssi     = statistics.average_rssi;
 		m->remrssi  = remote_statistics.average_rssi;
+		m->noise    = statistics.average_noise;
+		m->remnoise = remote_statistics.average_noise;
 	} else {
 		struct mavlink_RADIO_v09 *m = (struct mavlink_RADIO_v09 *)&pbuf[6];
 		m->rxerrors = errors.rx_errors;
-		m->serrors  = errors.serial_rx_overflow;
 		m->fixed    = errors.corrected_packets;
 		m->txbuf    = serial_read_space();
 		m->rssi     = statistics.average_rssi;
 		m->remrssi  = remote_statistics.average_rssi;
-		swap_bytes(6+3, 6);
+		m->noise    = statistics.average_noise;
+		m->remnoise = remote_statistics.average_noise;
+		swap_bytes(6+5, 4);
 	}
 	mavlink_crc();
 

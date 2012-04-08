@@ -123,6 +123,7 @@ extern __pdata uint8_t			g_board_bl_version;	///< bootloader version
 /// staticstics maintained by the radio code
 struct statistics {
 	uint8_t average_rssi;
+	uint8_t average_noise;
 	uint16_t receive_count;
 };
 __pdata extern struct statistics statistics, remote_statistics;

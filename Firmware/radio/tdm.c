@@ -98,28 +98,28 @@ __pdata static uint16_t ticks_per_byte;
 __pdata uint16_t transmit_wait;
 
 /// the long term duty cycle we are aiming for
-uint8_t duty_cycle;
+__pdata uint8_t duty_cycle;
 
 /// the average duty cycle we have been transmitting
-static float average_duty_cycle;
+__data static float average_duty_cycle;
 
 /// set to true if we need to wait for our duty cycle average to drop
 static bool duty_cycle_wait;
 
 /// how many ticks we have transmitted for in this TDM round
-static uint16_t transmitted_ticks;
+__pdata static uint16_t transmitted_ticks;
 
 /// the LDB (listen before talk) RSSI threshold
-uint8_t lbt_rssi;
+__pdata uint8_t lbt_rssi;
 
 /// how long we have listened for for LBT
-static uint16_t lbt_listen_time;
+__pdata static uint16_t lbt_listen_time;
 
 /// how long we have to listen for before LBT is OK
-static uint16_t lbt_min_time;
+__pdata static uint16_t lbt_min_time;
 
 /// random addition to LBT listen time (see European regs)
-static uint16_t lbt_rand;
+__pdata static uint16_t lbt_rand;
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
@@ -148,9 +148,11 @@ static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 void
 tdm_show_rssi(void)
 {
-	printf("L/R RSSI: %d/%d  pkts: %u   ",
+	printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u   ",
 	       (unsigned)statistics.average_rssi,
 	       (unsigned)remote_statistics.average_rssi,
+	       (unsigned)statistics.average_noise,
+	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
 	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
 	       (unsigned)errors.tx_errors,
@@ -569,18 +571,13 @@ tdm_serial_loop(void)
 		}		
 #endif
 
-		if (duty_cycle_wait) {
-			// we're waiting for our duty cycle to drop
+		if (transmit_yield != 0) {
+			// we've give up our window
 			continue;
 		}
 
 		if (transmit_wait != 0) {
 			// we're waiting for a preamble to turn into a packet
-			continue;
-		}
-
-		if (transmit_yield != 0) {
-			// we've give up our window
 			continue;
 		}
 
@@ -590,6 +587,16 @@ tdm_serial_loop(void)
 			// a preamble has been detected. Don't
 			// transmit for a while
 			transmit_wait = packet_latency;
+			continue;
+		}
+
+		// sample the background noise when it is out turn to
+		// transmit, but we are not transmitting,
+		// averaged over around 32 samples
+		statistics.average_noise = (radio_current_rssi() + 31*(uint16_t)statistics.average_noise)/32;
+
+		if (duty_cycle_wait) {
+			// we're waiting for our duty cycle to drop
 			continue;
 		}
 
