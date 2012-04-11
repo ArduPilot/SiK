@@ -3,7 +3,7 @@
 # Serial firmware uploader for the SiK bootloader
 #
 
-import sys, argparse, binascii, serial
+import sys, argparse, binascii, serial, glob
 
 class firmware(object):
 	'''Loads a firmware file'''
@@ -258,7 +258,7 @@ class uploader(object):
 
 # Parse commandline arguments
 parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
-parser.add_argument('--port', action="store", required=True, help="Serial port to which the SiK radio is attached.")
+parser.add_argument('--port', action="store", help="port to upload to")
 parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
 parser.add_argument("--baudrate", type=int, default=57600, help='baud rate')
 parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
@@ -267,14 +267,17 @@ args = parser.parse_args()
 # Load the firmware file
 fw = firmware(args.firmware)
 
-# Connect to the device and identify it
-up = uploader(args.port, atbaudrate=args.baudrate)
-if not up.check():
-	print("Failed to contact bootloader")
+ports = glob.glob(args.port)
+if not ports:
+	print("No matching ports for %s" % args.port)
 	sys.exit(1)
-id, freq = up.identify()
-print("board %x  freq %x" % (id, freq))
-
-# XXX here we should check the firmware board ID against the board we're connected to
-
-up.upload(fw,args.resetparams)
+# Connect to the device and identify it
+for port in glob.glob(args.port):
+	print("uploading to port %s" % port)
+	up = uploader(port, atbaudrate=args.baudrate)
+	if not up.check():
+		print("Failed to contact bootloader")
+		sys.exit(1)
+	id, freq = up.identify()
+	print("board %x  freq %x" % (id, freq))
+	up.upload(fw,args.resetparams)
