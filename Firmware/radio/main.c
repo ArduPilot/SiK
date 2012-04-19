@@ -284,8 +284,8 @@ radio_init(void)
 		freq_max = constrain(freq_max, 849000000UL, 889000000UL);
 		break;
 	case FREQ_915:
-		freq_min = constrain(freq_min, 895000000UL, 935000000UL);
-		freq_max = constrain(freq_max, 895000000UL, 935000000UL);
+		freq_min = constrain(freq_min, 868000000UL, 935000000UL);
+		freq_max = constrain(freq_max, 868000000UL, 935000000UL);
 		break;
 	default:
 		panic("bad board frequency %d", g_board_frequency);
