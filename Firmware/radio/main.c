@@ -272,8 +272,8 @@ radio_init(void)
 	// double check ranges the board can do
 	switch (g_board_frequency) {
 	case FREQ_433:
-		freq_min = constrain(freq_min, 414000000UL, 454000000UL);
-		freq_max = constrain(freq_max, 414000000UL, 454000000UL);
+		freq_min = constrain(freq_min, 414000000UL, 460000000UL);
+		freq_max = constrain(freq_max, 414000000UL, 460000000UL);
 		break;
 	case FREQ_470:
 		freq_min = constrain(freq_min, 450000000UL, 490000000UL);
