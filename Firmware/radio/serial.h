@@ -120,4 +120,8 @@ extern bool	serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 ///
 extern uint16_t	serial_read_available(void);
 
+/// check if RTS allows us to send more data
+///
+void serial_check_rts(void);
+
 #endif // _SERIAL_H_

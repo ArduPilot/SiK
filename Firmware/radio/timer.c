@@ -90,6 +90,10 @@ INTERRUPT(T2_ISR, INTERRUPT_TIMER2)
 
 	// increment the high 16 bits
 	timer2_high++;
+
+	if (feature_rtscts) {
+		serial_check_rts();
+	}
 }
 
 // return the 16 bit timer2 counter

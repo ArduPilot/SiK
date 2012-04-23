@@ -62,7 +62,8 @@ __code const struct parameter_info {
 	{"NUM_CHANNELS",	0},
 	{"DUTY_CYCLE",		100},
 	{"LBT_RSSI",		0},
-	{"MANCHESTER",		0}
+	{"MANCHESTER",		0},
+	{"RTSCTS",		0}
 };
 
 /// In-RAM parameter store.
@@ -78,7 +79,7 @@ union param_private {
 __xdata union param_private	parameter_values[PARAM_MAX];
 
 static bool
-param_check(enum ParamID id, __pdata uint32_t val)
+param_check(__pdata enum ParamID id, __data uint32_t val)
 {
 	// parameter value out of range - fail
 	if (id >= PARAM_MAX)
@@ -158,6 +159,11 @@ param_set(__data enum ParamID param, __pdata param_t value)
 	case PARAM_OPPRESEND:
 		feature_opportunistic_resend = value?true:false;
 		value = feature_opportunistic_resend?1:0;
+		break;
+
+	case PARAM_RTSCTS:
+		feature_rtscts = value?true:false;
+		value = feature_rtscts?1:0;
 		break;
 
 	default:

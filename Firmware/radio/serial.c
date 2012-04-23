@@ -138,6 +138,14 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 
 		// look for another byte we can send
 		if (BUF_NOT_EMPTY(tx)) {
+#ifdef SERIAL_RTS
+			if (feature_rtscts && SERIAL_RTS && !at_mode_active) {
+				// the other end doesn't have room in
+				// its serial buffer
+				tx_idle = true;
+				return;
+			}
+#endif
 			// fetch and send a byte
 			BUF_REMOVE(tx, c);
 			SBUF0 = c;
@@ -145,6 +153,17 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 			// note that the transmitter requires a kick to restart it
 			tx_idle = true;
 		}
+	}
+}
+
+
+/// check if RTS allows us to send more data
+///
+void
+serial_check_rts(void)
+{
+	if (BUF_NOT_EMPTY(tx) && tx_idle) {
+		serial_restart();
 	}
 }
 
@@ -272,8 +291,12 @@ serial_write_space(void)
 static void
 serial_restart(void)
 {
-	// XXX may be idle due to flow control - check signals before starting
-
+#ifdef SERIAL_RTS
+	if (feature_rtscts && SERIAL_RTS && !at_mode_active) {
+		// the line is blocked by hardware flow control
+		return;
+	}
+#endif
 	// generate a transmit-done interrupt to force the handler to send another byte
 	tx_idle = false;
 	TI0 = 1;
