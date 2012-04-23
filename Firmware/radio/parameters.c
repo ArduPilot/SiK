@@ -127,23 +127,44 @@ param_set(__data enum ParamID param, __pdata param_t value)
 	if (!param_check(param, value))
 		return false;
 
-	parameter_values[param].val = value;
-
 	// some parameters we update immediately
 	switch (param) {
 	case PARAM_TXPOWER:
 		// useful to update power level immediately when range
 		// testing in RSSI mode		
 		radio_set_transmit_power(value);
+		value = radio_get_transmit_power();
 		break;
+
 	case PARAM_DUTY_CYCLE:
 		// update duty cycle immediately
-		duty_cycle = constrain(value, 0, 100);
+		value = constrain(value, 0, 100);
+		duty_cycle = value;
+		break;
+
+	case PARAM_LBT_RSSI:
+		// update LBT RSSI immediately
+		if (value != 0) {
+			value = constrain(value, 25, 220);
+		}
+		lbt_rssi = value;
+		break;
+
+	case PARAM_MAVLINK:
+		feature_mavlink_framing = value?true:false;
+		value = feature_mavlink_framing?1:0;
+		break;
+
+	case PARAM_OPPRESEND:
+		feature_opportunistic_resend = value?true:false;
+		value = feature_opportunistic_resend?1:0;
 		break;
 
 	default:
 		break;
 	}
+
+	parameter_values[param].val = value;
 
 	return true;
 }
