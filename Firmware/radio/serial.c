@@ -90,6 +90,10 @@ static void serial_device_set_speed(register uint8_t speed);
 #define ES0_SAVE_DISABLE __bit ES_saved = ES0; ES0 = 0
 #define ES0_RESTORE ES0 = ES_saved
 
+// threshold for considering the rx buffer full
+#define SERIAL_CTS_THRESHOLD_LOW  17
+#define SERIAL_CTS_THRESHOLD_HIGH 34
+
 void
 serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 {
@@ -114,11 +118,16 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 			// and queue it for general reception
 			if (BUF_NOT_FULL(rx)) {
 				BUF_INSERT(rx, c);
-			} else if (errors.serial_rx_overflow != 0xFFFF) {
-				errors.serial_rx_overflow++;
+			} else {
+				if (errors.serial_rx_overflow != 0xFFFF) {
+					errors.serial_rx_overflow++;
+				}
 			}
-
-			// XXX use BUF_FREE here to determine flow control state
+#ifdef SERIAL_CTS
+			if (BUF_FREE(rx) < SERIAL_CTS_THRESHOLD_LOW) {
+				SERIAL_CTS = true;
+			}
+#endif
 		}
 	}
 
@@ -160,6 +169,12 @@ serial_init(register uint8_t speed)
 
 	// configure the serial port
 	SCON0	= 0x10;				// enable receiver, clear interrupts
+
+#ifdef SERIAL_CTS
+	// setting SERIAL_CTS low tells the other end that we have
+	// buffer space available
+	SERIAL_CTS = false;
+#endif
 
 	// re-enable UART interrupts
 	ES0 = 1;
@@ -277,6 +292,12 @@ serial_read(void)
 		c = '\0';
 	}
 
+#ifdef SERIAL_CTS
+	if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH) {
+		SERIAL_CTS = false;
+	}
+#endif
+
 	ES0_RESTORE;
 
 	return c;
@@ -337,6 +358,14 @@ serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 			rx_remove = count;
 		}		
 	}
+
+#ifdef SERIAL_CTS
+	__critical {
+		if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH) {
+			SERIAL_CTS = false;
+		}
+	}
+#endif
 	return true;
 }
 
