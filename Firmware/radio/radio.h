@@ -274,4 +274,10 @@ struct radio_settings {
 
 extern __pdata struct radio_settings settings;
 
+/// return temperature in degrees C
+///
+/// @return		temperature in degrees C, from 0 to 127
+///
+extern uint8_t radio_temperature(void);
+
 #endif // _RADIO_H_

@@ -1039,6 +1039,22 @@ set_frequency_registers(__pdata uint32_t frequency)
 	register_write(EZRADIOPRO_NOMINAL_CARRIER_FREQUENCY_0, carrier & 0xFF);
 }
 
+
+/// return temperature in degrees C
+///
+/// @return		temperature in degrees C
+///
+uint8_t radio_temperature(void)
+{
+	register_write(EZRADIOPRO_ADC_CONFIGURATION, 0);
+	// ask for 0 to 127 range
+	register_write(EZRADIOPRO_TEMPERATURE_SENSOR_CONTROL, 0xE0);
+	register_write(EZRADIOPRO_ADC_CONFIGURATION, EZRADIOPRO_ADCSTART);
+	while ((register_read(EZRADIOPRO_ADC_CONFIGURATION) & EZRADIOPRO_ADCDONE) == 0) ;
+	return register_read(EZRADIOPRO_ADC_VALUE) / 2;
+}
+
+
 /// the receiver interrupt
 ///
 /// We expect to get the following types of interrupt:

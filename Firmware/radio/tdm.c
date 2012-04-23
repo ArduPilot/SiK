@@ -154,13 +154,14 @@ tdm_show_rssi(void)
 	       (unsigned)statistics.average_noise,
 	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
-	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u\n",
+	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%u\n",
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
 	       (unsigned)errors.serial_tx_overflow,
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
-	       (unsigned)errors.corrected_packets);
+	       (unsigned)errors.corrected_packets,
+	       (unsigned)radio_temperature());
 	statistics.receive_count = 0;
 }
 
