@@ -16,7 +16,7 @@ if len(args) != 1:
 device = args[0]
 
 port = serial.Serial(device, opts.baudrate, timeout=1,
-                     dsrdtr=False, rtscts=False, xonxoff=False)
+                     dsrdtr=False, rtscts=True, xonxoff=False)
 
 while True:
     try:

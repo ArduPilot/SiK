@@ -16,7 +16,7 @@ if len(args) == 0:
 def update_mode(device):
     '''put a HM-TRP into update mode'''
     port = serial.Serial(device, opts.baudrate, timeout=0,
-                         dsrdtr=False, rtscts=False, xonxoff=False)
+                         dsrdtr=False, rtscts=True, xonxoff=False)
     ser = fdpexpect.fdspawn(port.fileno(), logfile=sys.stdout)
     ser.send('+++')
     time.sleep(1)
