@@ -103,6 +103,9 @@ __pdata uint8_t duty_cycle;
 /// the average duty cycle we have been transmitting
 __data static float average_duty_cycle;
 
+/// duty cycle offset due to temperature
+__pdata uint8_t duty_cycle_offset;
+
 /// set to true if we need to wait for our duty cycle average to drop
 static bool duty_cycle_wait;
 
@@ -148,20 +151,21 @@ static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 void
 tdm_show_rssi(void)
 {
-	printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u   ",
+	printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u ",
 	       (unsigned)statistics.average_rssi,
 	       (unsigned)remote_statistics.average_rssi,
 	       (unsigned)statistics.average_noise,
 	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
-	printf("  txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%u\n",
+	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%u dco=%u\n",
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
 	       (unsigned)errors.serial_tx_overflow,
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets,
-	       (unsigned)radio_temperature());
+	       (unsigned)radio_temperature(),
+	       (unsigned)duty_cycle_offset);
 	statistics.receive_count = 0;
 }
 
@@ -296,11 +300,11 @@ tdm_state_update(__pdata uint16_t tdelta)
 			}
 		}
 
-		if (tdm_state == TDM_TRANSMIT && duty_cycle != 100) {
+		if (tdm_state == TDM_TRANSMIT && (duty_cycle - duty_cycle_offset) != 100) {
 			// update duty cycle averages
 			average_duty_cycle = (0.95*average_duty_cycle) + (0.05*(100.0*transmitted_ticks)/(2*(silence_period+tx_window_width)));
 			transmitted_ticks = 0;
-			duty_cycle_wait = (average_duty_cycle >= duty_cycle);
+			duty_cycle_wait = (average_duty_cycle >= (duty_cycle - duty_cycle_offset));
 		}
 
 		// we lose the bonus on all state changes
@@ -324,13 +328,43 @@ tdm_change_phase(void)
 	tdm_state = (tdm_state+2) % 4;
 }
 
+/// called to check temperature
+///
+static void temperature_update(void)
+{
+	register int8_t diff;
+	if (radio_get_transmit_power() <= 20) {
+		duty_cycle_offset = 0;
+		return;
+	}
+
+	diff = radio_temperature() - MAX_PA_TEMPERATURE;
+	if (diff <= 0 && duty_cycle_offset > 0) {
+		// under temperature
+		duty_cycle_offset -= 1;
+	} else if (diff > 10) {
+		// getting hot!
+		duty_cycle_offset += 10;
+	} else if (diff > 5) {
+		// well over temperature
+		duty_cycle_offset += 5;
+	} else if (diff > 0) {
+		// slightly over temperature
+		duty_cycle_offset += 1;				
+	}
+	// limit to minimum of 20% duty cycle to ensure link stays up OK
+	if ((duty_cycle-duty_cycle_offset) < 20) {
+		duty_cycle_offset = duty_cycle - 20;
+	}
+}
+
 
 /// blink the radio LED if we have not received any packets
 ///
 static void
 link_update(void)
 {
-	static uint8_t unlock_count;
+	static uint8_t unlock_count, temperature_count;
 	if (received_packet) {
 		unlock_count = 0;
 		received_packet = false;
@@ -382,6 +416,13 @@ link_update(void)
 
 	test_display = at_testmode;
 	send_statistics = 1;
+
+	temperature_count++;
+	if (temperature_count == 4) {
+		// check every 2 seconds
+		temperature_update();
+		temperature_count = 0;
+	}
 }
 
 // dispatch an AT command to the remote system
@@ -681,7 +722,7 @@ tdm_serial_loop(void)
 
 		// if we're implementing a duty cycle, add the
 		// transmit time to the number of ticks we've been transmitting
-		if (duty_cycle != 100) {
+		if ((duty_cycle - duty_cycle_offset) != 100) {
 			transmitted_ticks += flight_time_estimate(len+sizeof(trailer));
 		}
 

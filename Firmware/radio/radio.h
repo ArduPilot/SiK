@@ -280,4 +280,10 @@ extern __pdata struct radio_settings settings;
 ///
 extern uint8_t radio_temperature(void);
 
+// maximum temperature we allow the radio to get to before
+// we start limiting the duty cycle
+#ifndef MAX_PA_TEMPERATURE
+#define MAX_PA_TEMPERATURE 75
+#endif
+
 #endif // _RADIO_H_
