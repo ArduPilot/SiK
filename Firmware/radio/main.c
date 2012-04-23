@@ -175,9 +175,9 @@ hardware_init(void)
 
 	// SPI1
 	XBR1	|= 0x40;	// enable SPI in 3-wire mode
-	P1MDOUT	|= 0x15;	// SCK1, MOSI1, MISO1 push-pull
+	P1MDOUT	|= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
 	SFRPAGE	 = CONFIG_PAGE;
-	P1DRV	|= 0x15;	// SPI signals use high-current mode
+	P1DRV	|= 0xF5;	// SPI signals use high-current mode, LEDs and PAEN High current drive
 	SFRPAGE	 = LEGACY_PAGE;
 	SPI1CFG	 = 0x40;	// master mode
 	SPI1CN	 = 0x00;	// 3 wire master mode

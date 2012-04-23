@@ -820,11 +820,11 @@ radio_configure(__pdata uint8_t air_rate)
 	return true;
 }
 
-#define NUM_POWER_LEVELS 8
-
 #ifdef _BOARD_RFD900
-	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 9, 12, 15, 18, 21, 24, 27, 30 };
+	#define NUM_POWER_LEVELS 5
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 17, 20, 27, 29, 30 };
 #else
+	#define NUM_POWER_LEVELS 8
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
 #endif
 

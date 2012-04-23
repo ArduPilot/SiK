@@ -72,7 +72,7 @@
 #define BOARD_ID	  0x42
 #define BOARD_NAME	"RFD900"
 
-#define BOARD_MINTXPOWER 9		// Minimum transmit power level
+#define BOARD_MINTXPOWER 17		// Minimum transmit power level
 #define BOARD_MAXTXPOWER 30		// Maximum transmit power level
 
 // GPIO definitions (not exported)
@@ -101,9 +101,10 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 	do {							\
 		/* GPIO config */				\
 		P0SKIP	|=  0x0C;		/* pins */	\
-		P1SKIP  |=  0x60;		/* LEDs */	\
+		P1SKIP  |=  0xE0;		/* LEDs 60*/	\
 		SFRPAGE	 =  CONFIG_PAGE;			  \
-		P1DRV	|=    0x60;		/* LEDs */	\
+		P1MDOUT	|= 0xF5;	/* SCK1, MOSI1, MISO1 push-pull was 60 */ \
+		P1DRV	|= 0xF5;	/* SPI signals use high-current mode, LEDs and PAEN High current drive was 60 */ \
 		SFRPAGE	 =  LEGACY_PAGE;			  \
 		/* INT0 is the radio interrupt, on P0.7 */	\
 		IT01CF   =  (IT01CF & 0xf) | 0x7;		\
