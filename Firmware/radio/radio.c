@@ -1044,7 +1044,8 @@ set_frequency_registers(__pdata uint32_t frequency)
 ///
 /// @return		temperature in degrees C
 ///
-uint8_t radio_temperature(void)
+uint8_t 
+radio_temperature(void)
 {
 	register_write(EZRADIOPRO_ADC_CONFIGURATION, 0);
 	// ask for 0 to 127 range
