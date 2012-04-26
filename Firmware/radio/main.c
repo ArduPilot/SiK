@@ -206,6 +206,13 @@ hardware_init(void)
 	LED_RADIO = LED_ON;
 	LED_BOOTLOADER = LED_OFF;
 
+	// ADC system initialise for temp sensor
+	AD0EN = 1;	// Enable ADC0
+	ADC0CF = 0xF9;  // Set amp0gn=1 (1:1)
+	ADC0AC = 0x00;
+	ADC0MX = 0x1B;	// Set ADC0MX to temp sensor
+	REF0CN = 0x07;	// Define reference and enable temp sensor
+
 	XBR2	 =  0x40;		// Crossbar (GPIO) enable
 }
 

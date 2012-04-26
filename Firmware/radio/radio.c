@@ -1044,15 +1044,19 @@ set_frequency_registers(__pdata uint32_t frequency)
 ///
 /// @return		temperature in degrees C
 ///
-uint8_t 
+S16
 radio_temperature(void)
 {
-	register_write(EZRADIOPRO_ADC_CONFIGURATION, 0);
-	// ask for 0 to 127 range
-	register_write(EZRADIOPRO_TEMPERATURE_SENSOR_CONTROL, 0xE0);
-	register_write(EZRADIOPRO_ADC_CONFIGURATION, EZRADIOPRO_ADCSTART);
-	while ((register_read(EZRADIOPRO_ADC_CONFIGURATION) & EZRADIOPRO_ADCDONE) == 0) ;
-	return register_read(EZRADIOPRO_ADC_VALUE) / 2;
+	S16 temp_local;
+
+	AD0BUSY = 1;		// Start ADC conversion
+	while (AD0BUSY) ;  	// Wait for completion of conversion
+
+	temp_local = (ADC0H << 8) | ADC0L;
+	temp_local *= 1.64060;  // convert reading into mV ( (val/1024) * 1680 )  vref=1680mV
+	temp_local = 25.0 + (temp_local - 1025) / 3.4; // convert mV reading into degC.
+
+	return temp_local;
 }
 
 
