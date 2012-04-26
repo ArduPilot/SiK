@@ -44,7 +44,7 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata uint8_t rx_buf[2048] = {0};
+__xdata uint8_t rx_buf[1024] = {0};
 __xdata uint8_t tx_buf[512] = {0};
 __pdata const uint16_t  rx_mask = sizeof(rx_buf) - 1;
 __pdata const uint16_t  tx_mask = sizeof(tx_buf) - 1;
