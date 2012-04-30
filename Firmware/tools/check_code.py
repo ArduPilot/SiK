@@ -54,6 +54,9 @@ def check_xiseg():
                 if ofs1 + ofs2 >= 4096:
                     print('ERROR: XISEG overflow %u in %s' % (ofs1+ofs2, map))
                     error_count += 1
+                else:
+                    print('XISEG %s - %u bytes available' % (map, 4096-(ofs1+ofs2)))
+
 
 # go through all the headers looking for extern declarations of functions
 for h in glob.glob('radio/*.h'):
