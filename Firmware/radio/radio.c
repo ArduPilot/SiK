@@ -1044,10 +1044,10 @@ set_frequency_registers(__pdata uint32_t frequency)
 ///
 /// @return		temperature in degrees C
 ///
-S16
+int16_t
 radio_temperature(void)
 {
-	S16 temp_local;
+	register int16_t temp_local;
 
 	AD0BUSY = 1;		// Start ADC conversion
 	while (AD0BUSY) ;  	// Wait for completion of conversion
