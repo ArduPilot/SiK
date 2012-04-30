@@ -164,7 +164,7 @@ tdm_show_rssi(void)
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets,
-	       radio_temperature(),
+	       (int)radio_temperature(),
 	       (unsigned)duty_cycle_offset);
 	statistics.receive_count = 0;
 }
@@ -332,7 +332,7 @@ tdm_change_phase(void)
 ///
 static void temperature_update(void)
 {
-	register S16 diff;
+	register int16_t diff;
 	if (radio_get_transmit_power() <= 20) {
 		duty_cycle_offset = 0;
 		return;
