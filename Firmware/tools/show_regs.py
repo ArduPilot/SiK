@@ -5,6 +5,9 @@ import serial, sys, optparse, time, fdpexpect
 
 parser = optparse.OptionParser("show_regs")
 parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
+parser.add_option("--rtscts", action='store_true', default=False, help='enable rtscts')
+parser.add_option("--dsrdtr", action='store_true', default=False, help='enable dsrdtr')
+parser.add_option("--xonxoff", action='store_true', default=False, help='enable xonxoff')
 
 opts, args = parser.parse_args()
 
@@ -16,7 +19,7 @@ if len(args) == 0:
 def show_regs(device):
     '''show S registers'''
     port = serial.Serial(device, opts.baudrate, timeout=0,
-                         dsrdtr=False, rtscts=True, xonxoff=False)
+                     dsrdtr=opts.dsrdtr, rtscts=opts.rtscts, xonxoff=opts.xonxoff)
     ser = fdpexpect.fdspawn(port.fileno(), logfile=sys.stdout)
     ser.send('+++')
     time.sleep(1)
