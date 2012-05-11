@@ -10,7 +10,9 @@ parser.add_option("--pattern", type='str', default='0123456789', help='pattern t
 parser.add_option("--echo", action='store_true', default=False, help='echo any bytes received')
 parser.add_option("--crlf", action='store_true', default=False, help='add crlf')
 parser.add_option("--counter", action='store_true', default=False, help='add counter')
-
+parser.add_option("--rtscts", action='store_true', default=False, help='enable rtscts')
+parser.add_option("--dsrdtr", action='store_true', default=False, help='enable dsrdtr')
+parser.add_option("--xonxoff", action='store_true', default=False, help='enable xonxoff')
 
 opts, args = parser.parse_args()
 
@@ -21,8 +23,7 @@ if len(args) != 1:
 device = args[0]
 
 port = serial.Serial(device, opts.baudrate, timeout=0,
-                     dsrdtr=False, rtscts=True, xonxoff=False)
-
+                     dsrdtr=opts.dsrdtr, rtscts=opts.rtscts, xonxoff=opts.xonxoff)
 counter = 0
 while True:
     try:
