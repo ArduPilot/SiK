@@ -32,7 +32,7 @@
 ///
 /// Board-specific definitions and documentation for the RFD900A,
 /// Version 1.2 onwards.
-///
+/// 
 /// The RFD900 board provides pads for programming
 /// the Si1000 via the debug port.
 /// The pads are on the single horizontal header on the bottom of the board.

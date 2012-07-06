@@ -170,7 +170,7 @@ hardware_init(void)
 
 #ifdef _BOARD_RFD900A			// Redefine port skips to override bootloader defs
 	P0SKIP  =  0xCF;                // P0 UART avail on XBAR
-	P1SKIP  =  0xF8;                // P1 SPI1, CEX0 avail on XBAR
+	P1SKIP  =  0xF8;                // P1 SPI1, CEX0 avail on XBAR 
 	P2SKIP  =  0x01;                // P2 CEX3 avail on XBAR, rest GPIO
 #endif
 
@@ -189,10 +189,10 @@ hardware_init(void)
 #else
 	XBR1	|= 0x40;	// enable SPI in 3-wire mode
 	P1MDOUT	|= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
-#endif
+#endif	
 	SFRPAGE	 = CONFIG_PAGE;
 	P1DRV	|= 0xF5;	// SPI signals use high-current mode, LEDs and PAEN High current drive
-	P2DRV	|= 0xFF;
+	P2DRV	|= 0xFF;	
 	SFRPAGE	 = LEGACY_PAGE;
 	SPI1CFG	 = 0x40;	// master mode
 	SPI1CN	 = 0x00;	// 3 wire master mode
