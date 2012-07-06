@@ -475,12 +475,19 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 {
 	bool ret;
 	EX0_SAVE_DISABLE;
+
+#ifdef _BOARD_RFD900A
+	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
+#endif
 	
 	if (!feature_golay) {
 		ret = radio_transmit_simple(length, buf, timeout_ticks);
 	} else {
 		ret = radio_transmit_golay(length, buf, timeout_ticks);
 	}
+#ifdef _BOARD_RFD900A
+	PA_ENABLE = 0;		// Set PA_Enable to off the PA after TX cycle
+#endif
 	EX0_RESTORE;
 	return ret;
 }
@@ -823,7 +830,20 @@ radio_configure(__pdata uint8_t air_rate)
 #ifdef _BOARD_RFD900
 	#define NUM_POWER_LEVELS 5
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 17, 20, 27, 29, 30 };
-#else
+#endif
+#ifdef _BOARD_RFD900A
+	#define NUM_POWER_LEVELS 16
+	#define POWER_LEVEL_STEP 2
+	// the power_levels array define 8 bit PWM values for each respective power level starting at 0dBm
+	// PWM=240 gives TXout=0dBm
+	//run1 __code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 240, 234, 226, 221, 214, 209, 204, 199, 193, 187, 180, 174, 165, 153, 137, 50 };
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211, 206, 201, 196, 190, 184, 178, 171, 164, 150, 136, 80 };
+#endif
+#ifdef _BOARD_HM_TRP_H_
+	#define NUM_POWER_LEVELS 8
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
+#endif
+#ifdef _BOARD_RF50_H
 	#define NUM_POWER_LEVELS 8
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
 #endif
@@ -834,6 +854,13 @@ void
 radio_set_transmit_power(uint8_t power)
 {
 	uint8_t i;
+
+#ifdef _BOARD_RFD900A
+	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
+	i = power / 2;
+	PCA0CPH3 = power_levels[i];     // Set PWM for PA to correct duty cycle
+	settings.transmit_power = i * POWER_LEVEL_STEP;
+#else
 	for (i=0; i<NUM_POWER_LEVELS; i++) {
 		if (power <= power_levels[i]) break;
 	}
@@ -842,6 +869,7 @@ radio_set_transmit_power(uint8_t power)
 	}
 	settings.transmit_power = power_levels[i];
 	register_write(EZRADIOPRO_TX_POWER, i);
+#endif
 }
 
 // get the current transmit power (in dBm)
