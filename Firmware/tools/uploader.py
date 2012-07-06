@@ -79,7 +79,7 @@ class uploader(object):
 
 	def __init__(self, portname, atbaudrate=57600):
 		print("Connecting to %s" % portname)
-		self.port = serial.Serial(portname, 115200, timeout=2)
+		self.port = serial.Serial(portname, 115200, timeout=3)
 		self.atbaudrate = atbaudrate
 
 	def __send(self, c):
