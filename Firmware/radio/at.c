@@ -58,6 +58,7 @@ static void	at_error(void);
 static void	at_i(void);
 static void	at_s(void);
 static void	at_ampersand(void);
+static void	at_plus(void);
 
 #pragma save
 #pragma nooverlay
@@ -228,6 +229,9 @@ at_command(void)
 			case '&':
 				at_ampersand();
 				break;
+			case '+':
+				at_plus();
+				break;
 			case 'I':
 				at_i();
 				break;
@@ -268,11 +272,28 @@ at_error(void)
 	printf("%s\n", "ERROR");
 }
 
+__pdata uint8_t		idx;
+
+static uint32_t
+at_parse_number() __reentrant
+{
+	uint32_t	reg;
+	uint8_t		c;
+
+	reg = 0;
+	for (;;) {
+		c = at_cmd[idx];
+		if (!isdigit(c))
+			break;
+		reg = (reg * 10) + (c - '0');
+		idx++;
+	}
+	return reg;
+}
+
 static void
 at_i(void)
 {
-	__pdata uint16_t	val;
-
 	switch (at_cmd[3]) {
 	case '\0':
 	case '0':
@@ -282,14 +303,14 @@ at_i(void)
 		printf("%s\n", g_version_string);
 		return;
 	case '2':
-		val = BOARD_ID;
+		printf("%u\n", BOARD_ID);
 		break;
 	case '3':
-		val = g_board_frequency;
+		printf("%u\n", g_board_frequency);
 		break;
 	case '4':
-		val = g_board_bl_version;
-		break;
+		printf("%u\n", g_board_bl_version);
+		return;
 	case '5': {
 		enum ParamID id;
 		// convenient way of showing all parameters
@@ -311,25 +332,17 @@ at_i(void)
 		at_error();
 		return;
 	}
-	printf("%u\n", (unsigned)val);
 }
 
 static void
 at_s(void)
 {
-	__pdata uint8_t		idx;
 	__pdata uint8_t		sreg;
 	__pdata uint32_t	val;
-	__pdata uint8_t		c;
 
 	// get the register number first
-	sreg = 0;
-	for (idx = 3; ; idx++) {
-		c = at_cmd[idx];
-		if (!isdigit(c))
-			break;
-		sreg = (sreg * 10) + (c - '0');
-	}
+	idx = 3;
+	sreg = at_parse_number();
 	// validate the selected sreg
 	if (sreg >= PARAM_MAX) {
 		at_error();
@@ -344,21 +357,11 @@ at_s(void)
 
 	case '=':
 		if (sreg > 0) {
-			val = 0;
-			for (;;) {
-				c = at_cmd[++idx];
-				if (c == '\0') {
-					if (param_set(sreg, val)) {
-						at_ok();
-					} else {
-						at_error();
-					}
-					return;
-				}
-				if (!isdigit(c)) {
-					break;
-				}
-				val = (val * 10) + (c - '0');
+			idx++;
+			val = at_parse_number();
+			if (param_set(sreg, val)) {
+				at_ok();
+				return;
 			}
 		}
 		break;
@@ -415,3 +418,58 @@ at_ampersand(void)
 	}
 }
 
+static void
+at_plus(void)
+{
+#ifdef BOARD_rfd900a
+	__pdata uint8_t		creg;
+	__pdata uint32_t	val;
+
+	// get the register number first
+	idx = 4;
+	creg = at_parse_number();
+
+	switch (at_cmd[3])
+	{
+	case 'P': // AT+P=x set power level pwm to x immediately
+		if (at_cmd[4] != '=')
+		{
+			break;
+		}
+		idx = 5;
+		val = at_parse_number();
+		PCA0CPH3 = val & 0xFF;
+		radio_set_diversity(false);
+		at_ok();
+		return;
+	case 'C': // AT+Cx=y write calibration value
+		switch (at_cmd[idx])
+		{
+		case '?':
+			val = calibration_get(creg);
+			printf("%lu\n",val);
+			return;
+		case '=':
+			idx++;
+			val = at_parse_number();
+			if (calibration_set(creg, val&0xFF))
+			{
+				at_ok();
+			} else {
+				at_error();
+			}
+			return;
+		}
+		break;
+	case 'L': // AT+L lock bootloader area if all calibrations written
+		if (calibration_lock())
+		{
+			at_ok();
+		} else {
+			at_error();
+		}
+		return;
+	}
+#endif //BOARD_rfd900a
+	at_error();
+}

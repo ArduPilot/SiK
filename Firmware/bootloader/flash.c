@@ -58,8 +58,11 @@ __at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
 /// page from overwriting it, and clear the LSB to lock the first page
 /// of flash.  This has the side-effect of locking the high page as well;
 /// combined this means that the bootloader code cannot be overwritten.
+/// RFD900A locks the bootloader as a separate step after calibration instead.
 ///
+#ifndef BOARD_rfd900a
 __at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
+#endif
 
 /// Patchbay for the board frequency byte.
 /// This is patched in the hex file(s) after building.
@@ -133,9 +136,47 @@ flash_write_byte(uint16_t address, uint8_t c)
 uint8_t
 flash_read_byte(uint16_t address)
 {
-	if (flash_address_visible(address)) {
-		return *(uint8_t __code *)address;
-	}
-	return 0xff;
+	return *(uint8_t __code *)address;
 }
 
+#ifdef BOARD_rfd900a
+__at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
+__at(FLASH_CALIBRATION_CRC_HIGH) uint8_t __code calibration_crc;
+
+void
+flash_transfer_calibration()
+{
+	uint8_t idx, crc = 0;
+	bool cal_empty = false;
+
+	// ensure the user area (plus crc byte) is all 0xFF
+	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
+	{
+		if (flash_read_byte(FLASH_CALIBRATION_AREA + idx) != 0xFF)
+		{
+			return;
+		}
+	}
+	if (flash_read_byte(FLASH_CALIBRATION_CRC) != 0xFF)
+	{
+		return;
+	}
+
+	// ensure valid data is available
+	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
+	{
+		crc ^= calibration[idx];
+	}
+	if (crc != calibration_crc)
+	{
+		return;
+	}
+
+	// transfer calibration data from bootloader area to user area
+	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
+	{
+		flash_write_byte((FLASH_CALIBRATION_AREA + idx), calibration[idx]);
+	}
+	flash_write_byte(FLASH_CALIBRATION_CRC, calibration_crc);
+}
+#endif //BOARD_rfd900a

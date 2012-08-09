@@ -42,6 +42,7 @@
 
 #include "radio.h"
 #include "tdm.h"
+#include <flash_layout.h>
 
 /// In-ROM parameter info table.
 ///
@@ -299,3 +300,89 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 	return v;
 }
 
+// rfd900a calibration stuff
+#ifdef BOARD_rfd900a
+static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
+static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
+
+static void
+flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
+{
+	PSCTL = 0x01;				// set PSWE, clear PSEE
+	FLKEY = 0xa5;
+	FLKEY = 0xf1;
+	*(uint8_t __xdata *)address = c;	// write the byte
+	PSCTL = 0x00;				// disable PSWE/PSEE
+}
+
+static uint8_t
+flash_read_byte(uint16_t address) __reentrant
+{
+	// will cause reset if the byte is in a locked page
+	return *(uint8_t __code *)address;
+}
+
+bool
+calibration_set(uint8_t idx, uint8_t value) __reentrant
+{
+	// if level is valid
+	if (idx <= BOARD_MAXTXPOWER && value != 0xFF)
+	{
+		// if the target byte isn't yet written
+		if (flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx) == 0xFF)
+		{
+			flash_write_byte(FLASH_CALIBRATION_AREA_HIGH + idx, value);
+			return true;
+		}
+	}
+	return false;
+}
+
+uint8_t
+calibration_get(uint8_t level) __reentrant
+{
+	uint8_t idx;
+	uint8_t crc = 0;
+
+	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
+	{
+		crc ^= calibration[idx];
+	}
+
+	if (calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER)
+	{
+		return calibration[level];
+	}
+	return 0xFF;
+}
+
+bool
+calibration_lock() __reentrant
+{
+	uint8_t idx;
+	uint8_t crc = 0;
+
+	// check that all entries are written
+	if (flash_read_byte(FLASH_CALIBRATION_CRC_HIGH) == 0xFF)
+	{
+		for (idx=0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
+		{
+			uint8_t cal = flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx);
+			crc ^= cal;
+			if (cal == 0xFF)
+			{
+				printf("dBm level %u not calibrated\n",idx);
+				return false;
+			}
+		}
+
+		// write crc
+		flash_write_byte(FLASH_CALIBRATION_CRC_HIGH, crc);
+		// lock the first and last pages
+		// can only be reverted by reflashing the bootloader
+		flash_write_byte(FLASH_LOCK_BYTE, 0xFE);
+		return true;
+	}
+	return false;
+}
+#endif
