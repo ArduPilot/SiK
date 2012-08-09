@@ -108,6 +108,11 @@ bl_main(void)
 		// and boot the app.
 		//
 		if (debounce_count < 200) {
+#ifdef BOARD_rfd900a
+			// make sure the calibration is available to the application
+			flash_transfer_calibration();
+#endif
+			// transfer
 
 			// Stash board info in SFRs for the application to find later
 			//

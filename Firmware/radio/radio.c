@@ -530,7 +530,7 @@ radio_initialise(void)
 {
 	uint8_t status;
 
-	delay_msec(25);
+	delay_msec(50);
 
 	// make sure there is a radio on the SPI bus
 	status = register_read(EZRADIOPRO_DEVICE_VERSION);
@@ -556,7 +556,7 @@ radio_initialise(void)
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
 
 	// wait for the chip ready bit for 10ms
-	delay_set(10);
+	delay_set(50);
 	while (!delay_expired()) {
 		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
@@ -703,15 +703,9 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
 #if RFD900_DIVERSITY
-	// with antenna diversity
-	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
-	// see table 23.8, page 279
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, 
-		       (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
+	radio_set_diversity(true);
 #else
-	// without antenna diversity
-	register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
-	register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
+	radio_set_diversity(false);
 #endif
 #else
 	//set GPIOx to GND
@@ -857,9 +851,18 @@ radio_set_transmit_power(uint8_t power)
 
 #ifdef _BOARD_RFD900A
 	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
-	i = power / 2;
-	PCA0CPH3 = power_levels[i];     // Set PWM for PA to correct duty cycle
-	settings.transmit_power = i * POWER_LEVEL_STEP;
+	i = calibration_get(power);
+	if (i != 0xFF)
+	{
+		PCA0CPH3 = i;     // Set PWM for PA to correct duty cycle
+		settings.transmit_power = power;
+	}
+	else
+	{
+		i = power / POWER_LEVEL_STEP;
+		PCA0CPH3 = power_levels[i];     // Set PWM for PA to correct duty cycle
+		settings.transmit_power = i * POWER_LEVEL_STEP;
+	}
 #else
 	for (i=0; i<NUM_POWER_LEVELS; i++) {
 		if (power <= power_levels[i]) break;
@@ -1087,6 +1090,26 @@ radio_temperature(void)
 	return temp_local;
 }
 
+/// Turn off radio diversity
+///
+void
+radio_set_diversity(bool enable)
+{
+	if (enable)
+	{
+		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
+		// see table 23.8, page 279
+		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
+	}
+	else
+	{
+		// see table 23.8, page 279
+		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
+
+		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
+		register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
+	}
+}
 
 /// the receiver interrupt
 ///

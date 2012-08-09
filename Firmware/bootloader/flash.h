@@ -74,4 +74,8 @@ void	flash_write_byte(uint16_t address, uint8_t c);
 ///
 uint8_t	flash_read_byte(uint16_t address);
 
+#ifdef BOARD_rfd900a
+void flash_transfer_calibration();
+#endif
+
 #endif // _FLASH_H_

@@ -40,7 +40,7 @@ CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 # Set limits for the low (CSEG) and high (HIGHCSEG) code segments.
 #
 CSEG_LIMIT	 =	$(shell printf %d 0x0400)	# start of application space
-HIGHCSEG_LIMIT	 =	$(shell printf %d 0xfbfc)	# room for four patch bytes at the end
+HIGHCSEG_LIMIT	 =	$(shell printf %d 0xfbdc)	# room for 32 calibration and four patch bytes at the end
 
 # Note that code is split into two parts; low code at 0, and high code at 0xf800.
 #

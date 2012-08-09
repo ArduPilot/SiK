@@ -284,7 +284,9 @@ extern int16_t radio_temperature(void);
 // maximum temperature we allow the radio to get to before
 // we start limiting the duty cycle
 #ifndef MAX_PA_TEMPERATURE
-#define MAX_PA_TEMPERATURE 70
+#define MAX_PA_TEMPERATURE 100
 #endif
+
+extern void radio_set_diversity(bool enable);
 
 #endif // _RADIO_H_
