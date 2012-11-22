@@ -12,7 +12,7 @@ parser.add_option("--xonxoff", action='store_true', default=False, help='enable 
 opts, args = parser.parse_args()
 
 if len(args) != 1:
-    print("usage: console.py <DEVICE>")
+    print("usage: sercat.py <DEVICE>")
     sys.exit(1)
 
 device = args[0]
