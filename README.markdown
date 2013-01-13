@@ -26,7 +26,7 @@ See the user documentation above for a list of current firmware features
  - At least two Si1000-based radio devices (just one radio by itself is not very useful).
  - A [SiLabs USB debug adapter](http://www.silabs.com/products/mcu/Pages/USBDebug.aspx).
  - [SDCC](http://sdcc.sourceforge.net/), version 3.1.0 or later.
- - [EC2Tools](http://github.com/MikeSmith/ec2-new)
+ - [EC2Tools](http://github.com/tridge/ec2)
  - [Mono](http://www.mono-project.com/) to build and run the GUI firmware updater.
  - Python to run the command-line firmware updater.
 
@@ -67,7 +67,7 @@ SiLabs have an extensive collection of documentation, application notes and samp
 
 ## Reporting Problems
 
-Please use the GitHub issues link at the top of the [project page](http://github.com/MikeSmith/SiK) to report any problems with, or to make suggestions about SiK.  I encourage you to fork the project and make whatever use you may of it.
+Please use the GitHub issues link at the top of the [project page](http://github.com/tridge/SiK) to report any problems with, or to make suggestions about SiK.  I encourage you to fork the project and make whatever use you may of it.
 
 ## What does SiK mean?
 
