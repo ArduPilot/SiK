@@ -29,9 +29,9 @@
 #
 
 VERSION		 =	1
-PRODUCT		 =	bootloader.$(BOARD)
+PRODUCT		 =	bootloader~$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-PRODUCT_INSTALL	 =	$(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT).$(frequency).hex)				
+PRODUCT_INSTALL	 =	$(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT)~$(frequency).hex)
 
 CFLAGS		+=	-DBL_VERSION=$(VERSION)
 CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
@@ -55,18 +55,18 @@ include $(SRCROOT)/include/rules.mk
 # Note that we have secret knowledge here that the frequency code byte is 
 # located at 0xfbfe, and its specific encoding.
 #
-$(PRODUCT_INSTALL):	frequency = $(word 3, $(subst ., ,$(notdir $@)))
+$(PRODUCT_INSTALL):	frequency = $(basename $(word 3, $(subst ~, ,$(notdir $@))))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@
 	$(v)mkdir -p $(dir $@)
 	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
-	
+
 #
 # Check that the bootloader has not overflowed its allocated space
 #
 $(PRODUCT_INSTALL):	sizecheck
 
-sizecheck:	mapfile = $(subst .hex,.map,$(PRODUCT_HEX))
+sizecheck:	mapfile = $(subst .ihx,.map,$(PRODUCT_HEX))
 sizecheck:	cseg_base = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 41-44`)
 sizecheck:	cseg_size = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 53-56`)
 sizecheck:	cseg_end  = $(shell expr $(cseg_base) + $(cseg_size))

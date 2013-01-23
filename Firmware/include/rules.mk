@@ -54,7 +54,7 @@ DSTROOT		?=	$(SRCROOT)/dst
 #
 # Buildable and installable products
 #
-PRODUCT_HEX	 =	$(OBJROOT)/$(PRODUCT).hex
+PRODUCT_HEX	 =	$(OBJROOT)/$(PRODUCT).ihx
 PRODUCT_INSTALL	?=	$(PRODUCT_HEX)
 
 #

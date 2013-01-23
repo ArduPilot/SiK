@@ -61,8 +61,8 @@ endif
 #
 # XXX radio should become firmware? 
 #
-BOOTLOADERS	 = $(foreach board, $(BOARDS), bootloader.$(board))
-FIRMWARES	 = $(foreach board, $(BOARDS), radio.$(board))
+BOOTLOADERS	 = $(foreach board, $(BOARDS), bootloader~$(board))
+FIRMWARES	 = $(foreach board, $(BOARDS), radio~$(board))
 PRODUCTS	 = $(BOOTLOADERS) $(FIRMWARES)
 
 #
@@ -70,16 +70,16 @@ PRODUCTS	 = $(BOOTLOADERS) $(FIRMWARES)
 #
 TARGETS		 = $(foreach action,$(ACTIONS), \
 			$(foreach product,$(PRODUCTS), \
-				$(action).$(product)))
+				$(action)~$(product)))
 
 all:		build
 
 #
 # Composite targets for handling actions.
 #
-build:		$(filter build.%,$(TARGETS)) check_code
-install:	$(filter install.%,$(TARGETS))
-clean:		$(filter clean.%,$(TARGETS))
+build:		$(filter build~%,$(TARGETS)) check_code
+install:	$(filter install~%,$(TARGETS))
+clean:		$(filter clean~%,$(TARGETS))
 
 check_code:
 	@./tools/check_code.py
@@ -88,7 +88,7 @@ check_code:
 # Composite target for handling the generic actions for each possible combination
 # of action and configuration.
 #
-$(TARGETS):	config    = $(subst ., ,$@)
+$(TARGETS):	config    = $(subst ~, ,$@)
 $(TARGETS):	action    = $(word 1, $(config))
 $(TARGETS):	product   = $(word 2, $(config))
 $(TARGETS):	board     = $(word 3, $(config))
