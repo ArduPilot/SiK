@@ -911,7 +911,7 @@ tdm_init(void)
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
-	if (window_width >= REGULATORY_MAX_WINDOW) {
+	if (window_width >= REGULATORY_MAX_WINDOW && num_fh_channels > 1) {
 		window_width = REGULATORY_MAX_WINDOW;
 	}
 
