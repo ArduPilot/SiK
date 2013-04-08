@@ -90,10 +90,6 @@ INTERRUPT(T2_ISR, INTERRUPT_TIMER2)
 
 	// increment the high 16 bits
 	timer2_high++;
-
-	if (feature_rtscts) {
-		serial_check_rts();
-	}
 }
 
 // return the 16 bit timer2 counter
@@ -110,21 +106,6 @@ timer2_16(void)
 	} while (high != TMR2H);
 	return low | (((uint16_t)high)<<8);
 }
-
-#if 0
-// return microseconds since boot
-// this call costs about 5usec
-uint32_t 
-micros(void)
-{
-	uint16_t low, high;
-	do {
-		high = timer2_high;
-		low = timer2_16();
-	} while (high != timer2_high);
-	return ((((uint32_t)high)<<16) | low) >> 1;
-}
-#endif
 
 // return a 16 bit value that rolls over in approximately
 // one second intervals

@@ -138,21 +138,6 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		value = radio_get_transmit_power();
 		break;
 
-	case PARAM_MAVLINK:
-		feature_mavlink_framing = value?true:false;
-		value = feature_mavlink_framing?1:0;
-		break;
-
-	case PARAM_OPPRESEND:
-		feature_opportunistic_resend = value?true:false;
-		value = feature_opportunistic_resend?1:0;
-		break;
-
-	case PARAM_RTSCTS:
-		feature_rtscts = value?true:false;
-		value = feature_rtscts?1:0;
-		break;
-
 	default:
 		break;
 	}

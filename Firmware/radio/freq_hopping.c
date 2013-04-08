@@ -36,6 +36,10 @@
 #include "radio.h"
 #include "freq_hopping.h"
 
+/*
+  Frequency table taken from the David_Vue code by DeKay
+ */
+
 static __code uint8_t FREQ_2[51] =
 {
   0x23, 0x22, 0x23, 0x23, 0x23, 0x22, 0x23, 0x23, 0x22, 0x23,
@@ -80,6 +84,7 @@ fhop_receive_freqency(void)
 		((uint32_t)FREQ_2[receive_channel])<<16 | 
 		((uint32_t)FREQ_1[receive_channel])<<8 | 
 		((uint32_t)FREQ_0[receive_channel]);
+	// a lazy way to convert from CC1101 registers to a frequency
 	float freq2 = freq * 26000000.0 / 65536;
 	return (uint32_t)freq2;
 }
