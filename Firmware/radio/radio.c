@@ -32,7 +32,6 @@
 #include "board.h"
 #include "radio.h"
 #include "timer.h"
-#include "crc.h"
 
 __xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
 __pdata uint8_t receive_packet_length;

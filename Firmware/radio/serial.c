@@ -34,7 +34,6 @@
 ///
 
 #include "serial.h"
-#include "packet.h"
 
 // Serial rx/tx buffers.
 //
@@ -477,9 +476,5 @@ void serial_device_set_speed(register uint8_t speed)
 	// set the rates in the UART
 	TH1 = serial_rates[i].th1;
 	CKCON = (CKCON & ~0x0b) | serial_rates[i].ckcon;
-
-	// tell the packet layer how fast the serial link is. This is
-	// needed for packet framing timeouts
-	packet_set_serial_speed(speed*125UL);	
 }
 

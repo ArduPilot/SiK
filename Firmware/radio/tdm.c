@@ -37,9 +37,7 @@
 #include "radio.h"
 #include "tdm.h"
 #include "timer.h"
-#include "packet.h"
 #include "freq_hopping.h"
-#include "crc.h"
 
 /// a packet buffer for the TDM code
 __xdata uint8_t	pbuf[MAX_PACKET_LENGTH];

@@ -61,7 +61,6 @@
 #include "parameters.h"
 #include "at.h"
 #include "flash.h"
-#include "rtc.h"
 
 // canary data for ram wrap
 extern __pdata uint8_t pdata_canary;
