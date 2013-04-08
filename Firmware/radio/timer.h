@@ -33,11 +33,6 @@
 ///
 extern uint16_t timer2_16(void);
 
-/// return microseconds since boot
-///
-/// @return		microseconds since boot
-extern uint32_t micros(void);
-
 /// return a 16 bit value that rolls over in approximately
 /// one second intervals
 ///

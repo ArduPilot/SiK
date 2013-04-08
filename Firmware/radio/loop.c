@@ -78,7 +78,7 @@ static void one_second(void)
 		radio_set_frequency(fhop_receive_freqency());
 		radio_receiver_on();
 		one_second_counter = 0;
-		printf(".");
+		printf("Searching...\n");
 	}
 }
 
