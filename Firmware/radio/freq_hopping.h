@@ -34,34 +34,13 @@
 #ifndef _FREQ_HOPPING_H_
 #define _FREQ_HOPPING_H_
 
-#define MAX_FREQ_CHANNELS 50
-
-/// initialise frequency hopping logic
-///
-/// @param netid	Our assigned network ID.
-extern void fhop_init(uint16_t netid);
-
-/// tell the TDM code what channel to transmit on
-///
-/// @return		The channel that we should be transmitting on.
-///
-extern uint8_t fhop_transmit_channel(void);
+extern void fhop_next(void);
 
 /// tell the TDM code what channel to receive on
 ///
 /// @return		The channel that we should be receiving on.
 //
-extern uint8_t fhop_receive_channel(void);
-
-/// called when the transmit window flips
-///
-extern void fhop_window_change(void);
-
-/// called when we get or lose radio lock
-///
-/// @param locked	True if we have gained lock, false if we have lost it.
-///
-extern void fhop_set_locked(bool locked);
+extern uint32_t fhop_receive_freqency(void);
 
 /// how many channels are we hopping over
 extern __pdata uint8_t num_fh_channels;

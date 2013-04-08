@@ -213,7 +213,6 @@ at_command(void)
 		if ((at_cmd_len >= 2) && (at_cmd[0] == 'R') && (at_cmd[1] == 'T')) {
 			// remote AT command - send it to the tdm
 			// system to send to the remote radio
-			tdm_remote_at();
 			at_cmd_len = 0;
 			at_cmd_ready = false;
 			return;
@@ -390,10 +389,6 @@ at_ampersand(void)
 				;
 		}
 		at_error();
-		break;
-
-	case 'P':
-		tdm_change_phase();
 		break;
 
 	case 'T':

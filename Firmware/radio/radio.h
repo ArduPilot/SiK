@@ -67,7 +67,6 @@
 extern __pdata uint8_t pdata_canary;
 
 /// optional features
-extern bool feature_golay;
 extern bool feature_opportunistic_resend;
 extern bool feature_mavlink_framing;
 extern bool feature_rtscts;
@@ -153,17 +152,6 @@ extern bool radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 ///
 extern bool radio_preamble_detected(void);
 
-/// begin transmission of a packet
-///
-/// @param length		Packet length to be transmitted; assumes
-///				the data is already present in the FIFO.
-/// @param timeout_ticks	The number of ticks to wait before assiming
-///				that transmission has failed.
-///
-/// @return			true if packet sent successfully
-///
-extern bool radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks);
-
 /// switch the radio to receive mode
 ///
 /// @return			Always true.
@@ -183,18 +171,6 @@ extern bool radio_initialise(void);
 /// @param value		The frequency in Hz
 ///
 extern bool radio_set_frequency(__pdata uint32_t value);
-
-/// set the channel spacing used by the channel offset control
-///
-/// @param value		The channel spacing in Hz
-///
-extern bool radio_set_channel_spacing(__pdata uint32_t value);
-
-/// set the channel for transmit/receive
-///
-/// @param value		The channel number to select
-///
-extern void radio_set_channel(uint8_t channel);
 
 /// get the tx/rx frequency channel
 ///

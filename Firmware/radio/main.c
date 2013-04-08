@@ -88,7 +88,6 @@ __pdata struct error_counts errors;
 __pdata struct statistics statistics, remote_statistics;
 
 /// optional features
-bool feature_golay;
 bool feature_opportunistic_resend;
 bool feature_mavlink_framing;
 bool feature_rtscts;
@@ -112,7 +111,6 @@ main(void)
 	// setup boolean features
 	feature_mavlink_framing = param_get(PARAM_MAVLINK)?true:false;
 	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
-	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
 
 	// Do hardware initialisation.
@@ -242,89 +240,27 @@ radio_init(void)
 {
 	__pdata uint32_t freq_min, freq_max;
 	__pdata uint32_t channel_spacing;
-	__pdata uint8_t txpower;
+
+	//at_testmode = AT_TEST_RSSI;
 
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
 		panic("radio_initialise failed");
 	}
 
-	switch (g_board_frequency) {
-	case FREQ_433:
-		freq_min = 433050000UL;
-		freq_max = 434790000UL;
-		txpower = 10;
-		num_fh_channels = 10;
-		break;
-	case FREQ_470:
-		freq_min = 470000000UL;
-		freq_max = 471000000UL;
-		txpower = 10;
-		num_fh_channels = 10;
-		break;
-	case FREQ_868:
-		freq_min = 868000000UL;
-		freq_max = 869000000UL;
-		txpower = 10;
-		num_fh_channels = 10;
-		break;
-	case FREQ_915:
-		freq_min = 915000000UL;
-		freq_max = 928000000UL;
-		txpower = 20;
-		num_fh_channels = MAX_FREQ_CHANNELS;
-		break;
-	default:
-		freq_min = 0;
-		freq_max = 0;
-		txpower = 0;
-		panic("bad board frequency %d", g_board_frequency);
-		break;
-	}
+	freq_min = 915000000UL;
+	freq_max = 928000000UL;
 
-	if (param_get(PARAM_NUM_CHANNELS) != 0) {
-		num_fh_channels = param_get(PARAM_NUM_CHANNELS);
-	}
 	if (param_get(PARAM_MIN_FREQ) != 0) {
 		freq_min        = param_get(PARAM_MIN_FREQ) * 1000UL;
 	}
 	if (param_get(PARAM_MAX_FREQ) != 0) {
 		freq_max        = param_get(PARAM_MAX_FREQ) * 1000UL;
 	}
-	if (param_get(PARAM_TXPOWER) != 0) {
-		txpower = param_get(PARAM_TXPOWER);
-	}
-
-	// constrain power and channels
-	txpower = constrain(txpower, BOARD_MINTXPOWER, BOARD_MAXTXPOWER);
-	num_fh_channels = constrain(num_fh_channels, 1, MAX_FREQ_CHANNELS);
 
 	// double check ranges the board can do
-	switch (g_board_frequency) {
-	case FREQ_433:
-		freq_min = constrain(freq_min, 414000000UL, 460000000UL);
-		freq_max = constrain(freq_max, 414000000UL, 460000000UL);
-		break;
-	case FREQ_470:
-		freq_min = constrain(freq_min, 450000000UL, 490000000UL);
-		freq_max = constrain(freq_max, 450000000UL, 490000000UL);
-		break;
-	case FREQ_868:
-		freq_min = constrain(freq_min, 849000000UL, 889000000UL);
-		freq_max = constrain(freq_max, 849000000UL, 889000000UL);
-		break;
-	case FREQ_915:
-		freq_min = constrain(freq_min, 868000000UL, 935000000UL);
-		freq_max = constrain(freq_max, 868000000UL, 935000000UL);
-		break;
-	default:
-		panic("bad board frequency %d", g_board_frequency);
-		break;
-	}
-
-	if (freq_max == freq_min) {
-		freq_max = freq_min + 1000000UL;
-	}
+	freq_min = constrain(freq_min, 868000000UL, 935000000UL);
+	freq_max = constrain(freq_max, 868000000UL, 935000000UL);
 
 	// get the duty cycle we will use
 	duty_cycle = param_get(PARAM_DUTY_CYCLE);
@@ -342,34 +278,20 @@ radio_init(void)
 	// sanity checks
 	param_set(PARAM_MIN_FREQ, freq_min/1000);
 	param_set(PARAM_MAX_FREQ, freq_max/1000);
-	param_set(PARAM_NUM_CHANNELS, num_fh_channels);
 
-	channel_spacing = (freq_max - freq_min) / (num_fh_channels+2);
+	channel_spacing = 500900UL;
 
 	// add half of the channel spacing, to ensure that we are well
 	// away from the edges of the allowed range
-	freq_min += channel_spacing/2;
+	//freq_min += channel_spacing/2;
 
 	// add another offset based on network ID. This means that
 	// with different network IDs we will have much lower
 	// interference
-	srand(param_get(PARAM_NETID));
-	if (num_fh_channels > 5) {
-		freq_min += ((unsigned long)(rand()*625)) % channel_spacing;
-	}
-	debug("freq low=%lu high=%lu spacing=%lu\n", 
-	       freq_min, freq_min+(num_fh_channels*channel_spacing), 
-	       channel_spacing);
 
 	// set the frequency and channel spacing
 	// change base freq based on netid
-	radio_set_frequency(freq_min);
-
-	// set channel spacing
-	radio_set_channel_spacing(channel_spacing);
-
-	// start on a channel chosen by network ID
-	radio_set_channel(param_get(PARAM_NETID) % num_fh_channels);
+	radio_set_frequency(fhop_receive_freqency());
 
 	// And intilise the radio with them.
 	if (!radio_configure(param_get(PARAM_AIR_SPEED)) &&
@@ -384,19 +306,10 @@ radio_init(void)
 	// setup network ID
 	radio_set_network_id(param_get(PARAM_NETID));
 
-	// setup transmit power
-	radio_set_transmit_power(txpower);
-	
-	// report the real transmit power in settings
-	param_set(PARAM_TXPOWER, radio_get_transmit_power());
-
 #ifdef USE_RTC
 	// initialise real time clock
 	rtc_init();
 #endif
-
-	// initialise frequency hopping system
-	fhop_init(param_get(PARAM_NETID));
 
 	// initialise TDM system
 	tdm_init();

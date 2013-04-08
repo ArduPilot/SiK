@@ -36,104 +36,60 @@
 #include "radio.h"
 #include "freq_hopping.h"
 
-/// how many channels are we hopping over
-__pdata uint8_t num_fh_channels;
-
-/// whether we current have good lock with the other end
-static bool have_radio_lock;
-
-/// current transmit channel
-/// This changes every time the TDM transmit window opens or closes,
-/// regardless of our lock state
-__pdata static volatile uint8_t transmit_channel;
-
-/// current receive channel
-/// When we have good lock with the other radio the receive channel
-/// follows the transmit channel. When we don't have lock the receive
-/// channel only changes
-/// very slowly - it moves only when the transmit channel wraps
-__pdata static volatile uint8_t receive_channel;
-
-/// map between hopping channel numbers and physical channel numbers
-__xdata static uint8_t channel_map[MAX_FREQ_CHANNELS];
-
-// a vary simple array shuffle
-// based on shuffle from
-// http://benpfaff.org/writings/clc/shuffle.html
-static inline void shuffle(__xdata uint8_t *array, uint8_t n)
+static __code uint8_t FREQ_2[51] =
 {
-	uint8_t i;
-	for (i = 0; i < n - 1; i++) {
-		uint8_t j = ((uint8_t)rand()) % n;
-		uint8_t t = array[j];
-		array[j] = array[i];
-		array[i] = t;
-	}
-}
-
-// initialise frequency hopping logic
-void 
-fhop_init(uint16_t netid)
+  0x23, 0x22, 0x23, 0x23, 0x23, 0x22, 0x23, 0x23, 0x22, 0x23,
+  0x23, 0x22, 0x23, 0x23, 0x23, 0x22, 0x23, 0x23, 0x22, 0x23,
+  0x23, 0x22, 0x23, 0x23, 0x22, 0x23, 0x22, 0x23, 0x23, 0x23,
+  0x22, 0x23, 0x23, 0x23, 0x22, 0x23, 0x23, 0x23, 0x22, 0x23,
+  0x23, 0x22, 0x23, 0x23, 0x22, 0x23, 0x22, 0x23, 0x22, 0x23,
+  0x23
+};  
+//
+//  Table for FREQ1 settings.
+//
+static __code uint8_t FREQ_1[51] =
 {
-	uint8_t i;
-	// create a random mapping between virtual and physical channel
-	// numbers, seeded by the network ID
-	for (i = 0; i < num_fh_channels; i++) {
-		channel_map[i] = i;
-	}
-	srand(netid);
-	shuffle(channel_map, num_fh_channels);
-}
-
-// tell the TDM code what channel to transmit on
-uint8_t 
-fhop_transmit_channel(void)
+  0x0D, 0xB4, 0x12, 0x7F, 0x30, 0xDC, 0x9C, 0x52, 0xF4, 0x66,
+  0x21, 0xC3, 0x43, 0x8E, 0x03, 0xCD, 0x3A, 0x70, 0xE6, 0xA6,
+  0x1C, 0xBE, 0x48, 0x84, 0xF9, 0xA1, 0xD7, 0x2B, 0x5C, 0x92,
+  0xB9, 0x08, 0x75, 0x35, 0xE1, 0x4D, 0xAB, 0x6B, 0xEF, 0x17,
+  0x57, 0xC8, 0x89, 0x3E, 0xFE, 0x61, 0xD2, 0x7A, 0xEB, 0x26,
+  0x97
+};  
+//
+//  Table for FREQ0 settings.
+//
+static __code uint8_t FREQ_0[51] =
 {
-	return channel_map[transmit_channel];
-}
+  0x97, 0xAB, 0x89, 0x39, 0x2D, 0x31, 0xDD, 0xC3, 0xE5, 0x85,
+  0x5B, 0x7D, 0xEF, 0x0B, 0xB7, 0x5F, 0x0F, 0x67, 0x13, 0xBF,
+  0x6B, 0x8D, 0xE1, 0x29, 0xD5, 0xCD, 0x41, 0x3D, 0xA3, 0xFB,
+  0x9B, 0xA7, 0x57, 0x1D, 0x21, 0xD1, 0xAF, 0x75, 0xF3, 0x79,
+  0xB3, 0x6D, 0x19, 0xFF, 0xC5, 0x95, 0x4F, 0x47, 0x03, 0x4B,
+  0xED
+};
+
+__pdata static volatile uint8_t receive_channel = 5;
 
 // tell the TDM code what channel to receive on
-uint8_t 
-fhop_receive_channel(void)
+uint32_t 
+fhop_receive_freqency(void)
 {
-	return channel_map[receive_channel];
+	__pdata uint32_t freq = 
+		((uint32_t)FREQ_2[receive_channel])<<16 | 
+		((uint32_t)FREQ_1[receive_channel])<<8 | 
+		((uint32_t)FREQ_0[receive_channel]);
+	float freq2 = freq * 26000000.0 / 65536;
+	return (uint32_t)freq2;
 }
 
 // called when the transmit windows changes owner
 void 
-fhop_window_change(void)
+fhop_next(void)
 {
-	transmit_channel = (transmit_channel + 1) % num_fh_channels;
-	if (have_radio_lock) {
-		// when we have lock, the receive channel follows the
-		// transmit channel
-		receive_channel = transmit_channel;
-	} else if (transmit_channel == 0) {
-		// when we don't have lock, the receive channel only
-		// changes when the transmit channel wraps
-		receive_channel = (receive_channel + 1) % num_fh_channels;
-		debug("Trying RCV on channel %d\n", (int)receive_channel);
-	}
+	receive_channel = (receive_channel + 1) % 51;
+	printf_small("chan=%d\n", (int)receive_channel);
 }
 
-// called when we get or lose radio lock
-void 
-fhop_set_locked(bool locked)
-{
-#if DEBUG
-	if (locked && !have_radio_lock) {
-		debug("FH lock\n");
-	}
-#endif
-	have_radio_lock = locked;
-	if (have_radio_lock) {
-		// we have just received a packet, so we know the
-		// other radios transmit channel must be our receive
-		// channel
-		transmit_channel = receive_channel;
-	} else {
-		// try the next receive channel
-		receive_channel = (receive_channel+1) % num_fh_channels;
-	}
-}
 
