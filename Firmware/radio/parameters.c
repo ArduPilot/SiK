@@ -41,7 +41,7 @@
 
 
 #include "radio.h"
-#include "tdm.h"
+#include "loop.h"
 #include <flash_layout.h>
 
 /// In-ROM parameter info table.

@@ -33,7 +33,7 @@
 ///
 
 #include "radio.h"
-#include "tdm.h"
+#include "loop.h"
 
 
 // canary data for ram wrap. It is in at.c as the compiler
@@ -210,14 +210,6 @@ at_command(void)
 {
 	// require a command with the AT prefix
 	if (at_cmd_ready) {
-		if ((at_cmd_len >= 2) && (at_cmd[0] == 'R') && (at_cmd[1] == 'T')) {
-			// remote AT command - send it to the tdm
-			// system to send to the remote radio
-			at_cmd_len = 0;
-			at_cmd_ready = false;
-			return;
-		}
-		
 		if ((at_cmd_len >= 2) && (at_cmd[0] == 'A') && (at_cmd[1] == 'T')) {
 
 			// look at the next byte to determine what to do
@@ -390,12 +382,6 @@ at_ampersand(void)
 		if (!strcmp(at_cmd + 4, "")) {
 			// disable all tests
 			at_testmode = 0;
-		} else if (!strcmp(at_cmd + 4, "=RSSI")) {
-			// display RSSI stats
-			at_testmode ^= AT_TEST_RSSI;
-		} else if (!strcmp(at_cmd + 4, "=TDM")) {
-			// display TDM debug
-			at_testmode ^= AT_TEST_TDM;
 		} else {
 			at_error();
 		}

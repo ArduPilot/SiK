@@ -55,7 +55,6 @@ static void	clear_status_registers(void);
 
 // save and restore radio interrupt. We use this rather than
 // __critical to ensure we don't disturb the timer interrupt at all.
-// minimal tick drift is critical for TDM
 #define EX0_SAVE_DISABLE __bit EX0_saved = EX0; EX0 = 0
 #define EX0_RESTORE EX0 = EX0_saved
 
@@ -870,7 +869,7 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		// we have a full packet
 		packet_received = true;
 
-		// disable interrupts until the tdm code has grabbed the packet
+		// disable interrupts until the loop code has grabbed the packet
 		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
 		register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0);
 

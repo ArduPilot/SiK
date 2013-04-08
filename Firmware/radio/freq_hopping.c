@@ -72,7 +72,7 @@ static __code uint8_t FREQ_0[51] =
 
 __pdata static volatile uint8_t receive_channel = 5;
 
-// tell the TDM code what channel to receive on
+// tell the loop code what channel to receive on
 uint32_t 
 fhop_receive_freqency(void)
 {

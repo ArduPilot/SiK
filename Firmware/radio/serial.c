@@ -37,13 +37,7 @@
 
 // Serial rx/tx buffers.
 //
-// Note that the rx buffer is much larger than you might expect
-// as we need the receive buffer to be many times larger than the
-// largest possible air packet size for efficient TDM. Ideally it
-// would be about 16x larger than the largest air packet if we have
-// 8 TDM time slots
-//
-__xdata uint8_t rx_buf[2048] = {0};
+__xdata uint8_t rx_buf[1024] = {0};
 __xdata uint8_t tx_buf[512] = {0};
 __pdata const uint16_t  rx_mask = sizeof(rx_buf) - 1;
 __pdata const uint16_t  tx_mask = sizeof(tx_buf) - 1;
@@ -85,7 +79,6 @@ static void serial_device_set_speed(register uint8_t speed);
 
 // save and restore serial interrupt. We use this rather than
 // __critical to ensure we don't disturb the timer interrupt at all.
-// minimal tick drift is critical for TDM
 #define ES0_SAVE_DISABLE __bit ES_saved = ES0; ES0 = 0
 #define ES0_RESTORE ES0 = ES_saved
 

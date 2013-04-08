@@ -38,7 +38,7 @@
 
 #include <stdarg.h>
 #include "radio.h"
-#include "tdm.h"
+#include "loop.h"
 #include "timer.h"
 #include "freq_hopping.h"
 

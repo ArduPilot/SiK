@@ -36,7 +36,7 @@
 
 extern void fhop_next(void);
 
-/// tell the TDM code what channel to receive on
+/// tell the loop code what channel to receive on
 ///
 /// @return		The channel that we should be receiving on.
 //
