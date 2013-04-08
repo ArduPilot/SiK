@@ -138,20 +138,6 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		value = radio_get_transmit_power();
 		break;
 
-	case PARAM_DUTY_CYCLE:
-		// update duty cycle immediately
-		value = constrain(value, 0, 100);
-		duty_cycle = value;
-		break;
-
-	case PARAM_LBT_RSSI:
-		// update LBT RSSI immediately
-		if (value != 0) {
-			value = constrain(value, 25, 220);
-		}
-		lbt_rssi = value;
-		break;
-
 	case PARAM_MAVLINK:
 		feature_mavlink_framing = value?true:false;
 		value = feature_mavlink_framing?1:0;

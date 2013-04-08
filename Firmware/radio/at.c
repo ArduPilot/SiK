@@ -321,12 +321,6 @@ at_i(void)
 		}
 		return;
 	}
-	case '6':
-		tdm_report_timing();
-		return;
-	case '7':
-		tdm_show_rssi();
-		return;
 	default:
 		at_error();
 		return;

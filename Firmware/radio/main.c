@@ -124,7 +124,7 @@ main(void)
 		panic("failed to enable receiver");
 	}
 
-	tdm_serial_loop();
+	serial_loop();
 }
 
 void
@@ -238,60 +238,10 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	__pdata uint32_t freq_min, freq_max;
-	__pdata uint32_t channel_spacing;
-
-	//at_testmode = AT_TEST_RSSI;
-
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
 		panic("radio_initialise failed");
 	}
-
-	freq_min = 915000000UL;
-	freq_max = 928000000UL;
-
-	if (param_get(PARAM_MIN_FREQ) != 0) {
-		freq_min        = param_get(PARAM_MIN_FREQ) * 1000UL;
-	}
-	if (param_get(PARAM_MAX_FREQ) != 0) {
-		freq_max        = param_get(PARAM_MAX_FREQ) * 1000UL;
-	}
-
-	// double check ranges the board can do
-	freq_min = constrain(freq_min, 868000000UL, 935000000UL);
-	freq_max = constrain(freq_max, 868000000UL, 935000000UL);
-
-	// get the duty cycle we will use
-	duty_cycle = param_get(PARAM_DUTY_CYCLE);
-	duty_cycle = constrain(duty_cycle, 0, 100);
-	param_set(PARAM_DUTY_CYCLE, duty_cycle);
-
-	// get the LBT threshold we will use
-	lbt_rssi = param_get(PARAM_LBT_RSSI);
-	if (lbt_rssi != 0) {
-		// limit to the RSSI valid range
-		lbt_rssi = constrain(lbt_rssi, 25, 220);
-	}
-	param_set(PARAM_LBT_RSSI, lbt_rssi);
-
-	// sanity checks
-	param_set(PARAM_MIN_FREQ, freq_min/1000);
-	param_set(PARAM_MAX_FREQ, freq_max/1000);
-
-	channel_spacing = 500900UL;
-
-	// add half of the channel spacing, to ensure that we are well
-	// away from the edges of the allowed range
-	//freq_min += channel_spacing/2;
-
-	// add another offset based on network ID. This means that
-	// with different network IDs we will have much lower
-	// interference
-
-	// set the frequency and channel spacing
-	// change base freq based on netid
-	radio_set_frequency(fhop_receive_freqency());
 
 	// And intilise the radio with them.
 	if (!radio_configure(param_get(PARAM_AIR_SPEED)) &&
@@ -299,19 +249,5 @@ radio_init(void)
 	    !radio_configure(param_get(PARAM_AIR_SPEED))) {
 		panic("radio_configure failed");
 	}
-
-	// report the real air data rate in parameters
-	param_set(PARAM_AIR_SPEED, radio_air_rate());
-
-	// setup network ID
-	radio_set_network_id(param_get(PARAM_NETID));
-
-#ifdef USE_RTC
-	// initialise real time clock
-	rtc_init();
-#endif
-
-	// initialise TDM system
-	tdm_init();
 }
 

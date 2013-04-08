@@ -292,7 +292,6 @@ radio_set_frequency(__pdata uint32_t value)
 	if (value < 240000000UL || value > 935000000UL) {
 		return false;
 	}
-	printf("Set frequency %lu\n", (unsigned long)value);
 	settings.frequency = value;
 	set_frequency_registers(value);
 	return true;
@@ -866,9 +865,6 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 
 	if (status & EZRADIOPRO_IPKVALID) {
 		__data uint8_t len = register_read(EZRADIOPRO_TRANSMIT_PACKET_LENGTH);
-		debug("status=0x%x rxlen=%d\n", 
-		      (unsigned)status,
-		      (int)register_read(EZRADIOPRO_RECEIVED_PACKET_LENGTH));
 		read_receive_fifo(len, &radio_buffer[0]);
 		receive_packet_length = len;
 

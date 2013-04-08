@@ -89,7 +89,6 @@ void
 fhop_next(void)
 {
 	receive_channel = (receive_channel + 1) % 51;
-	printf_small("chan=%d\n", (int)receive_channel);
 }
 
 
