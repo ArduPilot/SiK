@@ -3,7 +3,7 @@
 
 import serial, sys, optparse, time
 
-parser = optparse.OptionParser("reflector")
+parser = optparse.OptionParser("davis_log")
 parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
 
 opts, args = parser.parse_args()
@@ -17,7 +17,7 @@ logfile = args[1]
 
 port = serial.Serial(device, opts.baudrate, timeout=5, dsrdtr=False, rtscts=False, xonxoff=False)
 
-log = open(logfile, mode="w")
+log = open(logfile, mode="a")
 
 while True:
     line = port.readline()
