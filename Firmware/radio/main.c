@@ -102,12 +102,9 @@ main(void)
 	g_board_frequency = BOARD_FREQUENCY_REG;
 	g_board_bl_version = BOARD_BL_VERSION_REG;
 
-	// try to load parameters; set them to defaults if that fails.
+	// Load parameters from flash or defaults
 	// this is done before hardware_init() to get the serial speed
-	// XXX default parameter selection should be based on board info
-	//
-	if (!param_load())
-		param_default();
+	param_load();
 
 	// setup boolean features
 	feature_mavlink_framing = param_get(PARAM_MAVLINK)?true:false;
