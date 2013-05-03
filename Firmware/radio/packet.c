@@ -150,7 +150,27 @@ uint8_t
 packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	register uint16_t slen;
-
+	
+	slen = serial_read_available();
+	if (force_resend ||
+	    (feature_opportunistic_resend &&
+	     last_sent_is_resend == false && 
+	     last_sent_len != 0 && 
+	     slen < PACKET_RESEND_THRESHOLD)) {
+			if (max_xmit < last_sent_len) {
+				last_sent_len = 0;
+				return 0;
+			}
+			last_sent_is_resend = true;
+			force_resend = false;
+			memcpy(buf, last_sent, last_sent_len);
+			slen = last_sent_len;
+			last_sent_len = 0;
+			return (slen & 0xFF);
+	}
+	
+	last_sent_is_resend = false;
+	
 	if (injected_packet) {
 		// send a previously injected packet
 		slen = last_sent_len;
@@ -168,24 +188,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		last_sent_is_injected = true;
 		return last_sent_len;
 	}
+	
 	last_sent_is_injected = false;
-
-	slen = serial_read_available();
-	if (force_resend ||
-	    (feature_opportunistic_resend &&
-	     last_sent_is_resend == false && 
-	     last_sent_len != 0 && 
-	     slen < PACKET_RESEND_THRESHOLD)) {
-		if (max_xmit < last_sent_len) {
-			return 0;
-		}
-		last_sent_is_resend = true;
-		force_resend = false;
-		memcpy(buf, last_sent, last_sent_len);
-		return last_sent_len;
-	}
-
-	last_sent_is_resend = false;
 
 	// if we have received something via serial see how
 	// much of it we could fit in the transmit FIFO
