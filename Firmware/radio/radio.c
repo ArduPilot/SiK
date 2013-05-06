@@ -890,13 +890,13 @@ radio_set_transmit_power(uint8_t power)
 	i = calibration_get(power);
 	if (i != 0xFF)
 	{
-		PCA0CPH3 = i;     // Set PWM for PA to correct duty cycle
+		PCA0CPH0 = i;     // Set PWM for PA to correct duty cycle
 		settings.transmit_power = power;
 	}
 	else
 	{
 		i = power / POWER_LEVEL_STEP;
-		PCA0CPH3 = power_levels[i];     // Set PWM for PA to correct duty cycle
+		PCA0CPH0 = power_levels[i];     // Set PWM for PA to correct duty cycle
 		settings.transmit_power = i * POWER_LEVEL_STEP;
 	}
 #else

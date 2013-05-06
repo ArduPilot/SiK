@@ -438,7 +438,7 @@ at_plus(void)
 		}
 		idx = 5;
 		val = at_parse_number();
-		PCA0CPH3 = val & 0xFF;
+		PCA0CPH0 = val & 0xFF;
 		radio_set_diversity(false);
 		at_ok();
 		return;
