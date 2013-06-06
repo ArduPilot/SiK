@@ -368,12 +368,19 @@ link_update(void)
 	if (received_packet) {
 		unlock_count = 0;
 		received_packet = false;
+#ifdef TDM_SYNC_LOGIC
+		TDM_SYNC_PIN = true;
+#endif // TDM_SYNC_LOGIC
 	} else {
 		unlock_count++;
 	}
 	if (unlock_count < 6) {
 		LED_RADIO = LED_ON;
 	} else {
+#ifdef TDM_SYNC_LOGIC
+		TDM_SYNC_PIN = false;
+#endif // TDM_SYNC_LOGIC
+
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
 	}
@@ -934,6 +941,10 @@ tdm_init(void)
 		i = max_data_packet_length;
 	}
 	packet_set_max_xmit(i);
+
+#ifdef TDM_SYNC_LOGIC
+		TDM_SYNC_PIN = false;
+#endif // TDM_SYNC_LOGIC
 
 	// crc_test();
 

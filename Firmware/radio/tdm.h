@@ -35,6 +35,13 @@
 #ifndef _TDM_H_
 #define _TDM_H_
 
+// Sync Logic on Pin // P2.6
+#define TDM_SYNC_LOGIC
+
+#ifdef TDM_SYNC_LOGIC
+SBIT (TDM_SYNC_PIN, SFR_P2, 6);
+#endif // TDM_SYNC_LOGIC
+
 /// initialise tdm subsystem
 ///
 extern void tdm_init(void);
