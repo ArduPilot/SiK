@@ -39,7 +39,6 @@
 
 extern __xdata uint8_t pbuf[MAX_PACKET_LENGTH];
 static __pdata uint8_t seqnum;
-extern bool using_mavlink_10;
 
 #define MAVLINK_MSG_ID_RADIO 166
 #define MAVLINK_RADIO_CRC_EXTRA 21
@@ -60,11 +59,9 @@ static void mavlink_crc(void)
 
 	stoplen = length + 6;
 
-	if (using_mavlink_10) {
-		// MAVLink 1.0 has an extra CRC seed
-		pbuf[length+6] = MAVLINK_RADIO_CRC_EXTRA;
-		stoplen++;
-	}
+        // MAVLink 1.0 has an extra CRC seed
+        pbuf[length+6] = MAVLINK_RADIO_CRC_EXTRA;
+        stoplen++;
 
 	i = 1;
 	while (i<stoplen) {
@@ -127,33 +124,21 @@ static void swap_bytes(__pdata uint8_t ofs, __pdata uint8_t len)
 /// send a MAVLink status report packet
 void MAVLink_report(void)
 {
-	pbuf[0] = using_mavlink_10?254:'U';
+        struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
+	pbuf[0] = MAVLINK10_STX;
 	pbuf[1] = sizeof(struct mavlink_RADIO_v09);
 	pbuf[2] = seqnum++;
 	pbuf[3] = RADIO_SOURCE_SYSTEM;
 	pbuf[4] = RADIO_SOURCE_COMPONENT;
 	pbuf[5] = MAVLINK_MSG_ID_RADIO;
 
-	if (using_mavlink_10) {
-		struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
-		m->rxerrors = errors.rx_errors;
-		m->fixed    = errors.corrected_packets;
-		m->txbuf    = serial_read_space();
-		m->rssi     = statistics.average_rssi;
-		m->remrssi  = remote_statistics.average_rssi;
-		m->noise    = statistics.average_noise;
-		m->remnoise = remote_statistics.average_noise;
-	} else {
-		struct mavlink_RADIO_v09 *m = (struct mavlink_RADIO_v09 *)&pbuf[6];
-		m->rxerrors = errors.rx_errors;
-		m->fixed    = errors.corrected_packets;
-		m->txbuf    = serial_read_space();
-		m->rssi     = statistics.average_rssi;
-		m->remrssi  = remote_statistics.average_rssi;
-		m->noise    = statistics.average_noise;
-		m->remnoise = remote_statistics.average_noise;
-		swap_bytes(6+5, 4);
-	}
+        m->rxerrors = errors.rx_errors;
+        m->fixed    = errors.corrected_packets;
+        m->txbuf    = serial_read_space();
+        m->rssi     = statistics.average_rssi;
+        m->remrssi  = remote_statistics.average_rssi;
+        m->noise    = statistics.average_noise;
+        m->remnoise = remote_statistics.average_noise;
 	mavlink_crc();
 
 	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {

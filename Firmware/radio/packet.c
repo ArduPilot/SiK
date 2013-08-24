@@ -67,12 +67,8 @@ static bool injected_packet;
 
 // have we seen a mavlink packet?
 bool seen_mavlink;
-bool using_mavlink_10;
 
 #define PACKET_RESEND_THRESHOLD 32
-
-#define MAVLINK09_STX 85 // 'U'
-#define MAVLINK10_STX 254
 
 // check if a buffer looks like a MAVLink heartbeat packet - this
 // is used to determine if we will inject RADIO status MAVLink
@@ -80,15 +76,9 @@ bool using_mavlink_10;
 // monitoring of link quality
 static void check_heartbeat(__xdata uint8_t * __pdata buf)
 {
-	if (buf[0] == MAVLINK09_STX &&
-	    buf[1] == 3 && buf[5] == 0) {
-		// looks like a MAVLink 0.9 heartbeat
-		using_mavlink_10 = false;
-		seen_mavlink = true;
-	} else if (buf[0] == MAVLINK10_STX &&
-		   buf[1] == 9 && buf[5] == 0) {
+        if (buf[0] == MAVLINK10_STX &&
+            buf[1] == 9 && buf[5] == 0) {
 		// looks like a MAVLink 1.0 heartbeat
-		using_mavlink_10 = true;
 		seen_mavlink = true;
 	}
 }
@@ -113,7 +103,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	// buffer that we can fit in this packet
 	while (slen >= 8) {
 		register uint8_t c = serial_peek();
-		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+		if (c != MAVLINK10_STX) {
 			// its not a MAVLink packet
 			return last_sent_len;			
 		}
@@ -254,7 +244,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		
 	while (slen > 0) {
 		register uint8_t c = serial_peek();
-		if (c == MAVLINK09_STX || c == MAVLINK10_STX) {
+		if (c == MAVLINK10_STX) {
 			if (slen == 1) {
 				// we got a bare MAVLink header byte
 				if (last_sent_len == 0) {
