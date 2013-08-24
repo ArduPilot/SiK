@@ -43,6 +43,10 @@ static __pdata uint8_t seqnum;
 #define MAVLINK_MSG_ID_RADIO 166
 #define MAVLINK_RADIO_CRC_EXTRA 21
 
+// new RADIO_STATUS common message
+#define MAVLINK_MSG_ID_RADIO_STATUS 109
+#define MAVLINK_RADIO_STATUS_CRC_EXTRA 185
+
 // use '3D' for 3DRadio
 #define RADIO_SOURCE_SYSTEM '3'
 #define RADIO_SOURCE_COMPONENT 'D'
@@ -51,7 +55,7 @@ static __pdata uint8_t seqnum;
  * Calculates the MAVLink checksum on a packet in pbuf[] 
  * and append it after the data
  */
-static void mavlink_crc(void)
+static void mavlink_crc(register uint8_t crc_extra)
 {
 	register uint8_t length = pbuf[1];
         __pdata uint16_t sum = 0xFFFF;
@@ -60,7 +64,7 @@ static void mavlink_crc(void)
 	stoplen = length + 6;
 
         // MAVLink 1.0 has an extra CRC seed
-        pbuf[length+6] = MAVLINK_RADIO_CRC_EXTRA;
+        pbuf[length+6] = crc_extra;
         stoplen++;
 
 	i = 1;
@@ -139,7 +143,18 @@ void MAVLink_report(void)
         m->remrssi  = remote_statistics.average_rssi;
         m->noise    = statistics.average_noise;
         m->remnoise = remote_statistics.average_noise;
-	mavlink_crc();
+	mavlink_crc(MAVLINK_RADIO_CRC_EXTRA);
+
+	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {
+		// don't cause an overflow
+		return;
+	}
+
+	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v09)+8);
+
+        // now the new RADIO_STATUS common message
+	pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
+	mavlink_crc(MAVLINK_RADIO_STATUS_CRC_EXTRA);
 
 	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {
 		// don't cause an overflow
