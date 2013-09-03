@@ -916,8 +916,8 @@ tdm_init(void)
 	}
 
 	// make sure it fits in the 13 bits of the trailer window
-	if (window_width > 0x1FFF) {
-		window_width = 0x1FFF;
+	if (window_width > param_get(PARAM_MAX_WINDOW)) {
+		window_width = param_get(PARAM_MAX_WINDOW);
 	}
 
 	tx_window_width = window_width;
