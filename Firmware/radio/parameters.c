@@ -120,7 +120,7 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 			return false;
 		break;
 
-    case PARAM_MAX_WINDOW:
+        case PARAM_MAX_WINDOW:
 		// FIXME - validate against min/max window sizes
 		//if(val > REGULATORY_MAX_WINDOW)
 		//return false;

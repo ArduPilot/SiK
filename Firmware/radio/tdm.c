@@ -922,8 +922,8 @@ tdm_init(void)
 	}
 
 	// make sure it fits in the 13 bits of the trailer window
-	if (window_width > 0x1fff) {
-		window_width = 0x1fff;
+	if (window_width > param_get(PARAM_MAX_WINDOW)) {
+		window_width = param_get(PARAM_MAX_WINDOW);
 	}
 
 	printf("shrunk %u\r\n", (unsigned) window_width);
