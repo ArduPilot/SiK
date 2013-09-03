@@ -64,7 +64,8 @@ __code const struct parameter_info {
 	{"DUTY_CYCLE",		100},
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
-	{"RTSCTS",		0}
+	{"RTSCTS",		0},
+    {"MAX_WINDOW", 0x1fff}
 };
 
 /// In-RAM parameter store.
@@ -115,6 +116,12 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 			return false;
 		break;
 
+    case PARAM_MAX_WINDOW:
+		// FIXME - validate against min/max window sizes
+		//if(val > REGULATORY_MAX_WINDOW)
+		//return false;
+		break;
+				
 	default:
 		// no sanity check for this value
 		break;
