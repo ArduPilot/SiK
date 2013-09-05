@@ -45,7 +45,7 @@
 // 8 TDM time slots
 //
 __xdata uint8_t rx_buf[2048] = {0};
-__xdata uint8_t tx_buf[512] = {0};
+__xdata uint8_t tx_buf[256] = {0}; // FIXME - raise back to 512
 __pdata const uint16_t  rx_mask = sizeof(rx_buf) - 1;
 __pdata const uint16_t  tx_mask = sizeof(tx_buf) - 1;
 
@@ -79,6 +79,7 @@ static volatile bool			tx_idle;
 		_which##_remove = ((_which##_remove+1) & _which##_mask); } while(0)
 #define BUF_PEEK(_which)	_which##_buf[_which##_remove]
 #define BUF_PEEK2(_which)	_which##_buf[(_which##_remove+1) & _which##_mask]
+#define BUF_PEEKX(_which, offset)	_which##_buf[(_which##_remove+offset) & _which##_mask]
 
 static void			_serial_write(register uint8_t c);
 static void			serial_restart(void);
@@ -345,6 +346,18 @@ serial_peek2(void)
 
 	ES0_SAVE_DISABLE;
 	c = BUF_PEEK2(rx);
+	ES0_RESTORE;
+
+	return c;
+}
+
+uint8_t
+serial_peekx(uint16_t offset)
+{
+	register uint8_t c;
+
+	ES0_SAVE_DISABLE;
+	c = BUF_PEEKX(rx, offset);
 	ES0_RESTORE;
 
 	return c;
