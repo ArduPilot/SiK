@@ -109,10 +109,14 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 
 	case PARAM_ECC:
-	case PARAM_MAVLINK:
 	case PARAM_OPPRESEND:
 		// boolean 0/1 only
 		if (val > 1)
+			return false;
+		break;
+
+	case PARAM_MAVLINK:
+		if (val > 2)
 			return false;
 		break;
 
@@ -160,8 +164,8 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 
 	case PARAM_MAVLINK:
-		feature_mavlink_framing = value?true:false;
-		value = feature_mavlink_framing?1:0;
+		feature_mavlink_framing = (uint8_t) value;
+		value = feature_mavlink_framing;
 		break;
 
 	case PARAM_OPPRESEND:
