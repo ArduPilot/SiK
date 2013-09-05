@@ -83,12 +83,63 @@ static void check_heartbeat(__xdata uint8_t * __pdata buf)
 	}
 }
 
+#define MSG_TYP_RC_OVERRIDE 70
+#define MSG_LEN_RC_OVERRIDE (9 * 2)
+
+/// Return the offset of any high priority packet (so we can ensure that this packet goes out in the next
+/// tx window
+static 
+int16_t extract_hipri(uint8_t max_xmit)
+{
+	__xdata uint16_t slen = serial_read_available();
+    __xdata uint16_t offset = 0;
+	__xdata int16_t high_offset = -1;
+
+	// Walk the serial buffer to find the _last_ high pri packet
+	while (slen >= 8) {
+		register uint8_t c = serial_peekx(offset);
+		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+			// we've lost mavlink framing - stop scanning for this window
+			break;			
+		}
+		c = serial_peekx(offset + 1);
+		if (c >= 255 - 8 || 
+		    c+8 > max_xmit - last_sent_len) {
+			// it won't fit
+			break;
+		}
+		if (c+8 > slen) {
+			// we don't have the full MAVLink packet in
+			// the serial buffer
+			break;
+		}
+
+		if(serial_peekx(offset +6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+			if(high_offset != -1) 
+					printf("found 2nd\r\n");
+			else
+					printf("found rc\r\n");
+			high_offset = offset;
+		}
+
+		c += 8;
+		slen -= c;
+		offset += c;
+	}
+
+	return high_offset;
+}
+
+#define MAVLINK_FRAMING_DISABLED 0
+#define MAVLINK_FRAMING_SIMPLE 1
+#define MAVLINK_FRAMING_HIGHPRI 2
+
 // return a complete MAVLink frame, possibly expanding
 // to include other complete frames that fit in the max_xmit limit
 static 
 uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	__data uint16_t slen;
+	__xdata uint16_t slen, offset = 0, high_offset;
 
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
@@ -97,6 +148,8 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 	check_heartbeat(buf);
 
+	high_offset = (feature_mavlink_framing == MAVLINK_FRAMING_HIGHPRI) ? extract_hipri(max_xmit) : -1;
+	  
 	slen = serial_read_available();
 
 	// see if we have more complete MAVLink frames in the serial
@@ -119,16 +172,24 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			break;
 		}
 
-		c += 8;
+		// If we are using the special highpri mode, we might skip some override packets
+		if(high_offset != -1 && high_offset != offset && serial_peekx(6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+			printf("skipping rc\r\n");
+			c += 8;
+		}
+		else {
+			c += 8;
 
-		// we can add another MAVLink frame to the packet
-		serial_read_buf(&last_sent[last_sent_len], c);
-		memcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
+			// we can add another MAVLink frame to the packet
+			serial_read_buf(&last_sent[last_sent_len], c);
+			memcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
 
-		check_heartbeat(buf+last_sent_len);
+			check_heartbeat(buf+last_sent_len);
+		}
 
 		last_sent_len += c;
 		slen -= c;
+		offset += c;
 	}
 
 	return last_sent_len;
