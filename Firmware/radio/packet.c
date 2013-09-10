@@ -98,7 +98,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 	// Walk the serial buffer to find the _last_ high pri packet
 	while (slen >= 8) {
 		register uint8_t c = serial_peekx(offset);
-		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+		if (c != MAVLINK10_STX) {
 			// we've lost mavlink framing - stop scanning for this window
 			break;			
 		}
