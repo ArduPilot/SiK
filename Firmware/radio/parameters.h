@@ -61,7 +61,7 @@ enum ParamID {
 	PARAM_LBT_RSSI,			// listen before talk threshold
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
-	PARAM_MAX_WINDOW,       // The maximum window size allowed
+	PARAM_MAX_WINDOW,		// The maximum window size allowed
 	PARAM_MAX			// must be last
 };
 
