@@ -67,12 +67,8 @@ static bool injected_packet;
 
 // have we seen a mavlink packet?
 bool seen_mavlink;
-bool using_mavlink_10;
 
 #define PACKET_RESEND_THRESHOLD 32
-
-#define MAVLINK09_STX 85 // 'U'
-#define MAVLINK10_STX 254
 
 // check if a buffer looks like a MAVLink heartbeat packet - this
 // is used to determine if we will inject RADIO status MAVLink
@@ -80,15 +76,9 @@ bool using_mavlink_10;
 // monitoring of link quality
 static void check_heartbeat(__xdata uint8_t * __pdata buf)
 {
-	if (buf[0] == MAVLINK09_STX &&
-	    buf[1] == 3 && buf[5] == 0) {
-		// looks like a MAVLink 0.9 heartbeat
-		using_mavlink_10 = false;
-		seen_mavlink = true;
-	} else if (buf[0] == MAVLINK10_STX &&
-		   buf[1] == 9 && buf[5] == 0) {
+        if (buf[0] == MAVLINK10_STX &&
+            buf[1] == 9 && buf[5] == 0) {
 		// looks like a MAVLink 1.0 heartbeat
-		using_mavlink_10 = true;
 		seen_mavlink = true;
 	}
 }
@@ -102,13 +92,13 @@ static
 int16_t extract_hipri(uint8_t max_xmit)
 {
 	__xdata uint16_t slen = serial_read_available();
-    __xdata uint16_t offset = 0;
+	__xdata uint16_t offset = 0;
 	__xdata int16_t high_offset = -1;
 
 	// Walk the serial buffer to find the _last_ high pri packet
 	while (slen >= 8) {
 		register uint8_t c = serial_peekx(offset);
-		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+		if (c != MAVLINK10_STX) {
 			// we've lost mavlink framing - stop scanning for this window
 			break;			
 		}
@@ -125,10 +115,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 		}
 
 		if(serial_peekx(offset +6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
-			if(high_offset != -1) 
-					printf("found 2nd\r\n");
-			else
-					printf("found rc\r\n");
+			// if(high_offset != -1) printf("found 2nd\r\n"); else printf("found rc\r\n");
 			high_offset = offset;
 		}
 
@@ -149,7 +136,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 static 
 uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	__xdata uint16_t slen, offset = 0, high_offset;
+	__data uint16_t slen, offset = 0, high_offset;
 
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
@@ -166,7 +153,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	// buffer that we can fit in this packet
 	while (slen >= 8) {
 		register uint8_t c = serial_peek();
-		if (c != MAVLINK09_STX && c != MAVLINK10_STX) {
+		if (c != MAVLINK10_STX) {
 			// its not a MAVLink packet
 			return last_sent_len;			
 		}
@@ -184,7 +171,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 		// If we are using the special highpri mode, we might skip some override packets
 		if(high_offset != -1 && high_offset != offset && serial_peekx(6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
-			printf("skipping rc\r\n");
+			// printf("skipping rc\r\n");
 			c += 8;
 		}
 		else {
@@ -315,7 +302,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		
 	while (slen > 0) {
 		register uint8_t c = serial_peek();
-		if (c == MAVLINK09_STX || c == MAVLINK10_STX) {
+		if (c == MAVLINK10_STX) {
 			if (slen == 1) {
 				// we got a bare MAVLink header byte
 				if (last_sent_len == 0) {

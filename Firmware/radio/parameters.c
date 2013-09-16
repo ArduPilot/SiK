@@ -65,7 +65,7 @@ __code const struct parameter_info {
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
 	{"RTSCTS",		0},
-    {"MAX_WINDOW", 0x1fff}
+	{"MAX_WINDOW",		131}
 };
 
 /// In-RAM parameter store.
@@ -120,10 +120,12 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 			return false;
 		break;
 
-    case PARAM_MAX_WINDOW:
-		// FIXME - validate against min/max window sizes
-		//if(val > REGULATORY_MAX_WINDOW)
-		//return false;
+	case PARAM_MAX_WINDOW:
+		// 131 milliseconds == 0x1FFF 16 usec ticks,
+		// which is the maximum we can handle with a 13
+		// bit trailer for window remaining
+		if (val > 131)
+			return false;
 		break;
 				
 	default:

@@ -909,7 +909,7 @@ tdm_init(void)
 		window_width = constrain(window_width, 3*lbt_min_time, window_width);
 	}
 
-	printf("desired %u\r\n", (unsigned) window_width);
+	//printf("desired %u\r\n", (unsigned) window_width);
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
@@ -917,8 +917,9 @@ tdm_init(void)
 		window_width = REGULATORY_MAX_WINDOW;
 	}
 
-	if (window_width > param_get(PARAM_MAX_WINDOW)) {
-		window_width = param_get(PARAM_MAX_WINDOW);
+	// user specified window is in milliseconds
+	if (window_width > param_get(PARAM_MAX_WINDOW)*(1000/16)) {
+		window_width = param_get(PARAM_MAX_WINDOW)*(1000/16);
 	}
 
 	// make sure it fits in the 13 bits of the trailer window
@@ -926,7 +927,7 @@ tdm_init(void)
 		window_width = 0x1fff;
 	}
 
-	printf("shrunk %u\r\n", (unsigned) window_width);
+	//printf("shrunk %u\r\n", (unsigned) window_width);
 
 	tx_window_width = window_width;
 
