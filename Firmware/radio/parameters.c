@@ -64,7 +64,8 @@ __code const struct parameter_info {
 	{"DUTY_CYCLE",		100},
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
-	{"RTSCTS",		0}
+	{"RTSCTS",		0},
+	{"MAX_WINDOW",		131}
 };
 
 /// In-RAM parameter store.
@@ -108,13 +109,25 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 
 	case PARAM_ECC:
-	case PARAM_MAVLINK:
 	case PARAM_OPPRESEND:
 		// boolean 0/1 only
 		if (val > 1)
 			return false;
 		break;
 
+	case PARAM_MAVLINK:
+		if (val > 2)
+			return false;
+		break;
+
+	case PARAM_MAX_WINDOW:
+		// 131 milliseconds == 0x1FFF 16 usec ticks,
+		// which is the maximum we can handle with a 13
+		// bit trailer for window remaining
+		if (val > 131)
+			return false;
+		break;
+				
 	default:
 		// no sanity check for this value
 		break;
@@ -153,8 +166,8 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 
 	case PARAM_MAVLINK:
-		feature_mavlink_framing = value?true:false;
-		value = feature_mavlink_framing?1:0;
+		feature_mavlink_framing = (uint8_t) value;
+		value = feature_mavlink_framing;
 		break;
 
 	case PARAM_OPPRESEND:

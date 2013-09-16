@@ -102,6 +102,13 @@ extern uint8_t	serial_peek(void);
 ///
 extern uint8_t	serial_peek2(void);
 
+/// peek at the byte x bytes in from the serial port, without removing it
+/// caller must ensure serial available is > offset
+///
+/// @return			The byte after next in the receive FIFO.
+///
+extern uint8_t	serial_peekx(uint16_t offset);
+
 /// Read bytes from the serial port.
 ///
 /// @param	buf		Buffer for read data.

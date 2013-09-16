@@ -95,16 +95,14 @@ static void mavlink_crc(register uint8_t crc_extra)
 	    <field type="uint16_t" name="rxerrors">receive errors</field>
 	    <field type="uint16_t" name="fixed">count of error corrected packets</field>
 	  </message>
+
+          Note that the wire field ordering follows the MAVLink v1.0
+          spec 
+
+          The RADIO_STATUS message in common.xml is the same as the
+          ardupilotmega.xml RADIO message, but is message ID 109 with
+          a different CRC seed
 */
-struct mavlink_RADIO_v09 {
-	uint8_t rssi;
-	uint8_t remrssi;
-	uint8_t txbuf;
-	uint8_t noise;
-	uint8_t remnoise;
-	uint16_t rxerrors;
-	uint16_t fixed;
-};
 struct mavlink_RADIO_v10 {
 	uint16_t rxerrors;
 	uint16_t fixed;
@@ -130,7 +128,7 @@ void MAVLink_report(void)
 {
         struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
 	pbuf[0] = MAVLINK10_STX;
-	pbuf[1] = sizeof(struct mavlink_RADIO_v09);
+	pbuf[1] = sizeof(struct mavlink_RADIO_v10);
 	pbuf[2] = seqnum++;
 	pbuf[3] = RADIO_SOURCE_SYSTEM;
 	pbuf[4] = RADIO_SOURCE_COMPONENT;
@@ -145,21 +143,21 @@ void MAVLink_report(void)
         m->remnoise = remote_statistics.average_noise;
 	mavlink_crc(MAVLINK_RADIO_CRC_EXTRA);
 
-	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {
+	if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
 		// don't cause an overflow
 		return;
 	}
 
-	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v09)+8);
+	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
 
         // now the new RADIO_STATUS common message
 	pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
 	mavlink_crc(MAVLINK_RADIO_STATUS_CRC_EXTRA);
 
-	if (serial_write_space() < sizeof(struct mavlink_RADIO_v09)+8) {
+	if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
 		// don't cause an overflow
 		return;
 	}
 
-	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v09)+8);
+	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
 }
