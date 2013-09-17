@@ -114,26 +114,38 @@ def recv_vehicle():
     receive packets in the vehicle
     '''
     m = vehicle.recv_match(blocking=True,timeout=0.001)
-    if m and m.get_type() != 'BAD_DATA':
-        if opts.show:
-            print(m)
-        stats.vehicle_received += 1
-        if m.get_type() in ['RADIO','RADIO_STATUS']:
-            stats.vehicle_radio_received += 1
-        if m.get_type() == 'RC_CHANNELS_OVERRIDE':
-            process_override(m)
+    if not m:
+        # timeout
+        return
+    if m.get_type() == 'BAD_DATA':
+        stats.vehicle_bad_data += 1
+        return
+    if opts.show:
+        print(m)
+    stats.vehicle_received += 1
+    if m.get_type() in ['RADIO','RADIO_STATUS']:
+        stats.vehicle_radio_received += 1
+    if m.get_type() == 'RC_CHANNELS_OVERRIDE':
+        process_override(m)
+
 
 def recv_GCS():
     '''
     receive packets in the GCS
     '''
     m = gcs.recv_match(blocking=True,timeout=0.001)
-    if m and m.get_type() != 'BAD_DATA':
-        if opts.show:
-            print(m)
-        stats.gcs_received += 1        
-        if m.get_type() in ['RADIO','RADIO_STATUS']:
-            stats.gcs_radio_received += 1            
+    if not m:
+        # timeout
+        return    
+    if m.get_type() == 'BAD_DATA':
+        stats.gcs_bad_data += 1
+        return
+    if opts.show:
+        print(m)
+    stats.gcs_received += 1        
+    if m.get_type() in ['RADIO','RADIO_STATUS']:
+        stats.gcs_radio_received += 1            
+
 
 class PacketStats(object):
     '''
@@ -152,6 +164,8 @@ class PacketStats(object):
         self.latency_total = 0
         self.latency_min = 0
         self.latency_max = 0
+        self.vehicle_bad_data = 0
+        self.gcs_bad_data = 0
 
     def __str__(self):
         gcs_bytes_sent = gcs.mav.total_bytes_sent - self.gcs_last_bytes_sent
@@ -163,7 +177,7 @@ class PacketStats(object):
         if stats.latency_count != 0:
             avg_latency = stats.latency_total / stats.latency_count
         
-        return "Vehicle %u/%u/%u  GCS %u/%u/%u  pending %u byterates=%u/%u latency=%u/%u/%u" % (
+        return "Vehicle %u/%u/%u  GCS %u/%u/%u  pending %u byterates=%u/%u latency=%u/%u/%u bad_data=%u/%u" % (
             self.vehicle_sent,
             self.vehicle_received,
             self.vehicle_received - self.vehicle_radio_received,
@@ -175,7 +189,9 @@ class PacketStats(object):
             vehicle_bytes_sent,
             stats.latency_min,
             stats.latency_max,
-            avg_latency)
+            avg_latency,
+            self.vehicle_bad_data,
+            self.gcs_bad_data)
                                  
     
 '''
