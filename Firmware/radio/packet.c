@@ -148,6 +148,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 	check_heartbeat(buf);
 
+        offset = 0;
 	high_offset = (feature_mavlink_framing == MAVLINK_FRAMING_HIGHPRI) ? extract_hipri(max_xmit) : -1;
 	  
 	slen = serial_read_available();
