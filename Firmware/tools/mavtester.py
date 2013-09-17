@@ -85,6 +85,8 @@ def send_override():
     '''
     global last_override_send
     now = time.time()
+    if opts.override_rate == 0:
+        return
     if now - last_override_send < 1.0/opts.override_rate:
         return
     time_ms = int((now - start_time) * 1.0e3)
