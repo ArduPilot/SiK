@@ -35,8 +35,15 @@ last_gcs_send = time.time()
 last_override_send = time.time()
 
 def send_telemetry():
+    '''
+    send telemetry packets from the vehicle to
+    the GCS. This emulates the typical pattern of telemetry in
+    ArduPlane 2.75 in AUTO mode
+    '''    
     global last_vehicle_send
     now = time.time()
+    # send at rate specified by user. This doesn't do rate adjustment yet (APM does adjustment
+    # based on RADIO packets)
     if now - last_vehicle_send < 1.0/opts.rate:
         return
     last_vehicle_send = now
@@ -62,6 +69,9 @@ def send_telemetry():
     vehicle.mav.wind_send(direction=27.729429245, speed=5.35723495483, speed_z=-1.92264056206)
 
 def send_GCS():
+    '''
+    send GCS heartbeat messages
+    '''
     global last_gcs_send
     now = time.time()
     if now - last_gcs_send < 1.0:
@@ -70,6 +80,9 @@ def send_GCS():
     last_gcs_send = now
 
 def send_override():
+    '''
+    send RC_CHANNELS_OVERRIDE messages from GCS
+    '''
     global last_override_send
     now = time.time()
     if now - last_override_send < 1.0/opts.override_rate:
@@ -81,6 +94,9 @@ def send_override():
     last_override_send = now
 
 def process_override(m):
+    '''
+    process an incoming RC_CHANNELS_OVERRIDE message, measuring latency
+    '''
     now = time.time()
     time_ms_sent = m.chan2_raw*65536 + m.chan1_raw
     time_ms = int((now - start_time) * 1.0e3)
@@ -93,8 +109,36 @@ def process_override(m):
     if latency > stats.latency_max:
         stats.latency_max = latency
     
+def recv_vehicle():
+    '''
+    receive packets in the vehicle
+    '''
+    m = vehicle.recv_match(blocking=True,timeout=0.001)
+    if m and m.get_type() != 'BAD_DATA':
+        if opts.show:
+            print(m)
+        stats.vehicle_received += 1
+        if m.get_type() in ['RADIO','RADIO_STATUS']:
+            stats.vehicle_radio_received += 1
+        if m.get_type() == 'RC_CHANNELS_OVERRIDE':
+            process_override(m)
+
+def recv_GCS():
+    '''
+    receive packets in the GCS
+    '''
+    m = gcs.recv_match(blocking=True,timeout=0.001)
+    if m and m.get_type() != 'BAD_DATA':
+        if opts.show:
+            print(m)
+        stats.gcs_received += 1        
+        if m.get_type() in ['RADIO','RADIO_STATUS']:
+            stats.gcs_radio_received += 1            
 
 class PacketStats(object):
+    '''
+    class to hold statistics on the link
+    '''
     def __init__(self):
         self.gcs_sent = 0
         self.vehicle_sent = 0
@@ -134,32 +178,24 @@ class PacketStats(object):
             avg_latency)
                                  
     
-
+'''
+main code
+'''
 last_report = time.time()
 stats = PacketStats()
 
 while True:
+
     send_telemetry()
     stats.vehicle_sent = vehicle.mav.total_packets_sent
+
     send_GCS()
     send_override()
     stats.gcs_sent = gcs.mav.total_packets_sent
-    m = gcs.recv_match(blocking=True,timeout=0.001)
-    if m and m.get_type() != 'BAD_DATA':
-        if opts.show:
-            print(m)
-        stats.gcs_received += 1        
-        if m.get_type() in ['RADIO','RADIO_STATUS']:
-            stats.gcs_radio_received += 1            
-    m = vehicle.recv_match(blocking=True,timeout=0.001)
-    if m and m.get_type() != 'BAD_DATA':
-        if opts.show:
-            print(m)
-        stats.vehicle_received += 1
-        if m.get_type() in ['RADIO','RADIO_STATUS']:
-            stats.vehicle_radio_received += 1
-        if m.get_type() == 'RC_CHANNELS_OVERRIDE':
-            process_override(m)
+
+    recv_vehicle()
+    recv_GCS()
+
     if time.time() - last_report >= 1.0:
         print(stats)
         last_report = time.time()
