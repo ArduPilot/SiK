@@ -143,7 +143,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
     // There is already a packet sitting waiting here
     //
     // but this optimization is redundant with the loop below.  By letting the very slightly
-	// more expensive version its thing we can ensure we skip _all_ redundant rc_override msgs
+    // more expensive version its thing we can ensure we skip _all_ redundant rc_override msgs
 #if 0
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
