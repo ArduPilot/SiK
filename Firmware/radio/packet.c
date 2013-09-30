@@ -93,7 +93,7 @@ static
 int16_t extract_hipri(uint8_t max_xmit)
 {
 	__xdata uint16_t slen = serial_read_available();
-    __xdata uint16_t offset = 0;
+	__xdata uint16_t offset = 0;
 	__xdata int16_t high_offset = -1;
 
 	// Walk the serial buffer to find the _last_ high pri packet
@@ -116,6 +116,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 		}
 
 		if(serial_peekx(offset + 5) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+			// if(high_offset != -1) printf("found 2nd\r\n"); else printf("found rc\r\n");
 			high_offset = offset;
 		}
 
@@ -141,19 +142,20 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
     //
     // There is already a packet sitting waiting here
     //
-
-    // Is it an RC override?
-
-    // FIXME - move this into the loop below, so we can detect the second rc packet in a frame
+    // but this optimization is redundant with the loop below.  By letting the very slightly
+	// more expensive version its thing we can ensure we skip _all_ redundant rc_override msgs
+#if 0
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
 	memcpy(buf, last_sent, last_sent_len);
+	check_heartbeat(buf);
+#else
+	last_sent_len = 0;
+#endif
 	mav_pkt_len = 0;
 
-	check_heartbeat(buf);
+	high_offset = (feature_mavlink_framing == MAVLINK_FRAMING_HIGHPRI) ? extract_hipri(max_xmit) : -1;
 
-    high_offset = (feature_mavlink_framing == MAVLINK_FRAMING_HIGHPRI) ? extract_hipri(max_xmit) : -1;
-	  
 	slen = serial_read_available();
 
 	// see if we have more complete MAVLink frames in the serial
@@ -178,6 +180,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 		// If we are using the special highpri mode, we might skip some override packets
 		if(high_offset != -1 && high_offset != offset && serial_peekx(5) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+			// printf("skipping rc\r\n");
 			c += 8;
 		}
 		else {
