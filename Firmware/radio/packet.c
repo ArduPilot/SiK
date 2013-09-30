@@ -36,6 +36,7 @@
 #include "radio.h"
 #include "packet.h"
 #include "timer.h"
+#include "serial.h"
 
 static __bit last_sent_is_resend;
 static __bit last_sent_is_injected;
@@ -114,7 +115,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 			break;
 		}
 
-		if(serial_peekx(offset +6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+		if(serial_peekx(offset + 5) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
 			// if(high_offset != -1) printf("found 2nd\r\n"); else printf("found rc\r\n");
 			high_offset = offset;
 		}
@@ -138,6 +139,13 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	__data uint16_t slen, offset = 0, high_offset;
 
+    //
+    // There is already a packet sitting waiting here
+    //
+
+    // Is it an RC override?
+
+    // FIXME - move this into the loop below, so we can detect the second rc packet in a frame
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
 	memcpy(buf, last_sent, last_sent_len);
@@ -170,7 +178,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 
 		// If we are using the special highpri mode, we might skip some override packets
-		if(high_offset != -1 && high_offset != offset && serial_peekx(6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
+		if(high_offset != -1 && high_offset != offset && serial_peekx(5) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
 			// printf("skipping rc\r\n");
 			c += 8;
 		}
@@ -199,6 +207,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	register uint16_t slen;
 
+
 	if (injected_packet) {
 		// send a previously injected packet
 		slen = last_sent_len;
@@ -216,6 +225,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		last_sent_is_injected = true;
 		return last_sent_len;
 	}
+
 	last_sent_is_injected = false;
 
 	slen = serial_read_available();
@@ -266,7 +276,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		if (slen == 1) {
 			if ((uint16_t)(timer2_tick() - mav_pkt_start_time) > mav_pkt_max_time) {
 				// we didn't get the length byte in time
-				last_sent[last_sent_len++] = serial_read();
+				last_sent[last_sent_len++] = serial_read(); // Send the STX
 				memcpy(buf, last_sent, last_sent_len);				
 				mav_pkt_len = 0;
 				return last_sent_len;
@@ -299,7 +309,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		// the whole of the MAVLink packet is available
 		return mavlink_frame(max_xmit, buf);
 	}
-		
+
+    // We are now looking for a new packet (mav_pkt_len == 0)
 	while (slen > 0) {
 		register uint8_t c = serial_peek();
 		if (c == MAVLINK10_STX) {
@@ -320,7 +331,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			    mav_pkt_len+8 > mav_max_xmit) {
 				// its too big for us to cope with
 				mav_pkt_len = 0;
-				last_sent[last_sent_len++] = serial_read();
+				last_sent[last_sent_len++] = serial_read(); // Send the STX and try again (we will lose framing)
 				slen--;				
 				continue;
 			}
@@ -406,10 +417,12 @@ packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
 		last_recv_is_resend = false;
 		return false;
 	}
+
+	// We are now looking at a packet with the resend bit set
 	if (last_recv_is_resend == false && 
 	    len == last_recv_len &&
 	    memcmp(last_received, buf, len) == 0) {
-		last_recv_is_resend = false;
+		last_recv_is_resend = false;  // FIXME - this has no effect
 		return true;
 	}
 #if 0
