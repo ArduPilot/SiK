@@ -399,6 +399,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	}
 
 	// transmit timeout ... clear the FIFO
+	radio_clear_transmit_fifo();
 	debug("TX timeout %u ts=%u tn=%u len=%u\n",
 	       timeout_ticks,
 	       tstart,
