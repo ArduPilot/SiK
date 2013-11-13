@@ -28,7 +28,7 @@
 #
 
 VERSION_MAJOR	 =	1
-VERSION_MINOR	 =	7
+VERSION_MINOR	 =	8
 
 PRODUCT		 =	radio~$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
