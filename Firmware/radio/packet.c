@@ -115,10 +115,6 @@ int16_t extract_hipri(uint8_t max_xmit)
 		}
 
 		if(serial_peekx(offset +6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
-			if(high_offset != -1) 
-					printf("found 2nd\r\n");
-			else
-					printf("found rc\r\n");
 			high_offset = offset;
 		}
 
@@ -139,7 +135,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 static 
 uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	__xdata uint16_t slen, offset = 0, high_offset;
+	__data uint16_t slen, offset = 0, high_offset;
 
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
@@ -175,7 +171,6 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 		// If we are using the special highpri mode, we might skip some override packets
 		if(high_offset != -1 && high_offset != offset && serial_peekx(6) == MSG_TYP_RC_OVERRIDE && c == MSG_LEN_RC_OVERRIDE) {
-			printf("skipping rc\r\n");
 			c += 8;
 		}
 		else {
