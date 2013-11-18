@@ -52,7 +52,7 @@ enum ParamID {
         PARAM_NETID,			// network ID
         PARAM_TXPOWER,			// transmit power (dBm)
         PARAM_ECC,			// ECC using golay encoding
-	PARAM_MAVLINK,			// MAVLink framing
+	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
 	PARAM_OPPRESEND,		// opportunistic resend
 	PARAM_MIN_FREQ,			// min frequency in MHz
 	PARAM_MAX_FREQ,			// max frequency in MHz
@@ -61,7 +61,8 @@ enum ParamID {
 	PARAM_LBT_RSSI,			// listen before talk threshold
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
-        PARAM_MAX			// must be last
+	PARAM_MAX_WINDOW,		// The maximum window size allowed
+	PARAM_MAX			// must be last
 };
 
 #define PARAM_FORMAT_CURRENT	0x19UL				///< current parameter format ID

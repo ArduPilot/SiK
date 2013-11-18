@@ -44,10 +44,8 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata uint8_t rx_buf[2048] = {0};
-__xdata uint8_t tx_buf[512] = {0};
-__pdata const uint16_t  rx_mask = sizeof(rx_buf) - 1;
-__pdata const uint16_t  tx_mask = sizeof(tx_buf) - 1;
+__xdata uint8_t rx_buf[1900] = {0};
+__xdata uint8_t tx_buf[650] = {0};
 
 // FIFO insert/remove pointers
 static volatile __pdata uint16_t				rx_insert, rx_remove;
@@ -59,12 +57,14 @@ static volatile __pdata uint16_t				tx_insert, tx_remove;
 static volatile bool			tx_idle;
 
 // FIFO status
-#define BUF_FULL(_which)	(((_which##_insert + 1) & _which##_mask) == (_which##_remove))
-#define BUF_NOT_FULL(_which)	(((_which##_insert + 1) & _which##_mask) != (_which##_remove))
-#define BUF_EMPTY(_which)	(_which##_insert == _which##_remove)
-#define BUF_NOT_EMPTY(_which)	(_which##_insert != _which##_remove)
-#define BUF_USED(_which)	((_which##_insert - _which##_remove) & _which##_mask)
-#define BUF_FREE(_which)	((_which##_remove - _which##_insert - 1) & _which##_mask)
+#define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
+#define BUF_NEXT_REMOVE(_b)	((_b##_remove + 1) == sizeof(_b##_buf)?0:(_b##_remove + 1))
+#define BUF_FULL(_b)	(BUF_NEXT_INSERT(_b) == (_b##_remove))
+#define BUF_NOT_FULL(_b)	(BUF_NEXT_INSERT(_b) != (_b##_remove))
+#define BUF_EMPTY(_b)	(_b##_insert == _b##_remove)
+#define BUF_NOT_EMPTY(_b)	(_b##_insert != _b##_remove)
+#define BUF_USED(_b)	((_b##_insert >= _b##_remove)?(_b##_insert - _b##_remove):(sizeof(_b##_buf) - _b##_remove) + _b##_insert)
+#define BUF_FREE(_b)	((_b##_insert >= _b##_remove)?(sizeof(_b##_buf) + _b##_remove - _b##_insert):_b##_remove - _b##_insert)
 
 // FIFO insert/remove operations
 //
@@ -73,12 +73,13 @@ static volatile bool			tx_idle;
 // mode code.  This is violated if printing from interrupt context,
 // which should generally be avoided when possible.
 //
-#define BUF_INSERT(_which, _c)	do { _which##_buf[_which##_insert] = (_c); \
-		_which##_insert = ((_which##_insert+1) & _which##_mask); } while(0)
-#define BUF_REMOVE(_which, _c)	do { (_c) = _which##_buf[_which##_remove]; \
-		_which##_remove = ((_which##_remove+1) & _which##_mask); } while(0)
-#define BUF_PEEK(_which)	_which##_buf[_which##_remove]
-#define BUF_PEEK2(_which)	_which##_buf[(_which##_remove+1) & _which##_mask]
+#define BUF_INSERT(_b, _c)	do { _b##_buf[_b##_insert] = (_c); \
+		_b##_insert = BUF_NEXT_INSERT(_b); } while(0)
+#define BUF_REMOVE(_b, _c)	do { (_c) = _b##_buf[_b##_remove]; \
+		_b##_remove = BUF_NEXT_REMOVE(_b); } while(0)
+#define BUF_PEEK(_b)	_b##_buf[_b##_remove]
+#define BUF_PEEK2(_b)	_b##_buf[BUF_NEXT_REMOVE(_b)]
+#define BUF_PEEKX(_b, offset)	_b##_buf[(_b##_remove+offset) % sizeof(_b##_buf)]
 
 static void			_serial_write(register uint8_t c);
 static void			serial_restart(void);
@@ -261,7 +262,10 @@ serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 	buf += n1;
 	count -= n1;
 	__critical {
-		tx_insert = (tx_insert + n1) & tx_mask;
+		tx_insert += n1;
+		if (tx_insert >= sizeof(tx_buf)) {
+			tx_insert -= sizeof(tx_buf);
+		}
 	}
 
 	// add any leftover bytes to the start of the ring buffer
@@ -350,6 +354,18 @@ serial_peek2(void)
 	return c;
 }
 
+uint8_t
+serial_peekx(uint16_t offset)
+{
+	register uint8_t c;
+
+	ES0_SAVE_DISABLE;
+	c = BUF_PEEKX(rx, offset);
+	ES0_RESTORE;
+
+	return c;
+}
+
 // read count bytes from the serial buffer. This implementation
 // tries to be as efficient as possible, while disabling interrupts
 // for as short a time as possible
@@ -372,7 +388,10 @@ serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 	buf += n1;
 	// update the remove marker with interrupts disabled
 	__critical {
-		rx_remove = (rx_remove + n1) & rx_mask;
+		rx_remove += n1;
+		if (rx_remove >= sizeof(rx_buf)) {
+			rx_remove -= sizeof(rx_buf);
+		}
 	}
 	// any more bytes to do?
 	if (count > 0) {
