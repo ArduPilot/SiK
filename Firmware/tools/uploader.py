@@ -18,10 +18,24 @@ class firmware(object):
 		binstr = binascii.unhexlify(hexstr)
 		command = ord(binstr[3])
 		
-		# only type 0 records are interesting
-		if (command == 0):
-			address = (ord(binstr[1]) << 8) + ord(binstr[2])
+		# only type 0 and 4 records are interesting
+		if (command == 4 and ord(binstr[0]) == 0x02 and (ord(binstr[1]) << 8) + ord(binstr[2]) == 0x0000):
+			self.upperaddress = (ord(binstr[4]) << 8) + ord(binstr[5])
+			self.bankingDeteted = True
+		elif (command == 0):
+			address = (ord(binstr[1]) << 8) + ord(binstr[2]) + (self.upperaddress << 16)
 			bytes   = bytearray(binstr[4:])
+			if self.upperaddress in self.sanity_check:
+				self.sanity_check[self.upperaddress][0] += len(bytes)
+				if self.sanity_check[self.upperaddress][1] > (ord(binstr[1]) << 8) + ord(binstr[2]):
+					self.sanity_check[self.upperaddress][1] = (ord(binstr[1]) << 8) + ord(binstr[2])
+				if self.sanity_check[self.upperaddress][2] < (ord(binstr[1]) << 8) + ord(binstr[2]) + len(bytes):
+					self.sanity_check[self.upperaddress][2] = (ord(binstr[1]) << 8) + ord(binstr[2]) +len(bytes)
+			else:
+				self.sanity_check[self.upperaddress] = []
+				self.sanity_check[self.upperaddress].append(len(bytes))
+				self.sanity_check[self.upperaddress].append((ord(binstr[1]) << 8) + ord(binstr[2]))
+				self.sanity_check[self.upperaddress].append((ord(binstr[1]) << 8) + ord(binstr[2]) + len(bytes))
 			self.__insert(address, bytes)
 
 	# insert the byte array into the ranges dictionary, merging as we go
@@ -44,6 +58,9 @@ class firmware(object):
 
 	def __init__(self, path):
 		self.ranges = dict()
+		self.upperaddress = 0x0000
+		self.bankingDeteted = False
+		self.sanity_check = dict()
 
 		# read the file
 		# XXX should have some file metadata here too ...
@@ -58,15 +75,15 @@ class firmware(object):
 class uploader(object):
 	'''Uploads a firmware file to the SiK bootloader'''
 
-	NOP		= chr(0x00)
-	OK		= chr(0x10)
+	NOP			= chr(0x00)
+	OK			= chr(0x10)
 	FAILED		= chr(0x11)
 	INSYNC		= chr(0x12)
-	EOC		= chr(0x20)
+	EOC			= chr(0x20)
 	GET_SYNC	= chr(0x21)
 	GET_DEVICE	= chr(0x22)
 	CHIP_ERASE	= chr(0x23)
-	LOAD_ADDRESS	= chr(0x24)
+	LOAD_ADDRESS= chr(0x24)
 	PROG_FLASH	= chr(0x25)
 	READ_FLASH	= chr(0x26)
 	PROG_MULTI	= chr(0x27)
@@ -76,6 +93,7 @@ class uploader(object):
 	
 	PROG_MULTI_MAX	= 32 # 64 causes serial hangs with some USB-serial adapters
 	READ_MULTI_MAX	= 255
+	BANK_PROGRAMING = -1
 
 	def __init__(self, portname, atbaudrate=57600):
 		print("Connecting to %s" % portname)
@@ -123,8 +141,21 @@ class uploader(object):
 			self.__getSync()
 
 	# send a LOAD_ADDRESS command
-	def __set_address(self, address):
-		self.__send(uploader.LOAD_ADDRESS
+	def __set_address(self, address, banking):
+		if(banking):
+			if(self.BANK_PROGRAMING != address >> 16):
+				self.BANK_PROGRAMING = address >> 16
+				if self.BANK_PROGRAMING == 0:
+					print "HOME"
+				else:
+					print "BANK",self.BANK_PROGRAMING
+			self.__send(uploader.LOAD_ADDRESS
+				+ chr(address & 0xff)
+				+ chr((address >> 8) & 0xff)
+				+ chr((address >> 16) & 0xff)
+				+ uploader.EOC)
+		else:
+			self.__send(uploader.LOAD_ADDRESS
 				+ chr(address & 0xff)
 				+ chr(address >> 8)
 				+ uploader.EOC)
@@ -171,13 +202,13 @@ class uploader(object):
 
 	# split a sequence into a list of size-constrained pieces
 	def __split_len(self, seq, length):
-    		return [seq[i:i+length] for i in range(0, len(seq), length)]
+		return [seq[i:i+length] for i in range(0, len(seq), length)]
 
 	# upload code
 	def __program(self, fw):
 		code = fw.code()
 		for address in sorted(code.keys()):
-			self.__set_address(address)
+			self.__set_address(address, fw.bankingDeteted)
 			groups = self.__split_len(code[address], uploader.PROG_MULTI_MAX)
 			for bytes in groups:
 				self.__program_multi(bytes)
@@ -186,7 +217,7 @@ class uploader(object):
 	def __verify(self, fw):
 		code = fw.code()
 		for address in sorted(code.keys()):
-			self.__set_address(address)
+			self.__set_address(address, fw.bankingDeteted)
 			groups = self.__split_len(code[address], uploader.READ_MULTI_MAX)
 			for bytes in groups:
 				if (not self.__verify_multi(bytes)):
@@ -246,38 +277,43 @@ class uploader(object):
 		return board_id, board_freq
 
 	def upload(self, fw, erase_params = False):
-		print("erase...")
+		print("erasing...")
 		self.__erase(erase_params)
-		print("program...")
+		print("programing...")
 		self.__program(fw)
-		print("verify...")
+		print("verifying...")
 		self.__verify(fw)
 		print("done.")
 		self.__reboot()
-	
 
-# Parse commandline arguments
-parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
-parser.add_argument('--port', action="store", help="port to upload to")
-parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
-parser.add_argument("--baudrate", type=int, default=57600, help='baud rate')
-parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
-args = parser.parse_args()
+if __name__ == '__main__':
+	# Parse commandline arguments
+	parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
+	parser.add_argument('--port', action="store", help="port to upload to")
+	parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
+	parser.add_argument("--baudrate", type=int, default=57600, help='baud rate')
+	parser.add_argument('--forceBanking', action="store_true", help="force the programmer to use 24bit addressing")
+	parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
+	args = parser.parse_args()
 
-# Load the firmware file
-fw = firmware(args.firmware)
+	# Load the firmware file
+	fw = firmware(args.firmware)
+	if(args.forceBanking):
+		fw.bankingDeteted = True;
 
-ports = glob.glob(args.port)
-if not ports:
-	print("No matching ports for %s" % args.port)
-	sys.exit(1)
-# Connect to the device and identify it
-for port in glob.glob(args.port):
-	print("uploading to port %s" % port)
-	up = uploader(port, atbaudrate=args.baudrate)
-	if not up.check():
-		print("Failed to contact bootloader")
+	ports = glob.glob(args.port)
+	if not ports:
+		print("No matching ports for %s" % args.port)
 		sys.exit(1)
-	id, freq = up.identify()
-	print("board %x  freq %x" % (id, freq))
-	up.upload(fw,args.resetparams)
+	# Connect to the device and identify it
+	for port in glob.glob(args.port):
+		print("uploading to port %s" % port)
+		up = uploader(port, atbaudrate=args.baudrate)
+		if not up.check():
+			print("Failed to contact bootloader")
+			sys.exit(1)
+		id, freq = up.identify()
+		print("board %x  freq %x" % (id, freq))
+		if(fw.bankingDeteted):
+			print("Using 24bit addresses")
+		up.upload(fw,args.resetparams)
