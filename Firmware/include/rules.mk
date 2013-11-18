@@ -40,6 +40,17 @@ endif
 #
 include $(SRCROOT)/include/rules_$(BOARD).mk
 
+HB=$(if $(filter $(HAVE_BANKING),1),1,0)
+BS=$(if $(filter $(PRODUCT_SUPPORT_BANKING),1),1,0)
+MODEL_HUGE=$(if $(filter $(HB),1),$(BS),0)
+
+ifeq ($(MODEL_HUGE), 1)
+	OFFSET_FIRMWARE=1
+	CFLAG_MODEL			 = --model-huge
+else
+	CFLAG_MODEL			 = --model-large
+endif
+
 #
 # Common build options.
 #
@@ -66,6 +77,8 @@ endif
 CC		 =	sdcc -mmcs51
 AS		 =	sdas8051 -jloscp
 LD		 =	sdcc
+MD5		 =	md5
+BANK_ALLOC	 =	./tools/bank-alloc.py
 INCLUDES	 =	$(SRCROOT)/include
 CFLAGS		+=	$(addprefix -I,$(INCLUDES))
 DEPFLAGS	 =	-MM $(CFLAGS)
@@ -94,13 +107,25 @@ build:	$(PRODUCT_HEX)
 $(PRODUCT_HEX):	$(OBJS)
 	@echo LD $@
 	@mkdir -p $(dir $@)
-	$(v)$(LD) -o $@ $(LDFLAGS) $(OBJS)
+ifeq ($(MODEL_HUGE), 1)
+	$(v)$(LD) -Wl-r $(LDFLAGS) -o $@ $(OBJS)
+	$(v)$(BANK_ALLOC) $(OBJROOT)/$(PRODUCT) $(PRODUCT_DIR)/segment.rules $(CODE_OFFSET_HOME) 0x00 0x00 $(CODE_OFFSET_BANK3)
+	@rm $@
+	$(v)$(LD) -o $@ -Wl-r $(LDFLAGS) `cat $(OBJROOT)/$(PRODUCT).flags` $(OBJS)
+else
+	$(v)$(LD) $(LDFLAGS) -o $@ $(OBJS)
+endif
 
 $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.c
-	@echo CC $<
 	@mkdir -p $(dir $@)
 	$(v)(/bin/echo -n $(OBJROOT)/ && $(CC) $(DEPFLAGS) $<) > $(subst .rel,.dep,$@)
+ifeq ($(MODEL_HUGE), 1)
+	@/bin/echo CC $(shell $(BANK_ALLOC) $< $(PRODUCT_DIR)/segment.rules $@) $<
+	$(v)$(CC) --codeseg $(shell $(BANK_ALLOC) $< $(PRODUCT_DIR)/segment.rules $@) $(CFLAGS) -c $< -o $@
+else
+	@echo CC $<
 	$(v)$(CC) -c -o $@ $(CFLAGS) $<
+endif
 
 $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.asm
 	@echo AS $<
@@ -109,12 +134,30 @@ $(OBJROOT)/%.rel: $(PRODUCT_DIR)/%.asm
 	$(v)$(AS) $(ASFLAGS) $(subst $(PRODUCT_DIR),$(OBJROOT),$<)
 
 clean:
-	$(v)rm -rf $(OBJROOT)
+	$(v)rm -rf $(OBJROOT)/../*
 
 install:	$(PRODUCT_INSTALL)
 	@echo INSTALL $^
 	$(v)mkdir -p $(DSTROOT)
 	$(v)cp $(PRODUCT_INSTALL) $(DSTROOT)/
+	@./tools/check_code.py $^ $(XRAM_SIZE)
+ifeq ($(MODEL_HUGE), 1)
+	@echo ''
+	@echo FINAL ALLOCATION $^
+	$(v)$(BANK_ALLOC) $^ $(CODE_OFFSET_HOME) 0x00 0x00 $(CODE_OFFSET_BANK3)
+endif
+
+ifeq ($(MODEL_HUGE), 1)
+MD5_INPUT	:=	`touch $(OBJROOT)/segment.md5; cat $(OBJROOT)/segment.md5`
+MD5_FILE	:=	`$(MD5) $(PRODUCT_DIR)/segment.rules | cut -f2 -d '=' | tr -d ' '`
+segment.rules:
+	@mkdir -p $(OBJROOT)
+	$(v)if [ "$(MD5_INPUT)" != "$(MD5_FILE)" ]; then \
+		rm -rf $(OBJROOT)/*; \
+		echo $(MD5_FILE) > $(OBJROOT)/segment.md5; \
+	fi
+-include segment.rules
+endif
 
 #
 # Dependencies

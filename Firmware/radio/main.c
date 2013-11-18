@@ -104,7 +104,8 @@ main(void)
 
 	// Load parameters from flash or defaults
 	// this is done before hardware_init() to get the serial speed
-	param_load();
+	if (!param_load())
+		param_default();
 
 	// setup boolean features
 	feature_mavlink_framing = param_get(PARAM_MAVLINK);

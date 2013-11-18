@@ -75,7 +75,11 @@ __code const struct parameter_info {
 /// hold all the parameters when we're rewriting the scratchpad
 /// page anyway.
 ///
-__xdata param_t	parameter_values[PARAM_MAX];
+union param_private {
+	param_t		val;
+	uint8_t		bytes[4];
+};
+__xdata union param_private	parameter_values[PARAM_MAX];
 
 static bool
 param_check(__pdata enum ParamID id, __data uint32_t val)
@@ -181,7 +185,7 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 	}
 
-	parameter_values[param] = value;
+	parameter_values[param].val = value;
 
 	return true;
 }
@@ -191,41 +195,42 @@ param_get(__data enum ParamID param)
 {
 	if (param >= PARAM_MAX)
 		return 0;
-	return parameter_values[param];
+	return parameter_values[param].val;
 }
 
 bool
 param_load(void)
 __critical {
-	__pdata uint16_t	i;
+	__pdata uint8_t		i;
 	__pdata uint16_t	checksum;
 	__pdata uint16_t	expected;
 
 	// loop reading the parameters array
-	for (i = 0; i < sizeof(parameter_values); i++) {
-		((uint8_t *)parameter_values)[i] = flash_read_scratch(i+4);
+	expected = flash_read_scratch(0);
+	if (expected > sizeof(parameter_values) ||
+		expected < 12*sizeof(param_t)) {
+			return false;
 	}
-
-	// decide whether we read a supported version of the structure
-	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
-		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
-		param_default();
-		return false;
+	
+	for (i = 0; i < expected; i ++) {
+		parameter_values[0].bytes[i] = flash_read_scratch(i+1);
 	}
 
 	// verify checksum
 	checksum = crc16(sizeof(parameter_values), (__xdata uint8_t *)parameter_values);
-	expected = flash_read_scratch(3)<<8 | flash_read_scratch(2);
+	expected = flash_read_scratch(i+2)<<8 | flash_read_scratch(i+1);
 	if (checksum != expected)
-	{
-		debug("param crc fail %lu expecting %lu", checksum, expected);
-		param_default();
+		return false;
+
+	// decide whether we read a supported version of the structure
+	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
+		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
 
-	for (i = 0; i < PARAM_MAX; i++) {
-		if (!param_check(i, parameter_values[i])) {
-			parameter_values[i] = parameter_info[i].default_value;
+	for (i = 0; i < sizeof(parameter_values); i++) {
+		if (!param_check(i, parameter_values[i].val)) {
+			parameter_values[i].val = parameter_info[i].default_value;
 		}
 	}
 
@@ -235,28 +240,27 @@ __critical {
 void
 param_save(void)
 __critical {
-	__pdata uint16_t	i;
+	__pdata uint8_t		i;
 	__pdata uint16_t	checksum;
 
 	// tag parameters with the current format
-	parameter_values[PARAM_FORMAT] = PARAM_FORMAT_CURRENT;
+	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
 
 	// erase the scratch space
 	flash_erase_scratch();
 
 	// write param array length
-	flash_write_scratch(0, sizeof(parameter_values)&0xFF);
-	flash_write_scratch(1, (int)(sizeof(parameter_values))>>8);
-
-	// write checksum
-	checksum = crc16(sizeof(parameter_values), (__xdata uint8_t *)parameter_values);
-	flash_write_scratch(2, checksum&0xFF);
-	flash_write_scratch(3, checksum>>8);
+	flash_write_scratch(0, sizeof(parameter_values));
 
 	// save parameters to the scratch page
 	for (i = 0; i < sizeof(parameter_values); i++) {
-		flash_write_scratch(i+4, ((uint8_t *)parameter_values)[i]);
+		flash_write_scratch(i+1, parameter_values[0].bytes[i]);
 	}
+
+	// write checksum
+	checksum = crc16(sizeof(parameter_values), (__xdata uint8_t *)parameter_values);
+	flash_write_scratch(i+1, checksum&0xFF);
+	flash_write_scratch(i+2, checksum>>8);
 }
 
 void
@@ -266,7 +270,7 @@ param_default(void)
 
 	// set all parameters to their default values
 	for (i = 0; i < PARAM_MAX; i++) {
-		parameter_values[i] = parameter_info[i].default_value;
+		parameter_values[i].val = parameter_info[i].default_value;
 	}
 }
 

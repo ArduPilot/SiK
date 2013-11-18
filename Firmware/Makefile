@@ -177,6 +177,7 @@ FMT		+= --exclude=obj
 
 # ignore various files we want to be able to diff with upstream providers
 FMT		+= --exclude=Si1000_defs.h
+FMT		+= --exclude=Si1020_defs.h
 FMT		+= --exclude=compiler_defs.h
 FMT		+= --exclude=rtPhy.c
 FMT		+= --exclude=rtPhy.h

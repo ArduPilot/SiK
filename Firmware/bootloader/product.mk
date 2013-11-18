@@ -40,14 +40,16 @@ CFLAGS		+=	--model-small --no-xinit-opt --opt-code-size --Werror
 # Set limits for the low (CSEG) and high (HIGHCSEG) code segments.
 #
 CSEG_LIMIT	 =	$(shell printf %d 0x0400)	# start of application space
-HIGHCSEG_LIMIT	 =	$(shell printf %d 0xfbdc)	# room for 32 calibration and four patch bytes at the end
-
-# Note that code is split into two parts; low code at 0, and high code at 0xf800.
-#
-LDFLAGS		 =	--iram-size 256 --xram-size 4096 --stack-size 64 --nostdlib \
-			-Wl -bHIGHCSEG=0xf800
+PRODUCT_SUPPORT_BANKING = 0
 
 include $(SRCROOT)/include/rules.mk
+
+LDFLAGS		= $(BOOTLDFLAGS)
+ifeq ($(CPU_CC1030), 1)
+HIGHCSEG_LIMIT	 =	$(shell printf %d 0xffdc)	# room for 32 calibration and four patch bytes at the end
+else
+HIGHCSEG_LIMIT	 =	$(shell printf %d 0xfbdc)	# room for 32 calibration and four patch bytes at the end
+endif
 
 #
 # Patch the frequency code into the hex file.
@@ -59,7 +61,11 @@ $(PRODUCT_INSTALL):	frequency = $(basename $(word 3, $(subst ~, ,$(notdir $@))))
 $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@
 	$(v)mkdir -p $(dir $@)
+ifeq ($(CPU_CC1030), 1)
+	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfffe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+else
 	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+endif
 
 #
 # Check that the bootloader has not overflowed its allocated space
@@ -67,11 +73,11 @@ $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 $(PRODUCT_INSTALL):	sizecheck
 
 sizecheck:	mapfile = $(subst .ihx,.map,$(PRODUCT_HEX))
-sizecheck:	cseg_base = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 41-44`)
-sizecheck:	cseg_size = $(shell printf %d 0x`grep ^CSEG $(mapfile) | cut -c 53-56`)
+sizecheck:	cseg_base = $(shell printf %d 0x`grep ^CSEG $(mapfile) -m 1 | cut -c 41-44`)
+sizecheck:	cseg_size = $(shell printf %d 0x`grep ^CSEG $(mapfile) -m 1 | cut -c 53-56`)
 sizecheck:	cseg_end  = $(shell expr $(cseg_base) + $(cseg_size))
-sizecheck:	highcseg_base = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) | cut -c 41-44`)
-sizecheck:	highcseg_size = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) | cut -c 53-56`)
+sizecheck:	highcseg_base = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) -m 1 | cut -c 41-44`)
+sizecheck:	highcseg_size = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) -m 1 | cut -c 53-56`)
 sizecheck:	highcseg_end  = $(shell expr $(highcseg_base) + $(highcseg_size))
 sizecheck:	$(PRODUCT_HEX)
 	@echo SIZECHECK $<: CSEG $(cseg_size) HIGHCSEG $(highcseg_size)
