@@ -77,12 +77,10 @@ all:		build
 #
 # Composite targets for handling actions.
 #
-build:		$(filter build~%,$(TARGETS)) check_code
+build:		$(filter build~%,$(TARGETS))
 install:	$(filter install~%,$(TARGETS))
 clean:		$(filter clean~%,$(TARGETS))
 
-check_code:
-	@./tools/check_code.py
 
 #
 # Composite target for handling the generic actions for each possible combination
@@ -97,7 +95,7 @@ $(TARGETS):
 	@make -f $(product)/product.mk $(action) \
 		BOARD=$(board)
 
-.PHONY:	$(ACTIONS) $(TARGETS) check_code
+.PHONY:	$(ACTIONS) $(TARGETS)
 
 help:
 	@echo ""
