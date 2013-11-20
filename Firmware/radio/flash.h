@@ -31,6 +31,20 @@
 ///		Prototypes for the flash interface.
 ///
 
+// The Si1030 doesn't have a flash scratch page
+// so the read and write's are slightly diffrent
+#ifdef CPU_SI1030
+#define FLASH_ERASE_SCRATCH 0x03
+#define FLASH_WRITE_SCRATCH 0x01
+#define FLASH_READ_SCRATCH  0x00
+#define FLASH_DISABLE		0x00
+#else
+#define FLASH_ERASE_SCRATCH 0x07
+#define FLASH_WRITE_SCRATCH 0x05
+#define FLASH_READ_SCRATCH  0x04
+#define FLASH_DISABLE		0x00
+#endif
+
 extern void	flash_erase_scratch(void);
 extern uint8_t	flash_read_scratch(__pdata uint16_t address);
 extern void	flash_write_scratch(__pdata uint16_t address, __pdata uint8_t c);
