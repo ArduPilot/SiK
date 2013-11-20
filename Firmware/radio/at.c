@@ -34,7 +34,8 @@
 
 #include "radio.h"
 #include "tdm.h"
-
+#include "flash_layout.h"
+#include "at.h"
 
 // canary data for ram wrap. It is in at.c as the compiler
 // assigns addresses in alphabetial order and we want this at a low
@@ -384,8 +385,16 @@ at_ampersand(void)
 
 	case 'U':
 		if (!strcmp(at_cmd + 4, "PDATE")) {
-			// force a flash error
-			volatile char x = *(__code volatile char *)0xfc00;
+			// Erase Flash signature forcing it into reprogram mode next reset
+			FLKEY = 0xa5;
+			FLKEY = 0xf1;
+			PSCTL = 0x03;				// set PSWE and PSEE
+			*(uint8_t __xdata *)FLASH_SIGNATURE_BYTES = 0xff;	// do the page erase
+			PSCTL = 0x00;				// disable PSWE/PSEE
+			
+			// Reset the device using sofware reset
+			RSTSRC |= 0x10;
+			
 			for (;;)
 				;
 		}
