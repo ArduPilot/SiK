@@ -188,6 +188,8 @@ failed:
 static void
 radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 {
+	RADIO_PAGE();
+	
 	NSS1 = 0;
 	SPIF1 = 0;
 	SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -202,6 +204,8 @@ radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 
 	SPIF1 = 0;
 	NSS1 = 1;
+	
+	SFRPAGE = LEGACY_PAGE;
 }
 
 // check if a packet is being received
@@ -210,7 +214,7 @@ bool
 radio_receive_in_progress(void)
 {
 	if (packet_received ||
-	    partial_packet_length != 0) {
+		partial_packet_length != 0) {
 		return true;
 	}
 
@@ -400,10 +404,10 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 
 	// transmit timeout ... clear the FIFO
 	debug("TX timeout %u ts=%u tn=%u len=%u\n",
-	       timeout_ticks,
-	       tstart,
-	       timer2_tick(),
-	       (unsigned)length);
+		timeout_ticks,
+		tstart,
+		timer2_tick(),
+		(unsigned)length);
 	if (errors.tx_errors != 0xFFFF) {
 		errors.tx_errors++;
 	}
@@ -860,20 +864,14 @@ radio_configure(__pdata uint8_t air_rate)
 #ifdef _BOARD_RFD900
 	#define NUM_POWER_LEVELS 5
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 17, 20, 27, 29, 30 };
-#endif
-#ifdef _BOARD_RFD900A
+#elif defined _BOARD_RFD900A
 	#define NUM_POWER_LEVELS 16
 	#define POWER_LEVEL_STEP 2
 	// the power_levels array define 8 bit PWM values for each respective power level starting at 0dBm
 	// PWM=240 gives TXout=0dBm
 	//run1 __code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 240, 234, 226, 221, 214, 209, 204, 199, 193, 187, 180, 174, 165, 153, 137, 50 };
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211, 206, 201, 196, 190, 184, 178, 171, 164, 150, 136, 80 };
-#endif
-#ifdef _BOARD_HM_TRP_H_
-	#define NUM_POWER_LEVELS 8
-	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
-#endif
-#ifdef _BOARD_RF50_H
+#elif defined _BOARD_HM_TRP_H_ || defined _BOARD_RF50_H || defined _BOARD_RFD900U
 	#define NUM_POWER_LEVELS 8
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
 #endif
@@ -947,6 +945,7 @@ register_write(uint8_t reg, uint8_t value) __reentrant
 {
 	EX0_SAVE_DISABLE;
 
+	RADIO_PAGE();
 	NSS1 = 0;                           // drive NSS low
 	SPIF1 = 0;                          // clear SPIF
 	SPI1DAT = (reg | 0x80);             // write reg address
@@ -957,7 +956,8 @@ register_write(uint8_t reg, uint8_t value) __reentrant
 
 	SPIF1 = 0;                          // leave SPIF cleared
 	NSS1 = 1;                           // drive NSS high
-
+	SFRPAGE = LEGACY_PAGE;
+	
 	EX0_RESTORE;
 }
 
@@ -972,7 +972,8 @@ register_read(uint8_t reg) __reentrant
 {
 	register uint8_t value;
 	EX0_SAVE_DISABLE;
-
+	
+	RADIO_PAGE();
 	NSS1 = 0;				// dsrive NSS low
 	SPIF1 = 0;				// clear SPIF
 	SPI1DAT = (reg);			// write reg address
@@ -983,7 +984,8 @@ register_read(uint8_t reg) __reentrant
 	value = SPI1DAT;			// read value
 	SPIF1 = 0;				// leave SPIF cleared
 	NSS1 = 1;				// drive NSS high
-
+	SFRPAGE = LEGACY_PAGE;
+	
 	EX0_RESTORE;
 
 	return value;
@@ -995,6 +997,7 @@ register_read(uint8_t reg) __reentrant
 static void
 read_receive_fifo(register uint8_t n, __xdata uint8_t * buf) __reentrant
 {
+	RADIO_PAGE();
 	NSS1 = 0;				// drive NSS low
 	SPIF1 = 0;				// clear SPIF
 	SPI1DAT = EZRADIOPRO_FIFO_ACCESS;
@@ -1010,6 +1013,7 @@ read_receive_fifo(register uint8_t n, __xdata uint8_t * buf) __reentrant
 
 	SPIF1 = 0;				// leave SPIF cleared
 	NSS1 = 1;				// drive NSS high
+	SFRPAGE = LEGACY_PAGE;
 }
 
 /// clear interrupts by reading the two status registers

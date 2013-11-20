@@ -35,11 +35,10 @@
 ///
 
 #include <compiler_defs.h>
-#include <Si1000_defs.h>
+#include "board.h"
 #include <stdio.h>
 #include <stdint.h>
 
-#include "board.h"
 #include "bootloader.h"
 #include "board_info.h"
 #include "flash.h"

@@ -33,7 +33,7 @@
 ///
 
 #include <compiler_defs.h>
-#include <Si1000_defs.h>
+#include "board.h"
 #include <board_info.h>
 
 #include <stdint.h>

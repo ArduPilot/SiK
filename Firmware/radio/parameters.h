@@ -46,12 +46,12 @@
 ///   parameters.c:param_check()
 ///
 enum ParamID {
-        PARAM_FORMAT = 0,		// Must always be parameter 0
-        PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-        PARAM_AIR_SPEED,		// over the air baud rate
-        PARAM_NETID,			// network ID
-        PARAM_TXPOWER,			// transmit power (dBm)
-        PARAM_ECC,			// ECC using golay encoding
+	PARAM_FORMAT = 0,		// Must always be parameter 0
+	PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
+	PARAM_AIR_SPEED,		// over the air baud rate
+	PARAM_NETID,			// network ID
+	PARAM_TXPOWER,			// transmit power (dBm)
+	PARAM_ECC,			// ECC using golay encoding
 	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
 	PARAM_OPPRESEND,		// opportunistic resend
 	PARAM_MIN_FREQ,			// min frequency in MHz
@@ -65,7 +65,7 @@ enum ParamID {
 	PARAM_MAX			// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x19UL				///< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x1AUL				///< current parameter format ID
 
 /// Parameter type.
 ///

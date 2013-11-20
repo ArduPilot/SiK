@@ -84,6 +84,12 @@ extern bool feature_rtscts;
 # define debug(fmt, args...)
 #endif
 
+#ifdef CPU_SI1030
+#define RADIO_PAGE() SFRPAGE	 = SPI1_PAGE
+#else
+#define RADIO_PAGE() SFRPAGE	 = LEGACY_PAGE
+#endif
+
 // useful macro for array sizes
 #define ARRAY_LENGTH(a) (sizeof(a)/sizeof(a[0]))
 
