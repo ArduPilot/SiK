@@ -909,6 +909,8 @@ tdm_init(void)
 		window_width = constrain(window_width, 3*lbt_min_time, window_width);
 	}
 
+	//printf("desired %u\r\n", (unsigned) window_width);
+
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
 	if (window_width >= REGULATORY_MAX_WINDOW && num_fh_channels > 1) {
@@ -924,6 +926,8 @@ tdm_init(void)
 	if (window_width > 0x1fff) {
 		window_width = 0x1fff;
 	}
+
+	//printf("shrunk %u\r\n", (unsigned) window_width);
 
 	tx_window_width = window_width;
 
