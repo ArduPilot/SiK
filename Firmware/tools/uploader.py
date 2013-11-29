@@ -314,6 +314,11 @@ if __name__ == '__main__':
 			sys.exit(1)
 		id, freq = up.identify()
 		print("board %x  freq %x" % (id, freq))
-		if(fw.bankingDeteted):
+		# CPU's that support banking have the upper bit set in the byte (0x80)
+		if (fw.bankingDeteted and id & 0x80 != 0x80):
+			print "This firmware requires a CPU with banking"
+			sys.exit(1)
+		if(id & 0x80 == 0x80):
+			fw.bankingDeteted = True
 			print("Using 24bit addresses")
 		up.upload(fw,args.resetparams)

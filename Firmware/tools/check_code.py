@@ -22,12 +22,12 @@ if len(sys.argv) < 3:
 	print sys.argv
 	sys.exit(1)
 
-if int(sys.argv[2]) < 4096:
+if int(sys.argv[-1]) < 4096:
 	print("ERROR: xram invalid")
 	sys.exit(1)
 
 board     = sys.argv[1].split('.')[0]
-xram_size = int(sys.argv[2])
+xram_size = int(sys.argv[-1])
 
 
 def extract_header_functions(h, d):
