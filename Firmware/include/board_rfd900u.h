@@ -65,7 +65,9 @@
 #include <compiler_defs.h>
 #include <Si1020_defs.h>
 
-#define BOARD_ID	  0x44
+// Ensure that the BoardID has the upper most bit set
+// This tells the tool chain we are dealing with a CPU_SI1030 device
+#define BOARD_ID	 0x80 | 0x01
 #define BOARD_NAME	"RFD900U"
 #define CPU_SI1030
 
