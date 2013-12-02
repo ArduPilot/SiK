@@ -29,7 +29,7 @@
 # Configuration options for the RFD900U board.
 #
 FREQUENCIES				 = 915
-XRAM_SIZE				 = 8448
+XRAM_SIZE				 = 8192
 HAVE_BANKING			 = 0
 CPU_CC1030				 = 1
 #CFLAGS					+= --constseg CONSEG
