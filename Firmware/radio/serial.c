@@ -482,15 +482,18 @@ static
 void serial_device_set_speed(register uint8_t speed)
 {
 	uint8_t i;
+	bool valid_speed = false;
 	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
 	for (i = 0; i < num_rates; i++) {
 		if (speed == serial_rates[i].rate) {
+			valid_speed = true;
 			break;
 		}
 	}
-	if (i == num_rates) {
-		i = 3; // 57600 default
+	if (! valid_speed) {
+		i = 6; // 57600 default
+		speed = serial_rates[i].rate;
 	}
 
 	// set the rates in the UART
