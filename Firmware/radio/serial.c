@@ -462,24 +462,27 @@ serial_device_valid_speed(register uint8_t speed)
 static 
 void serial_device_set_speed(register uint8_t speed)
 {
-	uint8_t i;
-	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
+        uint8_t i;
+        bool valid_speed = false;
+        uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
-	for (i = 0; i < num_rates; i++) {
-		if (speed == serial_rates[i].rate) {
-			break;
-		}
-	}
-	if (i == num_rates) {
-		i = 3; // 57600 default
-	}
+        for (i = 0; i < num_rates; i++) {
+                if (speed == serial_rates[i].rate) {
+                        valid_speed = true;
+                        break;
+                }
+        }
+        if (! valid_speed) {
+                i = 6; // 57600 default
+                speed = serial_rates[i].rate;
+        }
 
-	// set the rates in the UART
-	TH1 = serial_rates[i].th1;
-	CKCON = (CKCON & ~0x0b) | serial_rates[i].ckcon;
+        // set the rates in the UART
+        TH1 = serial_rates[i].th1;
+        CKCON = (CKCON & ~0x0b) | serial_rates[i].ckcon;
 
-	// tell the packet layer how fast the serial link is. This is
-	// needed for packet framing timeouts
-	packet_set_serial_speed(speed*125UL);	
+        // tell the packet layer how fast the serial link is. This is
+        // needed for packet framing timeouts
+        packet_set_serial_speed(speed*125UL);        
 }
 
