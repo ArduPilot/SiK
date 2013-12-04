@@ -51,6 +51,10 @@ __code const struct pins_user_map {
 	{2, 6}, // 4 - P2.6
 	{0, 1}, // 5 - P0.1
 };
+#elif defined BOARD_rfd900u
+	{1, 0}, // 0 - P1.0
+	{1, 1}, // 1 - P1.1
+};
 #else
 	{0xff, 0xff} // Default pin mapping (not supported)
 };
