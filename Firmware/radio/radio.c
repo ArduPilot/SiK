@@ -773,7 +773,7 @@ radio_configure(__pdata uint8_t air_rate)
 	// setup frequency and channel spacing
 	set_frequency_registers(settings.frequency);
 	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, settings.channel_spacing);
-
+#ifdef INCLUDE_GOLAY
 	if (feature_golay) {
 		// when using golay encoding we use our own crc16
 		// instead of the hardware CRC, as we need to correct
@@ -787,6 +787,7 @@ radio_configure(__pdata uint8_t air_rate)
 		// no header check
 		register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x00);
 	} else {
+#endif // INCLUDE_GOLAY
 		register_write(EZRADIOPRO_DATA_ACCESS_CONTROL,
 			       EZRADIOPRO_ENPACTX | 
 			       EZRADIOPRO_ENPACRX |
@@ -798,7 +799,9 @@ radio_configure(__pdata uint8_t air_rate)
 		register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x0C);
 		register_write(EZRADIOPRO_HEADER_ENABLE_3, 0xFF);
 		register_write(EZRADIOPRO_HEADER_ENABLE_2, 0xFF);
+#ifdef INCLUDE_GOLAY
 	}
+#endif // INCLUDE_GOLAY
 
 
 	// set FIFO limits to allow for sending larger than 64 byte packets
