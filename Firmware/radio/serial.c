@@ -490,7 +490,7 @@ void serial_device_set_speed(register uint8_t speed)
 		}
 	}
 	if (i == num_rates) {
-		i = 3; // 57600 default
+		i = 6; // 57600 default
 	}
 
 	// set the rates in the UART
