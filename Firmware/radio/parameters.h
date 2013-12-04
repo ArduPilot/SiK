@@ -51,7 +51,7 @@ enum ParamID {
 	PARAM_AIR_SPEED,		// over the air baud rate
 	PARAM_NETID,			// network ID
 	PARAM_TXPOWER,			// transmit power (dBm)
-	PARAM_ECC,			// ECC using golay encoding
+	PARAM_ECC,				// ECC using golay encoding
 	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
 	PARAM_OPPRESEND,		// opportunistic resend
 	PARAM_MIN_FREQ,			// min frequency in MHz
@@ -62,7 +62,7 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
-	PARAM_MAX			// must be last
+	PARAM_MAX				// must be last
 };
 
 #define PARAM_FORMAT_CURRENT	0x1AUL				///< current parameter format ID
@@ -72,6 +72,9 @@ enum ParamID {
 /// All parameters have this type.
 ///
 typedef uint32_t	param_t;
+#if PIN_MAX > 0
+extern pins_user_info_t pin_values[];
+#endif
 
 /// Set a parameter
 ///

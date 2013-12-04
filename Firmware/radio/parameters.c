@@ -54,10 +54,10 @@ __code const struct parameter_info {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
-	{"NETID",		25},
-	{"TXPOWER",		0},
-	{"ECC",			1},
-	{"MAVLINK",		1},
+	{"NETID",			25},
+	{"TXPOWER",			0},
+	{"ECC",				1},
+	{"MAVLINK",			1},
 	{"OPPRESEND",		1},
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
@@ -65,9 +65,12 @@ __code const struct parameter_info {
 	{"DUTY_CYCLE",		100},
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
-	{"RTSCTS",		0},
+	{"RTSCTS",			0},
 	{"MAX_WINDOW",		131}
 };
+
+
+__code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 
 /// In-RAM parameter store.
 ///
@@ -75,11 +78,10 @@ __code const struct parameter_info {
 /// hold all the parameters when we're rewriting the scratchpad
 /// page anyway.
 ///
-union param_private {
-	param_t		val;
-	uint8_t		bytes[4];
-};
-__xdata union param_private	parameter_values[PARAM_MAX];
+__xdata param_t	parameter_values[PARAM_MAX];
+#if PIN_MAX > 0
+__xdata pins_user_info_t pin_values[PIN_MAX];
+#endif
 
 static bool
 param_check(__pdata enum ParamID id, __data uint32_t val)
@@ -110,6 +112,10 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 
 	case PARAM_ECC:
+// If Golay not defined, we can't set this variable
+#ifndef INCLUDE_GOLAY
+		return false;
+#endif // INCLUDE_GOLAY
 	case PARAM_OPPRESEND:
 		// boolean 0/1 only
 		if (val > 1)
@@ -128,7 +134,6 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		if (val > 131)
 			return false;
 		break;
-				
 	default:
 		// no sanity check for this value
 		break;
@@ -185,7 +190,7 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 	}
 
-	parameter_values[param].val = value;
+	parameter_values[param] = value;
 
 	return true;
 }
@@ -195,42 +200,67 @@ param_get(__data enum ParamID param)
 {
 	if (param >= PARAM_MAX)
 		return 0;
-	return parameter_values[param].val;
+	return parameter_values[param];
+}
+
+bool read_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
+{
+	uint8_t		i;
+	
+	for (i = start; i < start+size; i ++)
+		input[i-start] = flash_read_scratch(i);
+	
+	// verify checksum
+	if (crc16(size, input) != ((uint16_t) flash_read_scratch(i+1)<<8 | flash_read_scratch(i)))
+		return false;
+	return true;
+}
+
+void write_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
+{
+	uint8_t		i;
+	uint16_t	checksum;
+
+	// save parameters to the scratch page
+	for (i = start; i < start+size; i ++)
+		flash_write_scratch(i, input[i-start]);
+	
+	// write checksum
+	checksum = crc16(size, input);
+	flash_write_scratch(i, checksum&0xFF);
+	flash_write_scratch(i+1, checksum>>8);
 }
 
 bool
 param_load(void)
 __critical {
 	__pdata uint8_t		i;
-	__pdata uint16_t	checksum;
 	__pdata uint16_t	expected;
 
 	// loop reading the parameters array
 	expected = flash_read_scratch(0);
-	if (expected > sizeof(parameter_values) ||
-		expected < 12*sizeof(param_t)) {
-			return false;
-	}
-	
-	for (i = 0; i < expected; i ++) {
-		parameter_values[0].bytes[i] = flash_read_scratch(i+1);
-	}
-
-	// verify checksum
-	checksum = crc16(sizeof(parameter_values), (__xdata uint8_t *)parameter_values);
-	expected = flash_read_scratch(i+2)<<8 | flash_read_scratch(i+1);
-	if (checksum != expected)
+	if (expected > sizeof(parameter_values) || expected < 12*sizeof(param_t))
 		return false;
-
+	
+	// read and verify params
+	if(!read_params((__xdata uint8_t *)parameter_values, 1, expected))
+		return false;
+	
+	// read and verify pin params
+#if PIN_MAX > 0
+	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
+		return false;
+#endif
+	
 	// decide whether we read a supported version of the structure
 	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
 		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
-
+	
 	for (i = 0; i < sizeof(parameter_values); i++) {
-		if (!param_check(i, parameter_values[i].val)) {
-			parameter_values[i].val = parameter_info[i].default_value;
+		if (!param_check(i, parameter_values[i])) {
+			parameter_values[i] = parameter_info[i].default_value;
 		}
 	}
 
@@ -240,11 +270,9 @@ __critical {
 void
 param_save(void)
 __critical {
-	__pdata uint8_t		i;
-	__pdata uint16_t	checksum;
 
 	// tag parameters with the current format
-	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
+	parameter_values[PARAM_FORMAT] = PARAM_FORMAT_CURRENT;
 
 	// erase the scratch space
 	flash_erase_scratch();
@@ -252,15 +280,13 @@ __critical {
 	// write param array length
 	flash_write_scratch(0, sizeof(parameter_values));
 
-	// save parameters to the scratch page
-	for (i = 0; i < sizeof(parameter_values); i++) {
-		flash_write_scratch(i+1, parameter_values[0].bytes[i]);
-	}
+	// write params
+	write_params((__xdata uint8_t *)parameter_values, 1, sizeof(parameter_values));
 
-	// write checksum
-	checksum = crc16(sizeof(parameter_values), (__xdata uint8_t *)parameter_values);
-	flash_write_scratch(i+1, checksum&0xFF);
-	flash_write_scratch(i+2, checksum>>8);
+	// write pin params
+#if PIN_MAX > 0
+	write_params((__xdata uint8_t *)pin_values, sizeof(parameter_values)+3, sizeof(pin_values));
+#endif
 }
 
 void
@@ -270,8 +296,17 @@ param_default(void)
 
 	// set all parameters to their default values
 	for (i = 0; i < PARAM_MAX; i++) {
-		parameter_values[i].val = parameter_info[i].default_value;
+		parameter_values[i] = parameter_info[i].default_value;
 	}
+	
+#if PIN_MAX > 0
+	for (i = 0; i < PIN_MAX; i ++) {
+		pin_values[i].node_mirror = pins_defaults.node_mirror;
+		pin_values[i].output = pins_defaults.output;
+		pin_values[i].pin_dir = pins_defaults.pin_dir;
+		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
+	}
+#endif
 }
 
 enum ParamID
@@ -304,6 +339,7 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 }
 
 // rfd900a calibration stuff
+// Change for next rfd900 revision
 #ifdef BOARD_rfd900a
 static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
 static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
@@ -347,6 +383,7 @@ calibration_get(uint8_t level) __reentrant
 	uint8_t idx;
 	uint8_t crc = 0;
 
+	// Change for next board revision
 	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
 	{
 		crc ^= calibration[idx];

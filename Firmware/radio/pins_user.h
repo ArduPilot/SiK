@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2013 Luke Hovington, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -27,20 +27,51 @@
 //
 
 ///
-/// @file	golay23.h
+/// @file	pins.h
 ///
-/// golay 23/12 error correction encoding and decoding
+/// Prototypes for the PINS command parser
 ///
 
-#include "golay23.h"
+#ifndef _PINS_H_
+#define _PINS_H_
 
-#ifdef INCLUDE_GOLAY
-/// encode n bytes of data into 2n coded bytes. n must be a multiple 3
-extern void golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
+#include <stdint.h>
+#include <stdbool.h>
 
+// Pin rfd900a  Mapping
+#ifdef BOARD_rfd900a
+#define PINS_USER_MAX 6
+#else
+#define PINS_USER_MAX 0
+#endif
 
-/// decode n bytes of coded data into n/2 bytes of original data
-/// n must be a multiple of 6
-extern uint8_t golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
+#define PINS_ABS_MAX 10
+#define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
 
-#endif // INCLUDE_GOLAY
+enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
+				 PIN_HIGH=true,   PIN_LOW=false,
+				 PIN_NULL=0xFF,   PIN_MIRROR_NULL=0xFFFFFFFF,
+				 PIN_ERROR=0x7F };
+
+/// In-ROM parameter info table. Changed by ATP commands
+/// When changing this structure, PINS_USER_INFO_DEFAULT and param_default() need updating
+///
+typedef struct pins_user_info {
+	uint32_t   node_mirror;
+	uint16_t   output:4;
+	uint16_t   pin_dir:4;
+	uint16_t   pin_mirror:8;
+} pins_user_info_t;
+
+#define PINS_USER_INFO_DEFAULT {PIN_MIRROR_NULL, PIN_OUTPUT, PIN_LOW, PIN_NULL}
+
+#if PIN_MAX > 0
+extern void pins_user_init(void);
+extern bool pins_user_set_io(__pdata uint8_t pin, bool in_out);
+extern bool pins_user_get_io(__pdata uint8_t pin);
+extern bool pins_user_set_value(__pdata uint8_t pin, bool high_low);
+extern bool pins_user_get_value(__pdata uint8_t pin);
+extern uint8_t pins_user_get_adc(__pdata uint8_t pin);
+#endif // #if PIN_MAX > 0
+
+#endif	// _PINS_H_
