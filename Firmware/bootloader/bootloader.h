@@ -68,11 +68,11 @@
 // PARAM_ERASE			optional - clear flash scratch/parameter page
 // RESET			resets chip and starts application
 //
-#define PROTO_OK		0x10	// 'ok' response
+#define PROTO_OK			0x10	// 'ok' response
 #define PROTO_FAILED		0x11	// 'fail' response
 #define PROTO_INSYNC		0x12	// 'in sync' byte sent before status
 
-#define PROTO_EOC		0x20	// end of command
+#define PROTO_EOC			0x20	// end of command
 #define PROTO_GET_SYNC		0x21	// NOP for re-establishing sync
 #define PROTO_GET_DEVICE	0x22	// get device ID bytes,                       <reply_data>: <board ID><frequency code>
 #define PROTO_CHIP_ERASE	0x23	// erase program area
@@ -85,7 +85,7 @@
 
 #define PROTO_REBOOT		0x30	// reboot the board & start the app
 
-#define PROTO_DEBUG		0x31	// emit debug information - format not defined
+#define PROTO_DEBUG			0x31	// emit debug information - format not defined
 
 #define PROTO_PROG_MULTI_MAX	64	// maximum PROG_MULTI size
 #define PROTO_READ_MULTI_MAX	255	// size of the size field

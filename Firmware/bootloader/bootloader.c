@@ -34,11 +34,13 @@
 /// Protocol inspired by the STK500 protocol by way of Arduino.
 ///
 
+#pragma codeseg HOME
+
 #include <compiler_defs.h>
-#include "board.h"
 #include <stdio.h>
 #include <stdint.h>
 
+#include "board.h"
 #include "bootloader.h"
 #include "board_info.h"
 #include "flash.h"
@@ -69,10 +71,18 @@ void
 bl_main(void)
 {
 	uint8_t		i;
-
+#ifdef FLASH_BANKS
+	uint8_t		bank_state = PSBANK;
+#endif
+	
 	// Do early hardware init
 	hardware_init();
 
+	// Switch the page to bank 3
+#ifdef FLASH_BANKS
+	PSBANK = 0x33;
+#endif
+	
 	// Work out why we reset
 	//
 	// Note that if PORSF (bit 1) is set, all other bits are invalid.
@@ -83,6 +93,9 @@ bl_main(void)
 	// Check for app validity
 	app_valid = flash_app_valid();
 
+	// Set the button to have a pullup on this pin
+	BUTTON_BOOTLOAD = ~BUTTON_ACTIVE;
+	
 	// Do some simple debouncing on the bootloader-entry
 	// strap/button.
 	debounce_count = 0;
@@ -117,6 +130,10 @@ bl_main(void)
 			//
 			BOARD_FREQUENCY_REG = board_frequency;
 			BOARD_BL_VERSION_REG = BL_VERSION;
+#ifdef FLASH_BANKS
+			// Restore Banking Info
+			PSBANK = bank_state;
+#endif
 
 			// And jump
 			((void (__code *)(void))FLASH_APP_START)();
@@ -136,7 +153,11 @@ bootloader(void)
 {
 	uint8_t		c;
 	uint8_t		count, i;
+#ifdef CPU_SI1030
+	static uint32_t	address;
+#else // FLASH_BANKS
 	static uint16_t	address;
+#endif
 
 	// Wait for a command byte
 	LED_BOOTLOADER = LED_ON;
@@ -176,6 +197,9 @@ bootloader(void)
 	case PROTO_LOAD_ADDRESS:	// set address
 		address = cin();
 		address |= (uint16_t)cin() << 8;
+#ifdef CPU_SI1030
+		address |= (uint32_t)cin() << 16;
+#endif // FLASH_BANKS
 		if (cin() != PROTO_EOC)
 			goto cmd_bad;
 		break;
@@ -244,6 +268,8 @@ hardware_init(void)
 {
 	int i = 0;
 
+	SFRPAGE = LEGACY_PAGE;
+	
 	// Disable interrupts - we run with them off permanently
 	// as all interrupts vector to the application.
 	EA	 =  0x00;
@@ -253,14 +279,18 @@ hardware_init(void)
 
 	// Select the internal oscillator, prescale by 1
 	FLSCL	 =  0x40;
-	OSCICN	 =  0x8F;
+#ifdef CPU_SI1030
+	OSCICN	 |=	0x80;
+#else
+	OSCICN	 =	0x8F;
+#endif
 	CLKSEL	 =  0x00;
 
 	// Configure Timers
 	TCON	 =  0x40;		// Timer1 on
 	TMOD	 =  0x20;		// Timer1 8-bit auto-reload
 	CKCON	 =  0x08;		// Timer1 from SYSCLK
-	TH1	 =  0x96;		// 115200 bps
+	TH1		 =  0x96;		// 115200 bps
 
 	// Configure UART
 	SCON0	 =  0x12;		// enable receiver, set TX ready

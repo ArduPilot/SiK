@@ -28,7 +28,7 @@
 # Makefile for the Si1000 UART bootloader.
 #
 
-VERSION		 =	1
+VERSION		 =	2
 PRODUCT		 =	bootloader~$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 PRODUCT_INSTALL	 =	$(foreach frequency,$(FREQUENCIES), $(OBJROOT)/$(PRODUCT)~$(frequency).hex)
@@ -73,8 +73,8 @@ endif
 $(PRODUCT_INSTALL):	sizecheck
 
 sizecheck:	mapfile = $(subst .ihx,.map,$(PRODUCT_HEX))
-sizecheck:	cseg_base = $(shell printf %d 0x`grep ^CSEG $(mapfile) -m 1 | cut -c 41-44`)
-sizecheck:	cseg_size = $(shell printf %d 0x`grep ^CSEG $(mapfile) -m 1 | cut -c 53-56`)
+sizecheck:	cseg_base = $(shell printf %d 0x`grep ^HOME $(mapfile) -m 1 | cut -c 41-44`)
+sizecheck:	cseg_size = $(shell printf %d 0x`grep ^HOME $(mapfile) -m 1 | cut -c 53-56`)
 sizecheck:	cseg_end  = $(shell expr $(cseg_base) + $(cseg_size))
 sizecheck:	highcseg_base = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) -m 1 | cut -c 41-44`)
 sizecheck:	highcseg_size = $(shell printf %d 0x`grep ^HIGHCSEG $(mapfile) -m 1 | cut -c 53-56`)
