@@ -2,9 +2,12 @@
 
 ##SiK 1.8:
 
+###Alterations
+* Golay removed, can be added back using uncommenting #define in golay23.h
+
 ###NEW FEATURES!!
-1. Added support for new CPU Si102x/3x
-2. Users can now controll unused pins. This can be preformed by the following commands
+* Added support for new CPU Si102x/3x (For new Product RFD900u)
+* Users can now controll unused pins. This can be preformed by the following commands
 
 Command       | Function | Description
 ------------- | ---------|-------------
@@ -36,6 +39,6 @@ Pin  | Port
 ##SiK 1.7:
 
 ###Improvements
-1. Altered timing for better throughput
-2. Removed support for MAVLink 0.9 support freeing up code space
-3. Updated Config to use a CRC instead of the XOR 
+* Altered timing for better throughput
+* Removed support for MAVLink 0.9 support freeing up code space
+* Updated Config to use a CRC instead of the XOR 
