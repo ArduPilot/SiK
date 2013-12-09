@@ -63,7 +63,8 @@ endif
 #
 BOOTLOADERS	 = $(foreach board, $(BOARDS), bootloader~$(board))
 FIRMWARES	 = $(foreach board, $(BOARDS), radio~$(board))
-PRODUCTS	 = $(BOOTLOADERS) $(FIRMWARES)
+AES			 = $(foreach board, $(BOARDS), AES~$(board))
+PRODUCTS	 = $(BOOTLOADERS) $(FIRMWARES) $(AES)
 
 #
 # Build a full list of the things that may be built.
