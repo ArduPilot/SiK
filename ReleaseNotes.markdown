@@ -1,5 +1,9 @@
 #Release Notes:
 
+##SiK 1.9:
+###NEW FEATURES!!
+* Added AES encryption when using new RFD900u boards - NOT WORKING YET -
+
 ##SiK 1.8:
 
 ###Alterations
