@@ -56,9 +56,9 @@ __code const struct parameter_info {
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
 	{"NETID",			25},
 	{"TXPOWER",			0},
-	{"ECC",				1},
-	{"MAVLINK",			1},
-	{"OPPRESEND",		1},
+	{"ECC",				0},
+	{"MAVLINK",			0},
+	{"OPPRESEND",		0},
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
 	{"NUM_CHANNELS",	0},

@@ -4,6 +4,7 @@
 
 ###Alterations
 * Golay removed, can be added back using uncommenting #define in golay23.h
+* ECC - Setting ECC now causes a error due to it being removed
 
 ###NEW FEATURES!!
 * Added support for new CPU Si102x/3x (For new Product RFD900u)
