@@ -83,21 +83,33 @@ INCLUDES	 =	$(SRCROOT)/include
 CFLAGS		+=	$(addprefix -I,$(INCLUDES))
 DEPFLAGS	 =	-MM $(CFLAGS)
 
+ifeq ($(CPU_CC1030),1)
+INC_DIR		+= $(INC_DIR_CC1030)
+endif
+
 #
 # Assembly source/objects must come first to ensure startup files
 # can be in front.
 #
 ASRCS		+=	$(sort $(wildcard $(PRODUCT_DIR)/*.asm))
 OBJS		+=	$(patsubst $(PRODUCT_DIR)/%.asm,$(OBJROOT)/%.rel,$(ASRCS))
-
 CSRCS		+=	$(wildcard $(PRODUCT_DIR)/*.c)
 OBJS		+=	$(patsubst $(PRODUCT_DIR)/%.c,$(OBJROOT)/%.rel,$(CSRCS))
+EXTRA_CSRCS	 =	$(wildcard $(PRODUCT_DIR)/$(INC_DIR)/*.c)
+EXTRA_OBJS	 =	$(patsubst $(PRODUCT_DIR)/$(INC_DIR)/%.c,$(OBJROOT)/$(INC_DIR)/%.rel,$(EXTRA_CSRCS))
+OBJS		+=	$(foreach INC_DIR,$(INC_DIR),$(EXTRA_OBJS))
+#$(info $(OBJS))
 
 ifeq ($(VERBOSE),)
 v		 =	@
 else
 CFLAGS		+=	-V
 endif
+
+BUILD_C		=	$(foreach INC_DIR,$(INC_DIR),$(PRODUCT_DIR)/$(INC_DIR)/%.c)
+BUILD_ASM	=	$(foreach INC_DIR,$(INC_DIR),$(PRODUCT_DIR)/$(INC_DIR)/%.asm)
+#$(info $(INC_DIR))
+#$(info $(build))
 
 #
 # Build rules
