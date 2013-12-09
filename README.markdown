@@ -1,8 +1,8 @@
 # SiK - Firmware for SiLabs Si1000 - Si102x/3x ISM radios
 ## AES Branch
-With the use of magical kittens I have created a sub branch for the AES for people to hack on.   
+With the use of magical kittens I have created a sub folder inside the radio project 'AES'.   
 The magic comes from the ability to selectively compile sub folders depending on the cpu compiling to.   
-Thus not having to worry about messing with ifdefs and the like for files in the AES folder
+Thus not having to worry about messy ifdefs and the like for files in the AES folder when compiling with a unsupported CPU
 
 At present I have littered the main.c and the main function with test code, when this branch has been proven to work it will be merged into the main for people to use.   
 As such DO NOT USE THIS BUILD EXPECTING IT TO WORK, as it clearly doesn't in it's current state - Please feel free to fork and hack away as we all would like to see the encryption working on this little fella.
