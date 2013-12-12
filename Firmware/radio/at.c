@@ -273,22 +273,24 @@ at_error(void)
 }
 
 __pdata uint8_t		idx;
+__pdata uint32_t	at_num;
 
-static uint32_t
+/*
+  parse a number at idx putting the result in at_num
+ */
+static void
 at_parse_number() __reentrant
 {
-	uint32_t	reg;
-	uint8_t		c;
+	register uint8_t c;
 
-	reg = 0;
+	at_num = 0;
 	for (;;) {
 		c = at_cmd[idx];
 		if (!isdigit(c))
 			break;
-		reg = (reg * 10) + (c - '0');
+		at_num = (at_num * 10) + (c - '0');
 		idx++;
 	}
-	return reg;
 }
 
 static void
@@ -312,10 +314,22 @@ at_i(void)
 		printf("%u\n", g_board_bl_version);
 		return;
 	case '5': {
-		enum ParamID id;
+		register enum ParamID id;
+                register uint8_t start = 0;
+                register uint8_t end = PARAM_MAX-1;
+                if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
+                        idx = 5;
+                        at_parse_number();
+                        start = at_num;
+                        if (at_cmd[idx] == ':' && isdigit(at_cmd[idx+1])) {
+                                idx++;
+                                at_parse_number();
+                                end = at_num;                                
+                        }
+                }
 		// convenient way of showing all parameters
-		for (id = 0; id < PARAM_MAX; id++) {
-			printf("S%u: %s=%lu\n", 
+		for (id = start; id <= end; id++) {
+			printf("S%u:%s=%lu\n", 
 			       (unsigned)id, 
 			       param_name(id), 
 			       (unsigned long)param_get(id));
@@ -338,11 +352,11 @@ static void
 at_s(void)
 {
 	__pdata uint8_t		sreg;
-	__pdata uint32_t	val;
 
 	// get the register number first
 	idx = 3;
-	sreg = at_parse_number();
+	at_parse_number();
+        sreg = at_num;
 	// validate the selected sreg
 	if (sreg >= PARAM_MAX) {
 		at_error();
@@ -351,15 +365,15 @@ at_s(void)
 
 	switch (at_cmd[idx]) {
 	case '?':
-		val = param_get(sreg);
-		printf("%lu\n", val);
+		at_num = param_get(sreg);
+		printf("%lu\n", at_num);
 		return;
 
 	case '=':
 		if (sreg > 0) {
 			idx++;
-			val = at_parse_number();
-			if (param_set(sreg, val)) {
+			at_parse_number();
+			if (param_set(sreg, at_num)) {
 				at_ok();
 				return;
 			}
@@ -423,11 +437,11 @@ at_plus(void)
 {
 #ifdef BOARD_rfd900a
 	__pdata uint8_t		creg;
-	__pdata uint32_t	val;
 
 	// get the register number first
 	idx = 4;
-	creg = at_parse_number();
+	at_parse_number();
+        creg = at_num;
 
 	switch (at_cmd[3])
 	{
@@ -437,8 +451,8 @@ at_plus(void)
 			break;
 		}
 		idx = 5;
-		val = at_parse_number();
-		PCA0CPH3 = val & 0xFF;
+		at_parse_number();
+		PCA0CPH3 = at_num & 0xFF;
 		radio_set_diversity(false);
 		at_ok();
 		return;
@@ -446,13 +460,13 @@ at_plus(void)
 		switch (at_cmd[idx])
 		{
 		case '?':
-			val = calibration_get(creg);
-			printf("%lu\n",val);
+			at_num = calibration_get(creg);
+			printf("%lu\n",at_num);
 			return;
 		case '=':
 			idx++;
-			val = at_parse_number();
-			if (calibration_set(creg, val&0xFF))
+			at_parse_number();
+			if (calibration_set(creg, at_num&0xFF))
 			{
 				at_ok();
 			} else {
