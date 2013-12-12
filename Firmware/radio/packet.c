@@ -76,8 +76,8 @@ bool seen_mavlink;
 // monitoring of link quality
 static void check_heartbeat(__xdata uint8_t * __pdata buf)
 {
-        if (buf[0] == MAVLINK10_STX &&
-            buf[1] == 9 && buf[5] == 0) {
+	if (buf[0] == MAVLINK10_STX &&
+		buf[1] == 9 && buf[5] == 0) {
 		// looks like a MAVLink 1.0 heartbeat
 		seen_mavlink = true;
 	}
@@ -89,11 +89,11 @@ static void check_heartbeat(__xdata uint8_t * __pdata buf)
 /// Return the offset of any high priority packet (so we can ensure that this packet goes out in the next
 /// tx window
 static 
-int16_t extract_hipri(uint8_t max_xmit)
+int16_t extract_hipri(__pdata uint8_t max_xmit)
 {
-	__xdata uint16_t slen = serial_read_available();
-	__xdata uint16_t offset = 0;
-	__xdata int16_t high_offset = -1;
+	__pdata uint16_t slen = serial_read_available();
+	__pdata uint16_t offset = 0;
+	__pdata int16_t high_offset = -1;
 
 	// Walk the serial buffer to find the _last_ high pri packet
 	while (slen >= 8) {
@@ -104,7 +104,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 		}
 		c = serial_peekx(offset + 1);
 		if (c >= 255 - 8 || 
-		    c+8 > max_xmit - last_sent_len) {
+			c+8 > max_xmit - last_sent_len) {
 			// it won't fit
 			break;
 		}
@@ -159,7 +159,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 		c = serial_peek2();
 		if (c >= 255 - 8 || 
-		    c+8 > max_xmit - last_sent_len) {
+			c+8 > max_xmit - last_sent_len) {
 			// it won't fit
 			break;
 		}
@@ -201,10 +201,10 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	
 	slen = serial_read_available();
 	if (force_resend ||
-	    (feature_opportunistic_resend &&
-	     last_sent_is_resend == false && 
-	     last_sent_len != 0 && 
-	     slen < PACKET_RESEND_THRESHOLD)) {
+		(feature_opportunistic_resend &&
+		 last_sent_is_resend == false && 
+		 last_sent_len != 0 && 
+		 slen < PACKET_RESEND_THRESHOLD)) {
 			if (max_xmit < last_sent_len) {
 				last_sent_len = 0;
 				return 0;
@@ -321,7 +321,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			}
 			mav_pkt_len = serial_peek2();
 			if (mav_pkt_len >= 255-8 ||
-			    mav_pkt_len+8 > mav_max_xmit) {
+				mav_pkt_len+8 > mav_max_xmit) {
 				// its too big for us to cope with
 				mav_pkt_len = 0;
 				last_sent[last_sent_len++] = serial_read();
@@ -411,8 +411,8 @@ packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
 		return false;
 	}
 	if (last_recv_is_resend == false && 
-	    len == last_recv_len &&
-	    memcmp(last_received, buf, len) == 0) {
+		len == last_recv_len &&
+		memcmp(last_received, buf, len) == 0) {
 		last_recv_is_resend = false;
 		return true;
 	}
