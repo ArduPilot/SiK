@@ -247,30 +247,30 @@ __critical {
 
 void
 param_save(void)
-__critical {
-	__pdata uint8_t		d;
-	__pdata uint8_t		i;
-	__pdata uint8_t		sum;
+{
+	register uint8_t d;
+	register uint8_t i;
+	register uint8_t sum;
 
 	// tag parameters with the current format
 	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
 
-	// erase the scratch space
-	flash_erase_scratch();
+        // erase the scratch space
+        flash_erase_scratch();
 
 	// initialise checksum
 	sum = 0;
-	flash_write_scratch(0, sizeof(parameter_values));
+        flash_write_scratch(0, sizeof(parameter_values));
 
 	// save parameters to the scratch page
 	for (i = 0; i < sizeof(parameter_values); i++) {
 		d = parameter_values[0].bytes[i];	// byte we are going to write
 		sum ^= d;
-		flash_write_scratch(i+1, d);
+                flash_write_scratch(i+1, d);
 	}
 
 	// write checksum
-	flash_write_scratch(i+1, sum);
+        flash_write_scratch(i+1, sum);
 }
 
 void
