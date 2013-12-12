@@ -212,6 +212,13 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	if (injected_packet) {
 		// send a previously injected packet
 		slen = last_sent_len;
+
+                // sending these injected packets at full size doesn't
+                // seem to work well ... though I don't really know why!
+                if (max_xmit > 32) {
+                        max_xmit = 32;
+                }
+
 		if (max_xmit < slen) {
 			// send as much as we can
 			memcpy(buf, last_sent, max_xmit);
