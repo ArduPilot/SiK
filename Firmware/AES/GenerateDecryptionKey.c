@@ -80,14 +80,6 @@
 // AESYOUT channel for an extended key.
 //
 //-----------------------------------------------------------------------------
-#define delay4NOP() \
-__asm     \
-nop   \
-nop   \
-nop   \
-nop   \
-__endasm  \
-
 GENERATE_DECRYPTION_KEY_STATUS
    GenerateDecryptionKey (
    VARIABLE_SEGMENT_POINTER(encryptionKey, U8, SEG_XDATA),
@@ -109,17 +101,7 @@ GENERATE_DECRYPTION_KEY_STATUS
       // Calculate key length in bytes based on operation parameter.
       keyLength = ((keySize + 2) << 3);
    }
-//	printf("Key Len:%d\n",keyLength);
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
-//	delay4NOP();
+
    SFRPAGE = DPPE_PAGE;
 
    AES0BCFG = 0x00;                      // disable, for now
@@ -203,7 +185,12 @@ GENERATE_DECRYPTION_KEY_STATUS
 
    // This do...while loop ensures that the CPU will remain in Idle mode
    // until AES0YOUT DMA channel transfer is complete.
-   while((DMA0INT & AES0YOUT_MASK)==0){}
+   do
+   {
+      #ifdef DMA_TRANSFERS_USE_IDLE
+      PCON |= 0x01;                    // go to Idle mode
+      #endif
+   }  while((DMA0INT & AES0YOUT_MASK)==0);
 
    if (keySize> KEY_SIZE_128_BITS)     // if extended key
    {
@@ -230,7 +217,12 @@ GENERATE_DECRYPTION_KEY_STATUS
 
       // This do...while loop ensures that the CPU will remain in Idle mode
       // until AES0YOUT DMA channel transfer is complete.
-	   while((DMA0INT & AES0YOUT_MASK)==0){}
+      do
+      {
+         #ifdef DMA_TRANSFERS_USE_IDLE
+         PCON |= 0x01;                 // go to Idle mode
+         #endif
+      }  while((DMA0INT & AES0YOUT_MASK)==0);
    }
 
    //Clear AES Block
@@ -242,8 +234,6 @@ GENERATE_DECRYPTION_KEY_STATUS
    // Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
    DMA0INT &= ~AES0_KBY_MASK;
 
-   SFRPAGE = LEGACY_PAGE;
-	printf("End..\n");
    return SUCCESS;
 }
 //=============================================================================
