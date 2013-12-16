@@ -101,6 +101,9 @@ SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA);
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
 const SEGMENT_VARIABLE (ReferenceEncryptionKey128[16], U8, SEG_CODE) = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 const SEGMENT_VARIABLE (ReferenceDecryptionKey128[16], U8, SEG_CODE) = {0xD0, 0x14, 0xF9, 0xA8, 0xC9, 0xEE, 0x25, 0x89, 0xE1, 0x3F, 0x0C, 0xC8, 0xB6, 0x63, 0x0C, 0xA6};
+
+INTERRUPT_PROTO(DMA_ISR, INTERRUPT_DMA0);
+
 #endif
 
 void
@@ -461,3 +464,19 @@ radio_init(void)
 	tdm_init();
 }
 
+#ifdef CPU_SI1030
+//-----------------------------------------------------------------------------
+// DMA_ISR
+// description:
+//
+// This ISR is needed to support the DMA Idle mode wake up, which is used
+// in the AES functions. Bit 5 of EIE2 should be enabled before going into
+// idle mode. This ISR will disable further interrupts. EA must also be
+// enabled.
+//
+//-----------------------------------------------------------------------------
+INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
+{
+  EIE2 &= ~0x20;                       // disable further interrupts
+}
+#endif
