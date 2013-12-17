@@ -100,7 +100,9 @@ main(void)
 #ifdef CPU_SI1030
 	uint8_t i;
 	__xdata unsigned char str[252];
-	__xdata unsigned char *result;
+	__xdata unsigned char strtmp[252];
+	__xdata unsigned char *in_str;
+	__xdata unsigned char *out_str;
 	PSBANK = 0x33;
 #endif
 
@@ -133,27 +135,38 @@ main(void)
 	}
 
 #ifdef CPU_SI1030
- aes_init();
+	if (! aes_init()) {
+		panic("failed to initialise aes");
+	}
 #endif
 
 // Initial testing
 #ifdef CPU_SI1030
  memcpy(str, "abcedfghijklmnop", 16);
- result = aes_encrypt(str);
+ in_str = str;
+ out_str = strtmp;
+ if (aes_encrypt(in_str, out_str) != 0) {
+ 	panic("Error while trying to encrypt data");
+ }
+
   // Print out the Encrypted Text
    printf("Encrypted Ciper:");
          for (i=0; i<16; i++) {
-                 printf("%d ",result[i]);
+                 printf("%d ",out_str[i]);
          }
          printf("\n");
 
+ in_str = out_str;
+ out_str = strtmp;
 
- result = aes_decrypt(result);
+ if (aes_decrypt(in_str, out_str) != 0) {
+ 	panic("Error while trying to decrypt data");
+ }
 
   // Print out the Plain Text
    printf("Decrypted Ciper:");
          for (i=0; i<16; i++) {
-                 printf("%d ", result[i]);
+                 printf("%d ", out_str[i]);
          }
          printf("\n");
 #endif
