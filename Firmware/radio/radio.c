@@ -35,6 +35,18 @@
 #include "golay.h"
 #include "crc.h"
 
+#ifdef CPU_SI1030
+// #include "aes.h"
+
+//-----------------------------------------------------------------------------
+// Interrupt proto (for SDCC compatibility)
+//-----------------------------------------------------------------------------
+INTERRUPT_PROTO(DMA_ISR, INTERRUPT_DMA0);
+//=============================================================================
+
+#endif
+
+
 __xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
 __pdata uint8_t receive_packet_length;
 __pdata uint8_t partial_packet_length;
@@ -45,6 +57,7 @@ static volatile __bit packet_received;
 static volatile __bit preamble_detected;
 
 __pdata struct radio_settings settings;
+
 
 
 // internal helper functions
@@ -1232,4 +1245,5 @@ rxfail:
 	}
 	radio_receiver_on();
 }
+
 

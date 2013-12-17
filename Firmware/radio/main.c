@@ -41,6 +41,7 @@
 #include "tdm.h"
 #include "timer.h"
 #include "freq_hopping.h"
+#include "AES/aes.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
@@ -93,33 +94,16 @@ bool feature_opportunistic_resend;
 uint8_t feature_mavlink_framing;
 bool feature_rtscts;
 
-#ifdef CPU_SI1030
-#include "AES/GenerateDecryptionKey.h"
-#include "AES/AES_BlockCipher.h"
-
-SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA);
-SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
-SEGMENT_VARIABLE (PlainText[64], U8, SEG_XDATA);
-SEGMENT_VARIABLE (CipherText[64], U8, SEG_XDATA);
-SEGMENT_VARIABLE (InitialVector[16], U8, SEG_XDATA);
-SEGMENT_VARIABLE (Counter[16], U8, SEG_XDATA);
-
-const SEGMENT_VARIABLE (ReferenceEncryptionKey128[16], U8, SEG_CODE) = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-const SEGMENT_VARIABLE (ReferenceDecryptionKey128[16], U8, SEG_CODE) = {0xD0, 0x14, 0xF9, 0xA8, 0xC9, 0xEE, 0x25, 0x89, 0xE1, 0x3F, 0x0C, 0xC8, 0xB6, 0x63, 0x0C, 0xA6};
-const SEGMENT_VARIABLE (ReferencePlainText[16], U8, SEG_CODE) =        {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x21, 0x21, 0x21, 0x21};
-
-INTERRUPT_PROTO(DMA_ISR, INTERRUPT_DMA0);
-
-#endif
-
 void
 main(void)
 {
 #ifdef CPU_SI1030
-	uint8_t i, status;
+	uint8_t i;
+	__xdata unsigned char str[252];
+	__xdata unsigned char *result;
 	PSBANK = 0x33;
 #endif
-	
+
 	// Stash board info from the bootloader before we let anything touch
 	// the SFRs.
 	//
@@ -147,58 +131,33 @@ main(void)
 	if (!radio_receiver_on()) {
 		panic("failed to enable receiver");
 	}
+
 #ifdef CPU_SI1030
-	printf("Plain Text:     ");
-	for (i=0; i<16; i++) {
-		printf("%d ",ReferencePlainText[i]);
-	}
-	printf("\n");
-
-	// Create Encryption Key
-	for (i=0; i<16; i++) {
-		EncryptionKey[i] = ReferenceEncryptionKey128[i];
-	}
-	printf("Encryption Key: ");
-	for (i=0; i<16; i++) {
-		printf("%d ",EncryptionKey[i]);
-	}
-	printf("\n");
-	
-	// Create the Decryption Key
-	status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, KEY_SIZE_128_BITS);
-	
-	printf("Decryption Key: ");
-	for (i=0; i<16; i++) {
-		printf("%d ",DecryptionKey[i]);
-	}
-	printf("\n");
-
-	// Init the Plain text key
-	for (i=0; i<16; i++) {
-		PlainText[i] = ReferencePlainText[i];
-	}
-
-	// Encrypt plain Text
-	status = AES_BlockCipher (ENCRYPTION_128_BITS, PlainText, CipherText, EncryptionKey, 1);
-
-	// Printout the cipher Text
-	printf("Cipher Text:    ");
-	for (i=0; i<16; i++) {
-                printf("%d ",CipherText[i]);
-	}
-	printf("\n");
-
-	// Decrypt Cipher Text
-	status = AES_BlockCipher (DECRYPTION_128_BITS, PlainText, CipherText, DecryptionKey, 1);
-	
-	// Print out the Plain Text
-	printf("Decrypted Ciper:");
-        for (i=0; i<16; i++) {
-                printf("%d ",PlainText[i]);
-        }
-        printf("\n");
-
+ aes_init();
 #endif
+
+// Initial testing
+#ifdef CPU_SI1030
+ memcpy(str, "abcedfghijklmnop", 16);
+ result = aes_encrypt(str);
+  // Print out the Encrypted Text
+   printf("Encrypted Ciper:");
+         for (i=0; i<16; i++) {
+                 printf("%d ",result[i]);
+         }
+         printf("\n");
+
+
+ result = aes_decrypt(result);
+
+  // Print out the Plain Text
+   printf("Decrypted Ciper:");
+         for (i=0; i<16; i++) {
+                 printf("%d ", result[i]);
+         }
+         printf("\n");
+#endif
+
 	tdm_serial_loop();
 }
 
