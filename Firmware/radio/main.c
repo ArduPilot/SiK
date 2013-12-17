@@ -99,8 +99,8 @@ main(void)
 {
 #ifdef CPU_SI1030
 	uint8_t i;
-	__xdata unsigned char str[252];
-	__xdata unsigned char strtmp[252];
+	__xdata unsigned char str[240];
+	__xdata unsigned char strtmp[240];
 	__xdata unsigned char *in_str;
 	__xdata unsigned char *out_str;
 	PSBANK = 0x33;
@@ -151,7 +151,7 @@ main(void)
 
   // Print out the Encrypted Text
    printf("Encrypted Ciper:");
-         for (i=0; i<16; i++) {
+         for (i=0; i<strlen(out_str); i++) {
                  printf("%d ",out_str[i]);
          }
          printf("\n");
@@ -165,7 +165,7 @@ main(void)
 
   // Print out the Plain Text
    printf("Decrypted Ciper:");
-         for (i=0; i<16; i++) {
+         for (i=0; i<strlen(out_str); i++) {
                  printf("%d ", out_str[i]);
          }
          printf("\n");
