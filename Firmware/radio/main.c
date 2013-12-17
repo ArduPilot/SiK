@@ -101,6 +101,7 @@ main(void)
 	uint8_t i;
 	__xdata unsigned char str[240];
 	__xdata unsigned char strtmp[240];
+	__xdata unsigned char strtmp2[240];
 	__xdata unsigned char *in_str;
 	__xdata unsigned char *out_str;
 	PSBANK = 0x33;
@@ -157,7 +158,7 @@ main(void)
          printf("\n");
 
  in_str = out_str;
- out_str = strtmp;
+ out_str = strtmp2;
 
  if (aes_decrypt(in_str, out_str) != 0) {
  	panic("Error while trying to decrypt data");

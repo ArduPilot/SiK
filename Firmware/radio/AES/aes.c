@@ -32,6 +32,7 @@
 #include "GenerateDecryptionKey.h"
 #include "AES_BlockCipher.h"
 #include "CBC_EncryptDecrypt.h"
+#include "CTR_EncryptDecrypt.h"
 
 SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA);
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
@@ -46,6 +47,8 @@ const SEGMENT_VARIABLE (ReferenceEncryptionKey128[16], U8, SEG_CODE) = {0x2b, 0x
 const SEGMENT_VARIABLE (ReferenceDecryptionKey128[16], U8, SEG_CODE) = {0xD0, 0x14, 0xF9, 0xA8, 0xC9, 0xEE, 0x25, 0x89, 0xE1, 0x3F, 0x0C, 0xC8, 0xB6, 0x63, 0x0C, 0xA6};
 const SEGMENT_VARIABLE (ReferencePlainText[16], U8, SEG_CODE) =        {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x21, 0x21, 0x21, 0x21};
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+const SEGMENT_VARIABLE (Nonce[16], U8, SEG_CODE) = {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff};
+
 
 
 
@@ -92,6 +95,7 @@ bool aes_init()
    	return false;
    }
    aesCopyInit3(InitialVector, ReferenceInitialVector);
+   // aesCopyInit3(Counter, Nonce);
 
    return true;
 }
@@ -116,7 +120,6 @@ __xdata unsigned char *aes_pad(__xdata unsigned char *in_str)
 	}
 	in_str[strlen(in_str)] = '\0';
 
-
 	return in_str;
 }
 
@@ -124,6 +127,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 {
 	uint8_t status;
 	uint8_t blocks;
+        // uint8_t  i;   // FOR DEBUGGING
 	__xdata unsigned char *pt;
 
 	// Make sure we have something to encrypt
@@ -143,9 +147,16 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	// Pad out in_str  to X 16-Byte blocks
 	blocks = strlen(pt)>>4; // Number of 16-byte blocks....later we'll calc from in_str 
 
-
 	// Generate Initial Vector
 	// -- assuming that the IV changes from time to time --
+
+
+// DEBUGGING
+//   printf("PRE ENC %u:", blocks);
+//         for (i=0; i<strlen(pt); i++) {
+//                 printf("%d ",pt[i]);
+//         }
+//         printf("\n");
 
 
 	// Copy Initial Vecotr in place
@@ -153,6 +164,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 
 	// Validate 128-bit CBC Mode encryption
 	status = CBC_EncryptDecrypt (ENCRYPTION_128_BITS, pt, out_str, InitialVector, EncryptionKey, blocks);
+	// status = CTR_EncryptDecrypt (ENCRYPTION_128_BITS, pt, out_str, Counter, EncryptionKey, blocks);
 
 	return status;
 }
@@ -162,6 +174,7 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 {
 	uint8_t status;
 	uint8_t blocks;
+        // uint8_t  i;   // FOR DEBUGGING
 	__xdata unsigned char *ct;
 
 	// Make sure we have something to decrypt
@@ -175,8 +188,19 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	// Initialise CipherText
 	ct = in_str; // NOTE...later this might be a padded version of in_str
 
+   aesCopyInit3(Counter, Nonce);
+
+// DEBUGGING
+//   printf("PRE DEC %u:", blocks);
+//         for (i=0; i<strlen(ct); i++) {
+//                 printf("%d ",ct[i]);
+//         }
+//         printf("\n");
+
+
 	// Perform 128-bit CBC Mode decryption
 	status = CBC_EncryptDecrypt (DECRYPTION_128_BITS, out_str, ct, InitialVector, DecryptionKey, blocks);
+	// status = CTR_EncryptDecrypt (DECRYPTION_128_BITS, out_str, ct, Counter, DecryptionKey, blocks);
 
 	return status;
 }
