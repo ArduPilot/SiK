@@ -102,7 +102,7 @@ bool aes_init()
 
 /// Pad out the string to encrypt to a multiple of 16 x bytes
 ///
-__xdata unsigned char *aes_pad(__xdata unsigned char *in_str)
+__xdata unsigned char *aes_pad(__xdata unsigned char *in_str, uint8_t len)
 {
 
 	volatile uint8_t  pad_length;
@@ -110,20 +110,21 @@ __xdata unsigned char *aes_pad(__xdata unsigned char *in_str)
 	// __xdata unsigned char padstr[1];
 
 	i = 0;
-	pad_length = (strlen(in_str)%16);
+	pad_length = (len%16);
 	if (pad_length == 0) {
 		pad_length = 16;	
 	} 
 
 	for (i = 0; i < pad_length;i++) {
-		memcpy(&in_str[strlen(in_str)], &pad_length, sizeof(pad_length));
+		memcpy(&in_str[len+i], &pad_length, sizeof(pad_length));
 	}
-	in_str[strlen(in_str)] = '\0';
+	// in_str[strlen(in_str)] = '\0';
 
 	return in_str;
 }
 
-uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_str)
+uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t len, __xdata unsigned char *out_str,
+			uint8_t *out_len)
 {
 	uint8_t status;
 	uint8_t blocks;
@@ -131,7 +132,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	__xdata unsigned char *pt;
 
 	// Make sure we have something to encrypt
-	if (strlen(in_str) == 0) {
+	if (len == 0) {
 		return -1;
 	}
 	
@@ -142,10 +143,10 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	// last byte is a 01...is padding
 
 	// Copy String into XDATA
-	pt = aes_pad(in_str);  // NOTE...later this might be a padded version of in_str
+	pt = aes_pad(in_str, len);  // NOTE...later this might be a padded version of in_str
 
 	// Pad out in_str  to X 16-Byte blocks
-	blocks = strlen(pt)>>4; // Number of 16-byte blocks....later we'll calc from in_str 
+	blocks = 1 + (len>>4); // Number of 16-byte blocks....later we'll calc from in_str 
 
 	// Generate Initial Vector
 	// -- assuming that the IV changes from time to time --
@@ -165,25 +166,28 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	// Validate 128-bit CBC Mode encryption
 	status = CBC_EncryptDecrypt (ENCRYPTION_128_BITS, pt, out_str, InitialVector, EncryptionKey, blocks);
 	// status = CTR_EncryptDecrypt (ENCRYPTION_128_BITS, pt, out_str, Counter, EncryptionKey, blocks);
+	*out_len = 16 * blocks;
 
 	return status;
 }
 
 
-uint8_t aes_decrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_str)
+
+uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str,
+			uint8_t *out_len)
 {
 	uint8_t status;
 	uint8_t blocks;
-        // uint8_t  i;   // FOR DEBUGGING
+//        uint8_t  i;   // FOR DEBUGGING
 	__xdata unsigned char *ct;
 
 	// Make sure we have something to decrypt
-	if (strlen(in_str) == 0) {
+	if (in_len == 0) {
 		return -1;
 	}
 
 	// Pad out in_str  to X 16-Byte blocks
-	blocks = strlen(in_str)>>4; // Number of 16-byte blocks....later we'll calc from in_str
+	blocks = in_len>>4; // Number of 16-byte blocks....later we'll calc from in_str
 
 	// Initialise CipherText
 	ct = in_str; // NOTE...later this might be a padded version of in_str
@@ -201,6 +205,8 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_st
 	// Perform 128-bit CBC Mode decryption
 	status = CBC_EncryptDecrypt (DECRYPTION_128_BITS, out_str, ct, InitialVector, DecryptionKey, blocks);
 	// status = CTR_EncryptDecrypt (DECRYPTION_128_BITS, out_str, ct, Counter, DecryptionKey, blocks);
+
+	*out_len = in_len - out_str[16 * blocks - 1];
 
 	return status;
 }

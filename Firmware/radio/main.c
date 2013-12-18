@@ -98,7 +98,7 @@ void
 main(void)
 {
 #ifdef CPU_SI1030
-	uint8_t i;
+	uint8_t i, len1, len2;
 	__xdata unsigned char str[240];
 	__xdata unsigned char strtmp[240];
 	__xdata unsigned char strtmp2[240];
@@ -146,7 +146,9 @@ main(void)
  memcpy(str, "abcedfghijklmnop", 16);
  in_str = str;
  out_str = strtmp;
- if (aes_encrypt(in_str, out_str) != 0) {
+
+ // encrypt String - outputs string and length of cipherText
+ if (aes_encrypt(in_str, strlen(in_str), out_str, &len1) != 0) {
  	panic("Error while trying to encrypt data");
  }
 
@@ -158,15 +160,18 @@ main(void)
          printf("\n");
 
  in_str = out_str;
- out_str = strtmp2;
+ out_str = strtmp2; // It is important that in_str and out_str have their own allocated memory
+                    // as CBC uses previously data for decryption.
 
- if (aes_decrypt(in_str, out_str) != 0) {
+ // decrypt ciperText. We provide string and length and it outputs string pointer and length
+ // of string.
+ if (aes_decrypt(in_str, len1, out_str, &len2) != 0) {
  	panic("Error while trying to decrypt data");
  }
 
   // Print out the Plain Text
    printf("Decrypted Ciper:");
-         for (i=0; i<strlen(out_str); i++) {
+         for (i=0; i<len2; i++) {
                  printf("%d ", out_str[i]);
          }
          printf("\n");

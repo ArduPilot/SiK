@@ -43,9 +43,9 @@
 
 extern bool aes_init();
 
-extern uint8_t aes_encrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_str);
+extern uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t len, __xdata unsigned char *out_str, uint8_t *out_len);
 
-extern uint8_t aes_decrypt(__xdata unsigned char *in_str, __xdata unsigned char *out_str);
+extern uint8_t aes_decrypt(__xdata unsigned char *in_str,  uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
 
 #endif // _AES_H_
 
