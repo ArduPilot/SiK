@@ -545,42 +545,31 @@ bool
 radio_initialise(void)
 {
 	uint8_t status;
-
+	
 	delay_msec(50);
-
+	
 	// make sure there is a radio on the SPI bus
 	status = register_read(EZRADIOPRO_DEVICE_VERSION);
 	if (status == 0xFF || status < 5) {
 		// no valid radio there?
 		return false;
 	}
-
-	status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-
+	
+	// Reset the radio and setup all the registers
+	software_reset();
+	
+	status = register_read(EZRADIOPRO_DEVICE_VERSION);
+	
 	if ((status & EZRADIOPRO_IPOR) == 0) {
 		// it hasn't powered up cleanly, reset it
 		return software_reset();
 	}
-
+	
 	if (status & EZRADIOPRO_ICHIPRDY) {
 		// already ready
 		return true;
 	}
-
-	// enable chip ready interrupt
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
-
-	// wait for the chip ready bit for 10ms
-	delay_set(50);
-	while (!delay_expired()) {
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-		if (status & EZRADIOPRO_ICHIPRDY) {
-			return true;
-		}
-	}
-
+	
 	return false;
 }
 
