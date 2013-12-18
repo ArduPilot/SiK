@@ -56,7 +56,11 @@ __code const struct parameter_info {
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
 	{"NETID",			25},
 	{"TXPOWER",			0},
+#ifdef INCLUDE_GOLAY
+	{"ECC",				1},
+#else
 	{"ECC",				0},
+#endif
 	{"MAVLINK",			0},
 	{"OPPRESEND",		0},
 	{"MIN_FREQ",		0},
@@ -237,6 +241,9 @@ __critical {
 	__pdata uint8_t		i;
 	__pdata uint16_t	expected;
 
+	// Start with default values
+	param_default();
+	
 	// loop reading the parameters array
 	expected = flash_read_scratch(0);
 	if (expected > sizeof(parameter_values) || expected < 12*sizeof(param_t))
@@ -245,12 +252,6 @@ __critical {
 	// read and verify params
 	if(!read_params((__xdata uint8_t *)parameter_values, 1, expected))
 		return false;
-	
-	// read and verify pin params
-#if PIN_MAX > 0
-	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
-		return false;
-#endif
 	
 	// decide whether we read a supported version of the structure
 	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
@@ -263,6 +264,12 @@ __critical {
 			parameter_values[i] = parameter_info[i].default_value;
 		}
 	}
+	
+	// read and verify pin params
+#if PIN_MAX > 0
+	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
+		return false;
+#endif
 
 	return true;
 }

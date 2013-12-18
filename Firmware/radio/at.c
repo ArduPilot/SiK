@@ -440,12 +440,12 @@ at_p (void)
 	{
 		for (pinId = 0; pinId < PIN_MAX; pinId++)
 		{
-			printf("Pin:%d ", pinId);
+			printf("Pin:%u ", pinId);
 			if (pins_user_get_io(pinId))
 				printf("Output ");
 			else
 				printf("Input  ");
-			printf("Val: %d\n",pins_user_get_value(pinId));
+			printf("Val: %u\n",pins_user_get_value(pinId));
 		}
 		return;
 	}
@@ -478,7 +478,7 @@ at_p (void)
 			break;
 			
 		case 'C':
-			if(!isdigit(at_cmd[7]) || !pins_user_set_value(pinId, (at_cmd[7]-'0')))
+			if(!isdigit(at_cmd[7]) || !pins_user_set_value(pinId, (at_cmd[7]-'0')?1:0))
 			{
 				at_error();
 				return;

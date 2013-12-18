@@ -34,6 +34,7 @@
 
 #include "pins_user.h"
 #include "radio.h"
+#include "tdm.h"
 
 #if PIN_MAX > 0
 
@@ -71,6 +72,21 @@ pins_user_init(void)
 		pins_user_set_io(i, pin_values[i].output);
 		pins_user_set_value(i, pin_values[i].pin_dir);
 	}
+	
+//	// configure timer 0 for pin change checking
+//	TR0 	 = 0;						// timer off
+//	TMOD	 = (TMOD & ~0x0f) | 0x01;	// 16-bit timer
+//	// Use the system clock as serial is using timer 1 and prescale bits
+//	CKCON	|= 0x04;
+//	TF0		 = 0;						// Clear the Overflow Flag
+////	TL0		 = 0x0f;
+////	TH0		 = 0x0f;
+//	TR0		 = 1;						// timer on
+//	ET0		 = 1;						// Timer 0 Interrupt Enable
+	
+	
+// Client Application Hack
+//	pins_user_set_value(3,PIN_HIGH);
 }
 
 bool
@@ -83,7 +99,6 @@ pins_user_set_io(__pdata uint8_t pin, bool in_out)
 		
 		// Esure we are on the Legacy page (SFR Page 0x0)
 		SFRPAGE	= LEGACY_PAGE;
-		//P0DRV
 		
 		switch(pins_user_map[pin].port)
 		{
@@ -203,16 +218,10 @@ pins_user_get_adc(__pdata uint8_t pin)
 		{
 			case 0:
 				return P0 & (1<<pins_user_map[pin].pin);
-				break;
-				
 			case 1:
 				return P1 & (1<<pins_user_map[pin].pin);
-				break;
-				
 			case 2:
-				return P2 & (1<<pins_user_map[pin].pin);
-				break;
-				
+				return P2 & (1<<pins_user_map[pin].pin);				
 			default:
 				return PIN_ERROR;
 		}
@@ -220,4 +229,38 @@ pins_user_get_adc(__pdata uint8_t pin)
 	return PIN_ERROR;
 }
 
-#endif // #if PIN_MAX > 0
+uint8_t p, p_count;
+void
+pins_user_check()
+{
+//	if (pins_user_get_adc(5) != p || p_count != 0) {
+//		if(pins_user_get_adc(5) != p)
+//		{
+//			p = pins_user_get_adc(5);
+//			p_count = 100;
+//		}
+//		at_cmd[0] = 'R';
+//		at_cmd[1] = 'T';
+//		at_cmd[2] = 'P';
+//		at_cmd[3] = 'C';
+//		at_cmd[4] = '=';
+//		at_cmd[5] = '4';
+//		at_cmd[6] = ',';
+//		at_cmd[7] = '0'+(p?1:0);
+//		at_cmd[8] = 0;
+//		tdm_remote_at();
+//		p_count --;
+//	}
+}
+
+#endif // PIN_MAX > 0
+
+//// timer0 interrupt called every x microseconds
+//INTERRUPT(T0_ISR, INTERRUPT_TIMER0)
+//{
+////	TF0 = 0; // Does this get cleared automagicaly?
+//
+//#if PIN_MAX > 0
+////	pins_user_check();
+//#endif // PIN_MAX > 0
+//}

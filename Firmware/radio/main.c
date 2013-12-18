@@ -57,6 +57,10 @@ extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0);
 ///
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
+/// Timer0 tick interrupt handler
+///
+//extern void    T0_ISR(void)            __interrupt(INTERRUPT_TIMER0);
+
 /// Timer2 tick interrupt handler
 ///
 extern void    T2_ISR(void)            __interrupt(INTERRUPT_TIMER2);
@@ -128,6 +132,11 @@ main(void)
 		panic("failed to enable receiver");
 	}
 
+	// Init user pins
+#if PIN_MAX > 0
+	pins_user_init();
+#endif
+	
 	tdm_serial_loop();
 }
 
@@ -181,7 +190,7 @@ hardware_init(void)
 #elif defined _BOARD_RFD900A		// Redefine port skips to override bootloader defs
 	P0SKIP  =  0xCF;				// P0 UART avail on XBAR
 	P1SKIP  =  0xF8;				// P1 SPI1 avail on XBAR
-	P2SKIP  =  0x8F;				// P2 CEX0 avail on XBAR P2.4, rest GPIO
+	P2SKIP  =  0xCF;				// P2 CEX0 avail on XBAR P2.4, rest GPIO
 #endif
 
 	// Configure crossbar for UART

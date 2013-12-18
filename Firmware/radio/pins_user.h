@@ -74,6 +74,7 @@ extern bool pins_user_get_io(__pdata uint8_t pin);
 extern bool pins_user_set_value(__pdata uint8_t pin, bool high_low);
 extern bool pins_user_get_value(__pdata uint8_t pin);
 extern uint8_t pins_user_get_adc(__pdata uint8_t pin);
+extern void pins_user_check();
 #endif // #if PIN_MAX > 0
 
 #endif	// _PINS_H_
