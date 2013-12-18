@@ -143,7 +143,7 @@ main(void)
 
 // Initial testing
 #ifdef CPU_SI1030
- memcpy(str, "abcedfghijklmnop", 16);
+ memcpy(str, "Merry Christmas 2013", 20);
  in_str = str;
  out_str = strtmp;
 
@@ -152,12 +152,12 @@ main(void)
  	panic("Error while trying to encrypt data");
  }
 
-  // Print out the Encrypted Text
-   printf("Encrypted Ciper:");
-         for (i=0; i<strlen(out_str); i++) {
+ // Print out the Encrypted Text
+ printf("Encrypted Ciper:");
+         for (i=0; i<len1; i++) {
                  printf("%d ",out_str[i]);
          }
-         printf("\n");
+ printf("\n");
 
  in_str = out_str;
  out_str = strtmp2; // It is important that in_str and out_str have their own allocated memory
@@ -169,12 +169,12 @@ main(void)
  	panic("Error while trying to decrypt data");
  }
 
-  // Print out the Plain Text
-   printf("Decrypted Ciper:");
+ // Print out the Plain Text
+ printf("Decrypted Ciper:");
          for (i=0; i<len2; i++) {
-                 printf("%d ", out_str[i]);
+		putchar(out_str[i]);
          }
-         printf("\n");
+ printf("\n");
 #endif
 
 	tdm_serial_loop();
