@@ -41,3 +41,4 @@ PRODUCT_SUPPORT_BANKING = 1
 INC_DIR_CC1030	 = AES
 
 include $(SRCROOT)/include/rules.mk
+# LDFLAGS		+=	-V

@@ -50,6 +50,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+//#ifdef CPU_SI1030
+//#include "AES/aes.h"
+//#endif
+
 // the biggest packet length we will allow. To allow for golay
 // encoding this needs to be a multiple of 6
 #define MAX_PACKET_LENGTH 252
