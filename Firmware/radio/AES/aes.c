@@ -32,6 +32,9 @@
 #include "GenerateDecryptionKey.h"
 #include "AES_BlockCipher.h"
 #include "CBC_EncryptDecrypt.h"
+// #include <string.h>
+// #include <stdio.h>
+#include <stdlib.h>
 
 SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA);
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
@@ -39,18 +42,61 @@ SEGMENT_VARIABLE (InitialVector[16], U8, SEG_XDATA);
 
 // The following four will eventually be provided by user and by other means
 // They are here at present, to get the encryption/decryption working
-const SEGMENT_VARIABLE (ReferenceEncryptionKey128[16], U8, SEG_CODE) = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
+// Hard-coded key for now...will provide via a parameter later on
+__pdata unsigned char aes_key_string[] = "aabbccdd112233445566778899121311";
 
 
-// Perform Copying of data, to help prepare for encryption
-void aesCopyInit1(__xdata unsigned char *dest, __code unsigned char *source, uint8_t length) 
+// Default key to use if none provided, or invalid one provided
+__pdata unsigned char aes_default_key_string[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10};
+
+
+// Used to convert Hex # into Integers
+//
+uint8_t read_hex_nibble(const uint8_t c) __reentrant __nonbanked
 {
-   while(length--)
-   {
-      *dest++ = *source++;
-   }
+    if ((c >='0') && (c <= '9'))
+    {
+        return c - '0';
+    }
+    else if ((c >='A') && (c <= 'F'))
+    {
+        return c - 'A' + 10;
+    }
+    else if ((c >='a') && (c <= 'f'))
+    {
+        return c - 'a' + 10;
+    }
+    else
+    {
+        // printf("[%u] read_hex_nibble: Error char not in supported range",nodeId);
+        return 0;
+    }
+}
+
+// Generate EncryptionKey from aes key string provided (or default one if one provided is invalid)
+//
+void aes_loadkey()
+{
+	__pdata unsigned char *aes_key;
+	uint8_t i, key_length, num;
+
+	key_length = 16;
+
+	// Make sure that the string is valid. If not, use default key.
+	if (aes_key_string[strspn(aes_key_string, "0123456789abcdefABCDEF")] != 0)
+	{
+		aes_key = &aes_default_key_string[0];
+	} else {
+		aes_key = &aes_key_string[0];
+	}
+
+	for (i=0;i<key_length;i++) {
+		num = read_hex_nibble(aes_key[2 * i])<<4;
+		num += read_hex_nibble(aes_key[2 * i + 1]);
+		EncryptionKey[i] = num;
+	}
 }
 
 
@@ -72,9 +118,17 @@ void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 bool aes_init()
 {
    uint8_t status;
+//   uint8_t i;  // DEBUGGING
 
-   // Initialise Keys
-   aesCopyInit1(EncryptionKey, ReferenceEncryptionKey128, 16);
+   // Load Key
+   aes_loadkey();
+
+// DEBUGGING
+//   printf("ENC Key:");
+//         for (i=0; i<16; i++) {
+//                 printf("%u ",EncryptionKey[i]);
+//         }
+//         printf("\n");
 
    // Generate Decryption Key
    status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, KEY_SIZE_128_BITS);
