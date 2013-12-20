@@ -89,6 +89,7 @@ __pdata struct error_counts errors;
 __pdata struct statistics statistics, remote_statistics;
 
 /// optional features
+uint8_t feature_encryption;
 bool feature_golay;
 bool feature_opportunistic_resend;
 uint8_t feature_mavlink_framing;
@@ -123,6 +124,8 @@ main(void)
 	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
 	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
+	feature_encryption = param_get(PARAM_ENCRYPTION);
+
 
 	// Do hardware initialisation.
 	hardware_init();
@@ -136,11 +139,18 @@ main(void)
 	}
 
 #ifdef CPU_SI1030
-	if (! aes_init()) {
-		panic("failed to initialise aes");
+// At present, any value of encryption > 0, <=3 will trigger the test
+// Later on, the value of this will determine key size
+	if (feature_encryption > 0) {
+		if (! aes_init()) {
+			panic("failed to initialise aes");
+		}
 	}
 #endif
 
+
+
+if (feature_encryption != 0) {
 // Initial testing
 #ifdef CPU_SI1030
  memcpy(str, "Merry Christmas 2013", 20);
@@ -176,6 +186,7 @@ main(void)
          }
  printf("\n");
 #endif
+}
 
 	tdm_serial_loop();
 }

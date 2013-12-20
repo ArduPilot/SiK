@@ -62,6 +62,7 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
+	PARAM_ENCRYPTION,
 	PARAM_MAX				// must be last
 };
 
@@ -128,6 +129,18 @@ extern void param_default(void);
 
 /// convenient routine to constrain parameter values
 uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max);
+
+/// set the encryption key
+///
+extern bool param_set_encryption_key(__xdata unsigned char *key);
+
+/// get the encryption key
+///
+extern __xdata unsigned char *param_get_encryption_key();
+
+/// Print hex codes 
+///
+extern void print_hex_codes(__xdata unsigned char *in_str);
 
 #ifdef BOARD_rfd900a
 extern bool calibration_set(uint8_t idx, uint8_t value) __reentrant;

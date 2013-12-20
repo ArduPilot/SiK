@@ -144,7 +144,7 @@ __pdata struct tdm_trailer trailer;
 
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
-static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
+static __xdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
 /// display RSSI output
 ///
