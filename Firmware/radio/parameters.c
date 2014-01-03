@@ -66,19 +66,20 @@ __code const struct parameter_info {
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
 	{"RTSCTS",			0},
-	{"MAX_WINDOW",		131},
-	{"ENCRYPTION",		0}
+	{"MAX_WINDOW",		131}
+#ifdef CPU_SI1030
+	,{"ENCRYPTION",		0}
+#endif
 };
 
 
 __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 
 
+#ifdef CPU_SI1030
 // Holds the encrpytion string
 __xdata unsigned char encryption_key[16]; 
-
-// Holds the default encryption string 
-// static __xdata unsigned char encryption_key_def[] = {0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61};
+#endif
 
 /// In-RAM parameter store.
 ///
@@ -142,10 +143,12 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		if (val > 131)
 			return false;
 		break;
+#ifdef CPU_SI1030
 	case PARAM_ENCRYPTION:
 		if (val >3)
 			return false;
 		break;
+#endif
 	default:
 		// no sanity check for this value
 		break;
@@ -222,8 +225,6 @@ bool read_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
 	for (i = start; i < start+size; i ++)
 		input[i-start] = flash_read_scratch(i);
 	
-// printf("Reading from i:%d %u\n", i, input[i-start]);
-
 	// verify checksum
 	if (crc16(size, input) != ((uint16_t) flash_read_scratch(i+1)<<8 | flash_read_scratch(i)))
 		return false;
@@ -238,7 +239,6 @@ void write_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
 	// save parameters to the scratch page
 	for (i = start; i < start+size; i ++) 
 		flash_write_scratch(i, input[i-start]);
-// printf("Writing to i:%d %u\n", i, input[i-start]);
 		
 	
 	// write checksum
@@ -266,12 +266,15 @@ __critical {
 #if PIN_MAX > 0
 	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
 		return false;
+#ifdef CPU_SI1030
 	if(!read_params((__xdata unsigned char *)encryption_key, expected + 3 + sizeof(pin_values) + 2, sizeof(encryption_key)))
 		return false;
-
+#endif
 #else
+#ifdef CPU_SI1030
 	if(!read_params((__xdata unsigned char *)encryption_key, expected+3, sizeof(encryption_key)))
 		return false;
+#endif
 
 #endif
 
@@ -310,10 +313,13 @@ __critical {
 	// write pin params
 #if PIN_MAX > 0
 	write_params((__xdata uint8_t *)pin_values, sizeof(parameter_values)+3, sizeof(pin_values));
+#ifdef CPU_SI1030
 	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3+sizeof(pin_values)+2, sizeof(encryption_key));
+#endif
 #else
+#ifdef CPU_SI1030
 	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3, sizeof(encryption_key));
-	
+#endif	
 #endif
 
 }
@@ -499,6 +505,7 @@ void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_ou
 }
 
 
+#ifdef CPU_SI1030
 /// set the encryption key
 ///
 bool param_set_encryption_key(__xdata unsigned char *key)
@@ -522,6 +529,7 @@ bool param_set_encryption_key(__xdata unsigned char *key)
 
  return true;
 }
+#endif
 
 /// Print hex codes for given string
 ///
@@ -536,10 +544,11 @@ void print_hex_codes(__xdata unsigned char *in_str)
 	printf("\n");
 }
 
+#ifdef CPU_SI1030
 /// get the encryption key
 ///
 __xdata unsigned char *param_get_encryption_key()
 {
  return encryption_key;
 }
-
+#endif

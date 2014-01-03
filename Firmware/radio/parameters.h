@@ -62,7 +62,9 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
+#ifdef CPU_SI1030
 	PARAM_ENCRYPTION,
+#endif
 	PARAM_MAX				// must be last
 };
 
@@ -130,6 +132,7 @@ extern void param_default(void);
 /// convenient routine to constrain parameter values
 uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max);
 
+#ifdef CPU_SI1030
 /// set the encryption key
 ///
 extern bool param_set_encryption_key(__xdata unsigned char *key);
@@ -137,6 +140,7 @@ extern bool param_set_encryption_key(__xdata unsigned char *key);
 /// get the encryption key
 ///
 extern __xdata unsigned char *param_get_encryption_key();
+#endif
 
 /// Print hex codes 
 ///

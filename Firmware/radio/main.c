@@ -124,7 +124,9 @@ main(void)
 	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
 	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
+#ifdef CPU_SI1030
 	feature_encryption = param_get(PARAM_ENCRYPTION);
+#endif
 
 
 	// Do hardware initialisation.
