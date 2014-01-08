@@ -153,10 +153,11 @@ main(void)
 
 
 
+// KEEP THIS A LITTLE BIT LONGER TO TEST OUT OTHER CIPHERS
 #ifdef CPU_SI1030
 if (aes_get_encryption_level() > 0 ) {
 // Initial testing
- memcpy(str, "Merry Christmas 2013", 20);
+ memcpy(str, "Message to decrypt..", 20);
  in_str = str;
  out_str = strtmp;
 

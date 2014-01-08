@@ -730,7 +730,8 @@ tdm_serial_loop(void)
 
 #ifdef CPU_SI1030
 			if (aes_get_encryption_level() > 0) {
-				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 + len+sizeof(trailer)));
+				// Calculation here gives length of cipher text (= same length of padded block)
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 * (1 + (len+sizeof(trailer)>>4))));
 			} else {
 				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));		
 			}

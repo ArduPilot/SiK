@@ -36,7 +36,6 @@
 
 //=============================================================================
 // Function Prototypes
-// Fuctions used to initialize arrays.
 //-----------------------------------------------------------------------------
 
 extern bool aes_init(uint8_t encryption_level);

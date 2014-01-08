@@ -89,7 +89,6 @@ static void	clear_status_registers(void);
 bool
 radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
-//	__xdata uint8_t i;
 #ifdef INCLUDE_GOLAY
 	__xdata uint8_t gout[3];
 	__data uint16_t crc1, crc2;
@@ -123,13 +122,6 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 #ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
 #endif
-
-//printf("Received packet of length %u\n", receive_packet_length);
-//   printf("pack enc:");
-//         for (i=0; i<receive_packet_length; i++) {
-//                 printf("%u ",radio_buffer[i]);
-//         }
-//         printf("\n");
 
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
 #ifdef CPU_SI1030
