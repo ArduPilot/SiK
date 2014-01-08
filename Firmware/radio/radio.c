@@ -535,7 +535,6 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 bool
 radio_transmit(uint8_t len, __xdata uint8_t * __pdata data, __pdata uint16_t timeout_ticks)
 {
-//	__xdata uint8_t i;
 	bool ret;
 	__xdata uint8_t length;
 	__xdata uint8_t * __pdata buf;
@@ -550,13 +549,6 @@ radio_transmit(uint8_t len, __xdata uint8_t * __pdata data, __pdata uint16_t tim
 #ifdef _BOARD_RFD900A
 	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
 #endif
-
-//joe
-//   printf("B4 enc:");
-//         for (i=0; i<len; i++) {
-//                 printf("%u ",data[i]);
-//         }
-//         printf("\n");
 
 #ifdef CPU_SI1030
         if (aes_get_encryption_level() > 0) {
@@ -573,12 +565,6 @@ radio_transmit(uint8_t len, __xdata uint8_t * __pdata data, __pdata uint16_t tim
         length = len;
         buf = data;
 #endif
-
-//   printf("AFTER enc:");
-//         for (i=0; i<length; i++) {
-//                 printf("%u ",buf[i]);
-//         }
-//         printf("\n");
 
 	
 #ifdef INCLUDE_GOLAY
