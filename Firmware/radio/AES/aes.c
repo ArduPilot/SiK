@@ -44,6 +44,26 @@ SEGMENT_VARIABLE (InitialVector[16], U8, SEG_XDATA);
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 
+uint8_t encryption_level;
+
+
+// Indicate if encryption subsystem initialised and ready.
+//
+// returns a bool
+uint8_t aes_get_encryption_level()
+{
+        return encryption_level;
+}
+
+
+// Set status of initialistion of aes encryption
+//
+void aes_set_encryption_level(uint8_t encryption)
+{
+        encryption_level = encryption;
+}
+
+
 
 // Generate EncryptionKey from aes key string provided (or default one if one provided is invalid)
 //
@@ -68,10 +88,15 @@ void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 // Initialse variables ready for AES
 //
 // returns true if successful, or false if not
-bool aes_init()
+bool aes_init(uint8_t encryption_level)
 {
    uint8_t status;
 //   uint8_t i;  // DEBUGGING
+
+   aes_set_encryption_level(0);  // Initially set to zero
+
+   // If encyption level is 0, no encryption
+   if (encryption_level == 0) return true;
 
    // Load Key
    aes_initkey();
@@ -91,6 +116,8 @@ bool aes_init()
 
    // Initialise IV
    aesCopyInit2(InitialVector, ReferenceInitialVector);
+
+   aes_set_encryption_level(encryption_level);  // If up to here, must have been successful
 
    return true;
 }
@@ -197,5 +224,6 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 
 	return status;
 }
+
 
 

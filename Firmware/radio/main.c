@@ -41,7 +41,10 @@
 #include "tdm.h"
 #include "timer.h"
 #include "freq_hopping.h"
+
+#ifdef CPU_SI1030
 #include "AES/aes.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
@@ -143,18 +146,16 @@ main(void)
 #ifdef CPU_SI1030
 // At present, any value of encryption > 0, <=3 will trigger the test
 // Later on, the value of this will determine key size
-	if (feature_encryption > 0) {
-		if (! aes_init()) {
-			panic("failed to initialise aes");
-		}
+	if (! aes_init(feature_encryption)) {
+		panic("failed to initialise aes");
 	}
 #endif
 
 
 
-if (feature_encryption != 0) {
-// Initial testing
 #ifdef CPU_SI1030
+if (aes_get_encryption_level() > 0 ) {
+// Initial testing
  memcpy(str, "Merry Christmas 2013", 20);
  in_str = str;
  out_str = strtmp;
@@ -187,8 +188,9 @@ if (feature_encryption != 0) {
 		putchar(out_str[i]);
          }
  printf("\n");
-#endif
 }
+#endif
+
 
 	tdm_serial_loop();
 }

@@ -36,7 +36,7 @@
 #include "crc.h"
 
 #ifdef CPU_SI1030
-// #include "aes.h"
+#include "AES/aes.h"
 
 //-----------------------------------------------------------------------------
 // Interrupt proto (for SDCC compatibility)
@@ -89,12 +89,18 @@ static void	clear_status_registers(void);
 bool
 radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
+//	__xdata uint8_t i;
 #ifdef INCLUDE_GOLAY
 	__xdata uint8_t gout[3];
 	__data uint16_t crc1, crc2;
 	__data uint8_t elen;
 #endif // INCLUDE_GOLAY
 	__data uint8_t errcount = 0;
+
+#ifdef CPU_SI1030
+        __xdata uint8_t len_decrypted;
+        __xdata uint8_t pbuf_decrypted[MAX_PACKET_LENGTH];
+#endif
 
 	if (!packet_received) {
 		return false;
@@ -117,9 +123,32 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 #ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
 #endif
-		// simple unencoded packets
+
+//printf("Received packet of length %u\n", receive_packet_length);
+//   printf("pack enc:");
+//         for (i=0; i<receive_packet_length; i++) {
+//                 printf("%u ",radio_buffer[i]);
+//         }
+//         printf("\n");
+
+// If on appropriate CPU and encryption configured, then attempt to decrypt it
+#ifdef CPU_SI1030
+	if (aes_get_encryption_level() > 0) {
+		if (aes_decrypt(radio_buffer, receive_packet_length, pbuf_decrypted, &len_decrypted) != 0) {
+			panic("Error while trying to encrypt data");
+		}
+		*length = len_decrypted;
+		memcpy(buf, pbuf_decrypted, len_decrypted);
+	} else {
 		*length = receive_packet_length;
 		memcpy(buf, radio_buffer, receive_packet_length);
+	}
+#else
+	*length = receive_packet_length;
+	memcpy(buf, radio_buffer, receive_packet_length);
+#endif
+
+		// simple unencoded packets
 		radio_receiver_on();
 		return true;
 		
@@ -191,6 +220,21 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 			errors.corrected_packets++;
 		}
 	}
+
+// If on appropriate CPU and encryption configured, then attempt to decrypt it
+// Note how we perform decryption AFTER the GOLAY code. Wouldn't make sense to 
+// have encryption of a golay packet. GOLAY protects packet...so we can decrypt 
+#ifdef CPU_SI1030
+        if (aes_get_encryption_level() > 0) {
+                if (aes_decrypt(buf, gout[2], pbuf_decrypted, &len_decrypted) != 0) {
+                        panic("Error while trying to encrypt data");
+                }
+                *length = len_decrypted;
+                memcpy(buf, pbuf_decrypted, len_decrypted);
+        }
+#endif
+
+
 
 	return true;
 #endif // INCLUDE_GOLAY
@@ -324,9 +368,11 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	bool transmit_started;
 	__data uint8_t n;
 
+
 	if (length > sizeof(radio_buffer)) {
 		panic("oversized packet");
 	}
+
 
 	radio_clear_transmit_fifo();
 
@@ -495,14 +541,53 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 // @return	    true if packet sent successfully
 //
 bool
-radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
+radio_transmit(uint8_t len, __xdata uint8_t * __pdata data, __pdata uint16_t timeout_ticks)
 {
+//	__xdata uint8_t i;
 	bool ret;
+	__xdata uint8_t length;
+	__xdata uint8_t * __pdata buf;
+
+#ifdef CPU_SI1030
+	__xdata uint8_t len_encrypted;
+	__xdata uint8_t pbuf_encrypted[MAX_PACKET_LENGTH];
+#endif
+
 	EX0_SAVE_DISABLE;
 
 #ifdef _BOARD_RFD900A
 	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
 #endif
+
+//joe
+//   printf("B4 enc:");
+//         for (i=0; i<len; i++) {
+//                 printf("%u ",data[i]);
+//         }
+//         printf("\n");
+
+#ifdef CPU_SI1030
+        if (aes_get_encryption_level() > 0) {
+                if (aes_encrypt(data, len, pbuf_encrypted, &len_encrypted) != 0) {
+                        panic("Error while trying to encrypt data");
+                }
+                length = len_encrypted;
+                buf = &pbuf_encrypted[0];
+        } else {
+                length = len;
+                buf = data;
+        }
+#else
+        length = len;
+        buf = data;
+#endif
+
+//   printf("AFTER enc:");
+//         for (i=0; i<length; i++) {
+//                 printf("%u ",buf[i]);
+//         }
+//         printf("\n");
+
 	
 #ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
