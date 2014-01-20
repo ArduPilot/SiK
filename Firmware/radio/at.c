@@ -43,7 +43,7 @@
 __pdata uint8_t pdata_canary = 0x41;
 
 // AT command buffer
-__pdata char at_cmd[AT_CMD_MAXLEN + 1];
+__xdata char at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
 // mode flags
@@ -58,6 +58,10 @@ static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
 static void	at_s(void);
+
+#ifdef CPU_SI1030
+static void	at_e(void);
+#endif
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
@@ -244,6 +248,11 @@ at_command(void)
 				at_plus_counter = ATP_COUNT_1S;
 				at_mode_active = 0;
 				break;
+#ifdef CPU_SI1030
+			case 'E':
+				at_e();
+				break;
+#endif
 			case 'S':
 				at_s();
 				break;
@@ -363,7 +372,7 @@ at_s(void)
 	case '=':
 		if (sreg > 0) {
 			idx++;
-			val = at_parse_number();
+                	val = at_parse_number();
 			if (param_set(sreg, val)) {
 				at_ok();
 				return;
@@ -373,6 +382,42 @@ at_s(void)
 	}
 	at_error();
 }
+
+
+#ifdef CPU_SI1030
+static void 
+at_e(void)
+{
+
+        __pdata uint8_t         sreg;
+        __xdata unsigned char   *val;
+
+        // get the register number first
+        idx = 3;
+        sreg = at_parse_number();
+        // validate the selected sreg
+        if (sreg >= PARAM_MAX) {
+                at_error();
+                return;
+        }
+
+        switch (at_cmd[idx]) {
+        case '?':
+                val = param_get_encryption_key();
+		print_hex_codes(val);
+                return;
+
+        case '=':
+                if (param_set_encryption_key((__xdata unsigned char *)&at_cmd[4])) {
+                        at_ok();
+                        return;
+                }
+                break;
+        }
+        at_error();
+
+}
+#endif
 
 static void
 at_ampersand(void)

@@ -42,6 +42,10 @@
 #include "freq_hopping.h"
 #include "crc.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 #define USE_TICK_YIELD 1
 
 /// the state of the tdm system
@@ -144,7 +148,7 @@ __pdata struct tdm_trailer trailer;
 
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
-static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
+static __xdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
 /// display RSSI output
 ///
@@ -483,6 +487,7 @@ tdm_serial_loop(void)
 {
 	__pdata uint16_t last_t = timer2_tick();
 	__pdata uint16_t last_link_update = last_t;
+//	__xdata uint8_t i;
 
 	_canary = 42;
 
@@ -521,6 +526,13 @@ tdm_serial_loop(void)
 
 		// see if we have received a packet
 		if (radio_receive_packet(&len, pbuf)) {
+
+//printf("Received packet of length %u\n", len);
+//   printf("packet:");
+//         for (i=0; i<len; i++) {
+//                 printf("%u ",pbuf[i]);
+//         }
+//         printf("\n");
 
 			// update the activity indication
 			received_packet = true;
@@ -569,7 +581,7 @@ tdm_serial_loop(void)
 					LED_ACTIVITY = LED_ON;
 					serial_write_buf(pbuf, len);
 					LED_ACTIVITY = LED_OFF;
-					//printf("]\n");
+					// printf("]\n");
 				}
 			}
 			continue;
@@ -661,9 +673,22 @@ tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit -= sizeof(trailer)+1;
+
+#ifdef CPU_SI1030
+		if (aes_get_encryption_level() > 0) {
+			if (max_xmit < 16) {
+				// With AES, the cipher is up to 16 bytes larger than the text
+				// we are encrypting. So we make sure we have sufficient space
+				// i.e. min size of any cipher text is 16 bytes
+				continue;
+			}
+			max_xmit -= 16;
+		}
+#endif
 		if (max_xmit > max_data_packet_length) {
 			max_xmit = max_data_packet_length;
 		}
+
 
 		// ask the packet system for the next packet to send
 		if (send_at_command && 
@@ -702,7 +727,17 @@ tdm_serial_loop(void)
 			// calculate the control word as the number of
 			// 16usec ticks that will be left in this
 			// tdm state after this packet is transmitted
+
+#ifdef CPU_SI1030
+			if (aes_get_encryption_level() > 0) {
+				// Calculation here gives length of cipher text (= same length of padded block)
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 * (1 + (len+sizeof(trailer)>>4))));
+			} else {
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));		
+			}
+#else
 			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
+#endif
 		}
 
 		// set right transmit channel

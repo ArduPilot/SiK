@@ -41,7 +41,10 @@
 #include "tdm.h"
 #include "timer.h"
 #include "freq_hopping.h"
+
+#ifdef CPU_SI1030
 #include "AES/aes.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
@@ -89,6 +92,7 @@ __pdata struct error_counts errors;
 __pdata struct statistics statistics, remote_statistics;
 
 /// optional features
+uint8_t feature_encryption;
 bool feature_golay;
 bool feature_opportunistic_resend;
 uint8_t feature_mavlink_framing;
@@ -123,6 +127,10 @@ main(void)
 	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
 	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
+#ifdef CPU_SI1030
+	feature_encryption = param_get(PARAM_ENCRYPTION);
+#endif
+
 
 	// Do hardware initialisation.
 	hardware_init();
@@ -136,14 +144,20 @@ main(void)
 	}
 
 #ifdef CPU_SI1030
-	if (! aes_init()) {
+// At present, any value of encryption > 0, <=3 will trigger the test
+// Later on, the value of this will determine key size
+	if (! aes_init(feature_encryption)) {
 		panic("failed to initialise aes");
 	}
 #endif
 
-// Initial testing
+
+
+// KEEP THIS A LITTLE BIT LONGER TO TEST OUT OTHER CIPHERS
 #ifdef CPU_SI1030
- memcpy(str, "Merry Christmas 2013", 20);
+if (aes_get_encryption_level() > 0 ) {
+// Initial testing
+ memcpy(str, "Message to decrypt..", 20);
  in_str = str;
  out_str = strtmp;
 
@@ -175,7 +189,9 @@ main(void)
 		putchar(out_str[i]);
          }
  printf("\n");
+}
 #endif
+
 
 	tdm_serial_loop();
 }

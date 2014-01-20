@@ -67,10 +67,19 @@ __code const struct parameter_info {
 	{"MANCHESTER",		0},
 	{"RTSCTS",			0},
 	{"MAX_WINDOW",		131}
+#ifdef CPU_SI1030
+	,{"ENCRYPTION",		0}
+#endif
 };
 
 
 __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
+
+
+#ifdef CPU_SI1030
+// Holds the encrpytion string
+__xdata unsigned char encryption_key[16]; 
+#endif
 
 /// In-RAM parameter store.
 ///
@@ -134,6 +143,12 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		if (val > 131)
 			return false;
 		break;
+#ifdef CPU_SI1030
+	case PARAM_ENCRYPTION:
+		if (val >3)
+			return false;
+		break;
+#endif
 	default:
 		// no sanity check for this value
 		break;
@@ -222,8 +237,9 @@ void write_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
 	uint16_t	checksum;
 
 	// save parameters to the scratch page
-	for (i = start; i < start+size; i ++)
+	for (i = start; i < start+size; i ++) 
 		flash_write_scratch(i, input[i-start]);
+		
 	
 	// write checksum
 	checksum = crc16(size, input);
@@ -250,7 +266,18 @@ __critical {
 #if PIN_MAX > 0
 	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
 		return false;
+#ifdef CPU_SI1030
+	if(!read_params((__xdata unsigned char *)encryption_key, expected + 3 + sizeof(pin_values) + 2, sizeof(encryption_key)))
+		return false;
 #endif
+#else
+#ifdef CPU_SI1030
+	if(!read_params((__xdata unsigned char *)encryption_key, expected+3, sizeof(encryption_key)))
+		return false;
+#endif
+
+#endif
+
 	
 	// decide whether we read a supported version of the structure
 	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
@@ -286,12 +313,21 @@ __critical {
 	// write pin params
 #if PIN_MAX > 0
 	write_params((__xdata uint8_t *)pin_values, sizeof(parameter_values)+3, sizeof(pin_values));
+#ifdef CPU_SI1030
+	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3+sizeof(pin_values)+2, sizeof(encryption_key));
 #endif
+#else
+#ifdef CPU_SI1030
+	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3, sizeof(encryption_key));
+#endif	
+#endif
+
 }
 
 void
 param_default(void)
 {
+	// bool result;
 	__pdata uint8_t	i;
 
 	// set all parameters to their default values
@@ -307,6 +343,7 @@ param_default(void)
 		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
 	}
 #endif
+	// result = param_set_encryption_key('\0');
 }
 
 enum ParamID
@@ -424,5 +461,94 @@ calibration_lock() __reentrant
 		return true;
 	}
 	return false;
+}
+#endif
+
+
+// Used to convert individial Hex digits into Integers
+//
+uint8_t read_hex_nibble(const uint8_t c) __reentrant __nonbanked
+{
+    if ((c >='0') && (c <= '9'))
+    {
+        return c - '0';
+    }
+    else if ((c >='A') && (c <= 'F'))
+    {
+        return c - 'A' + 10;
+    }
+    else if ((c >='a') && (c <= 'f'))
+    {
+        return c - 'a' + 10;
+    }
+    else
+    {
+        // printf("[%u] read_hex_nibble: Error char not in supported range",nodeId);
+        return 0;
+    }
+}
+
+
+/// Convert string to hex codes
+///
+void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_out)
+{
+	uint8_t i, key_length, num;
+
+	key_length = 16;
+
+	for (i=0;i<key_length;i++) {
+		num = read_hex_nibble(str_in[2 * i])<<4;
+		num += read_hex_nibble(str_in[2 * i + 1]);
+		str_out[i] = num;
+	}
+}
+
+
+#ifdef CPU_SI1030
+/// set the encryption key
+///
+bool param_set_encryption_key(__xdata unsigned char *key)
+{
+	uint8_t len, key_length;
+	uint8_t i; 
+	__xdata unsigned char b[] = {0x62};
+
+	
+	key_length = 16;
+	len = strlen(key);
+
+ 	if (len < 32 ) {	
+		for (i=0;i< key_length;i++) {
+			// Set default key to b's
+			memcpy(&encryption_key[i], &b, 1);
+		}
+	} else {
+		convert_to_hex(key, encryption_key);
+	}
+
+ return true;
+}
+#endif
+
+/// Print hex codes for given string
+///
+void print_hex_codes(__xdata unsigned char *in_str)
+{
+	uint8_t i, key_length;
+	key_length = 16;
+
+	for (i=0; i<key_length; i++) {
+		printf("%x",in_str[i]);
+	}
+	printf("\n");
+}
+
+#ifdef CPU_SI1030
+/// get the encryption key
+///
+__xdata unsigned char *param_get_encryption_key()
+{
+ return encryption_key;
 }
 #endif

@@ -32,25 +32,44 @@
 #include "GenerateDecryptionKey.h"
 #include "AES_BlockCipher.h"
 #include "CBC_EncryptDecrypt.h"
+#include <stdlib.h>
 
-SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA);
+/* SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA); */
+__xdata unsigned char *EncryptionKey;
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
 SEGMENT_VARIABLE (InitialVector[16], U8, SEG_XDATA);
 
 // The following four will eventually be provided by user and by other means
 // They are here at present, to get the encryption/decryption working
-const SEGMENT_VARIABLE (ReferenceEncryptionKey128[16], U8, SEG_CODE) = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 
+uint8_t encryption_level;
 
-// Perform Copying of data, to help prepare for encryption
-void aesCopyInit1(__xdata unsigned char *dest, __code unsigned char *source, uint8_t length) 
+
+// Indicate if encryption subsystem initialised and ready.
+//
+// returns a bool
+uint8_t aes_get_encryption_level()
 {
-   while(length--)
-   {
-      *dest++ = *source++;
-   }
+        return encryption_level;
+}
+
+
+// Set status of initialistion of aes encryption
+//
+void aes_set_encryption_level(uint8_t encryption)
+{
+        encryption_level = encryption;
+}
+
+
+
+// Generate EncryptionKey from aes key string provided (or default one if one provided is invalid)
+//
+void aes_initkey()
+{
+	EncryptionKey = param_get_encryption_key();
 }
 
 
@@ -69,12 +88,25 @@ void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 // Initialse variables ready for AES
 //
 // returns true if successful, or false if not
-bool aes_init()
+bool aes_init(uint8_t encryption_level)
 {
    uint8_t status;
+//   uint8_t i;  // DEBUGGING
 
-   // Initialise Keys
-   aesCopyInit1(EncryptionKey, ReferenceEncryptionKey128, 16);
+   aes_set_encryption_level(0);  // Initially set to zero
+
+   // If encyption level is 0, no encryption
+   if (encryption_level == 0) return true;
+
+   // Load Key
+   aes_initkey();
+
+// DEBUGGING
+//   printf("ENC Key:");
+//         for (i=0; i<16; i++) {
+//                 printf("%u ",EncryptionKey[i]);
+//         }
+//         printf("\n");
 
    // Generate Decryption Key
    status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, KEY_SIZE_128_BITS);
@@ -84,6 +116,8 @@ bool aes_init()
 
    // Initialise IV
    aesCopyInit2(InitialVector, ReferenceInitialVector);
+
+   aes_set_encryption_level(encryption_level);  // If up to here, must have been successful
 
    return true;
 }
@@ -190,5 +224,6 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 
 	return status;
 }
+
 
 
