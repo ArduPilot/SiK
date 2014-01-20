@@ -56,7 +56,11 @@ __code const struct parameter_info {
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
 	{"NETID",			25},
 	{"TXPOWER",			0},
-	{"ECC",				0},
+#ifndef INCLUDE_GOLAY
+	{"DISABLED",		0},
+#else
+    {"ECC",				1},
+#endif
 	{"MAVLINK",			0},
 	{"OPPRESEND",		0},
 	{"MIN_FREQ",		0},
@@ -75,12 +79,6 @@ __code const struct parameter_info {
 
 __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 
-
-#ifdef CPU_SI1030
-// Holds the encrpytion string
-__xdata unsigned char encryption_key[16]; 
-#endif
-
 /// In-RAM parameter store.
 ///
 /// It seems painful to have to do this, but we need somewhere to
@@ -88,8 +86,20 @@ __xdata unsigned char encryption_key[16];
 /// page anyway.
 ///
 __xdata param_t	parameter_values[PARAM_MAX];
+#define NEXT_FLASH_LOC_PARAM sizeof(parameter_values)+3
 #if PIN_MAX > 0
 __xdata pins_user_info_t pin_values[PIN_MAX];
+#define NEXT_FLASH_LOC_PIN NEXT_FLASH_LOC_PARAM+sizeof(pin_values)+2
+#else  
+#define NEXT_FLASH_LOC_PIN NEXT_FLASH_LOC_PARAM
+#endif
+
+#ifdef CPU_SI1030
+// Holds the encrpytion string
+__xdata unsigned char encryption_key[16];
+#define NEXT_FLASH_LOC_ENC NEXT_FLASH_LOC_PIN+sizeof(encryption_key)+2
+#else
+#define NEXT_FLASH_LOC_ENC NEXT_FLASH_LOC_PIN
 #endif
 
 static bool
@@ -264,20 +274,15 @@ __critical {
 	
 	// read and verify pin params
 #if PIN_MAX > 0
-	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
+	if(!read_params((__xdata uint8_t *)pin_values, NEXT_FLASH_LOC_PARAM, sizeof(pin_values)))
 		return false;
+#endif
+    
+    // read and verify encryption params
 #ifdef CPU_SI1030
-	if(!read_params((__xdata unsigned char *)encryption_key, expected + 3 + sizeof(pin_values) + 2, sizeof(encryption_key)))
+	if(!read_params((__xdata unsigned char *)encryption_key, NEXT_FLASH_LOC_PIN, sizeof(encryption_key)))
 		return false;
 #endif
-#else
-#ifdef CPU_SI1030
-	if(!read_params((__xdata unsigned char *)encryption_key, expected+3, sizeof(encryption_key)))
-		return false;
-#endif
-
-#endif
-
 	
 	// decide whether we read a supported version of the structure
 	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
@@ -312,14 +317,11 @@ __critical {
 
 	// write pin params
 #if PIN_MAX > 0
-	write_params((__xdata uint8_t *)pin_values, sizeof(parameter_values)+3, sizeof(pin_values));
-#ifdef CPU_SI1030
-	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3+sizeof(pin_values)+2, sizeof(encryption_key));
+	write_params((__xdata uint8_t *)pin_values, NEXT_FLASH_LOC_PARAM, sizeof(pin_values));
 #endif
-#else
+    
 #ifdef CPU_SI1030
-	write_params((__xdata unsigned char *)encryption_key, sizeof(parameter_values)+3, sizeof(encryption_key));
-#endif	
+	write_params((__xdata unsigned char *)encryption_key, NEXT_FLASH_LOC_PIN, sizeof(encryption_key));
 #endif
 
 }
