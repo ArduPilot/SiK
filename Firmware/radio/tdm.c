@@ -486,6 +486,16 @@ tdm_serial_loop(void)
 
 	_canary = 42;
 
+    
+    
+#ifdef RADIO_SPLAT_TESTING_MODE
+    for (;;) {
+        radio_set_channel(0);
+        radio_transmit(MAX_PACKET_LENGTH, pbuf, 0);
+        //        radio_receiver_on();
+    }
+#else
+    
 	for (;;) {
 		__pdata uint8_t	len;
 		__pdata uint16_t tnow, tdelta;
@@ -665,6 +675,9 @@ tdm_serial_loop(void)
 			max_xmit = max_data_packet_length;
 		}
 
+        // Check to see if any pins have changed state
+        pins_user_check();
+        
 		// ask the packet system for the next packet to send
 		if (send_at_command && 
 		    max_xmit >= strlen(remote_at_cmd)) {
@@ -755,6 +768,7 @@ tdm_serial_loop(void)
 			LED_ACTIVITY = LED_OFF;
 		}
 	}
+#endif
 }
 
 #if 0

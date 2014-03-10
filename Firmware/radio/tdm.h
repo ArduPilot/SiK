@@ -38,6 +38,8 @@
 // Sync Logic on Pin // P2.6
 //#define TDM_SYNC_LOGIC
 
+//#define RADIO_SPLAT_TESTING_MODE
+
 #ifdef TDM_SYNC_LOGIC
 SBIT (TDM_SYNC_PIN, SFR_P2, 6);
 #endif // TDM_SYNC_LOGIC

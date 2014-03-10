@@ -225,7 +225,14 @@ class uploader(object):
 
 	def autosync(self):
 		'''use AT&UPDATE to put modem in update mode'''
-		import fdpexpect, time
+		import time, fdpexpect
+		
+		try:
+			TIMEOUT = fdpexpect.TIMEOUT
+		except AttributeError:
+			import pexpect
+			TIMEOUT = pexpect.TIMEOUT
+			
 		ser = fdpexpect.fdspawn(self.port.fileno(), logfile=sys.stdout)
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(self.atbaudrate)
@@ -235,7 +242,7 @@ class uploader(object):
 		ser.send('+++')
 		try:
 			ser.expect('OK', timeout=1.1)
-		except fdpexpect.TIMEOUT:
+		except TIMEOUT:
 			# may already be in AT mode
 			pass
 		for i in range(5):
@@ -249,7 +256,7 @@ class uploader(object):
 				if self.atbaudrate != 115200:
 					self.port.setBaudrate(115200)
 				return True
-			except fdpexpect.TIMEOUT:
+			except TIMEOUT:
 				continue
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(115200)
