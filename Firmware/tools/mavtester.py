@@ -16,6 +16,7 @@ parser.add_option("--port2", default=None, help="serial port 2")
 parser.add_option("--rate", default=4, type='float', help="initial stream rate")
 parser.add_option("--override-rate", default=1, type='float', help="RC_OVERRIDE rate")
 parser.add_option("--show", action='store_true', default=False, help="show messages")
+parser.add_option("--rtscts", action='store_true', default=False, help="enable RTSCTS hardware flow control")
 
 (opts, args) = parser.parse_args()
 
@@ -28,6 +29,10 @@ if opts.port1 is None or opts.port2 is None:
 # create GCS connection
 gcs = mavutil.mavlink_connection(opts.port1, baud=opts.baudrate)
 vehicle = mavutil.mavlink_connection(opts.port2, baud=opts.baudrate)
+
+if opts.rtscts:
+    gcs.set_rtscts(True)
+    vehicle.set_rtscts(True)
 
 start_time = time.time()
 last_vehicle_send = time.time()
