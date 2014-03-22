@@ -125,6 +125,9 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 	do {							\
 		/* GPIO config */				\
 		P0SKIP	|=  0x0c;		/* pins */	\
+                P0MDOUT |=  0x04;               /* CTS pushpull */ \
+                P0MDOUT &=  ~0x08;              /* RTS open drain */ \
+                P0DRV   &= ~0x04;               /* CTS low drive */ \
 		P1SKIP  |=  0x60;		/* LEDs */	\
 		SFRPAGE	 =  CONFIG_PAGE;			\
 		P1DRV	|=  0x60;		/* LEDs */	\

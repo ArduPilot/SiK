@@ -51,7 +51,8 @@ __xdata uint8_t tx_buf[650] = {0};
 static volatile __pdata uint16_t				rx_insert, rx_remove;
 static volatile __pdata uint16_t				tx_insert, tx_remove;
 
-
+// count of number of bytes we are allowed to send due to a RTS low reading
+static uint8_t rts_count;
 
 // flag indicating the transmitter is idle
 static volatile bool			tx_idle;
@@ -140,12 +141,19 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 		// look for another byte we can send
 		if (BUF_NOT_EMPTY(tx)) {
 #ifdef SERIAL_RTS
-			if (feature_rtscts && SERIAL_RTS && !at_mode_active) {
-				// the other end doesn't have room in
-				// its serial buffer
-				tx_idle = true;
-				return;
-			}
+                        if (feature_rtscts) {
+                                if (SERIAL_RTS && !at_mode_active) {
+                                        if (rts_count == 0) {
+                                                // the other end doesn't have room in
+                                                // its serial buffer
+                                                tx_idle = true;
+                                                return;
+                                        }
+                                        rts_count--;
+                                } else {
+                                        rts_count = 8;
+                                }
+                        }
 #endif
 			// fetch and send a byte
 			BUF_REMOVE(tx, c);
