@@ -4,7 +4,7 @@
 test MAVLink performance between two radios
 '''
 
-import sys, time, os
+import sys, time, os, threading, Queue
 
 from optparse import OptionParser
 parser = OptionParser("mavtester.py [options]")
@@ -35,6 +35,25 @@ vehicle.setup_logfile('vehicle.tlog')
 if opts.rtscts:
     gcs.set_rtscts(True)
     vehicle.set_rtscts(True)
+
+# we use thread based receive to avoid problems with serial buffer overflow in the Linux kernel. 
+def receive_thread(mav, q):
+    '''continuously receive packets are put them in the queue'''
+    while True:
+        m = mav.recv_match(blocking=True)
+        if m is not None:
+            q.put(m)
+
+# start receive threads for the 
+gcs_queue = Queue.Queue()
+gcs_thread = threading.Thread(target=receive_thread, args=(gcs, gcs_queue))
+gcs_thread.daemon = True
+gcs_thread.start()
+
+vehicle_queue = Queue.Queue()
+vehicle_thread = threading.Thread(target=receive_thread, args=(vehicle, vehicle_queue))
+vehicle_thread.daemon = True
+vehicle_thread.start()
 
 start_time = time.time()
 last_vehicle_send = time.time()
@@ -126,9 +145,9 @@ def recv_vehicle():
     '''
     receive packets in the vehicle
     '''
-    m = vehicle.recv_match(blocking=False)
-    if not m:
-        # timeout
+    try:
+        m = vehicle_queue.get(block=False)
+    except Queue.Empty:
         return False
     if m.get_type() == 'BAD_DATA':
         stats.vehicle_bad_data += 1
@@ -148,10 +167,10 @@ def recv_GCS():
     '''
     receive packets in the GCS
     '''
-    m = gcs.recv_match(blocking=False)
-    if not m:
-        # timeout
-        return False   
+    try:
+        m = gcs_queue.get(block=False)
+    except Queue.Empty:
+        return False
     if m.get_type() == 'BAD_DATA':
         stats.gcs_bad_data += 1
         return True
