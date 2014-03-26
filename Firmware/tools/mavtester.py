@@ -262,8 +262,11 @@ while True:
     send_override()
     stats.gcs_sent = gcs.mav.total_packets_sent
 
-    if not recv_vehicle() and not recv_GCS():
-        time.sleep(0.01)
+    while True:
+        recv1 = recv_vehicle()
+        recv2 = recv_GCS()
+        if not recv1 and not recv2:
+            break
 
     if time.time() - last_report >= 1.0:
         print(stats)
