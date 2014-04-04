@@ -223,34 +223,49 @@ class uploader(object):
 				if (not self.__verify_multi(bytes)):
 					raise RuntimeError("Verification failed in group at 0x%x" % address)
 
+        def expect(self, pattern, timeout):
+                '''wait for a pattern with timeout, return True if found, False if not'''
+                import re, time
+                prog = re.compile(pattern)
+                start = time.time()
+                s = ''
+                while time.time() < start + timeout:
+                        b = self.port.read(1)
+                        if len(b) > 0:
+                                sys.stdout.write(b)
+                                s += b
+                                if prog.search(s) is not None:
+                                        return True
+                        else:
+                                time.sleep(0.01)
+                return False
+
+        def send(self, s):
+                '''write a string to port and stdout'''
+                self.port.write(s)
+                sys.stdout.write(s)                        
+
 	def autosync(self):
 		'''use AT&UPDATE to put modem in update mode'''
-		import fdpexpect, time
-		ser = fdpexpect.fdspawn(self.port.fileno(), logfile=sys.stdout)
+		import time
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(self.atbaudrate)
 		print("Trying autosync")
-		ser.send('\r\n')
+		self.send('\r\n')
 		time.sleep(1.0)
-		ser.send('+++')
-		try:
-			ser.expect('OK', timeout=1.1)
-		except fdpexpect.TIMEOUT:
-			# may already be in AT mode
-			pass
+		self.send('+++')
+                self.expect('OK', timeout=1.1)
 		for i in range(5):
-			ser.send('\r\nATI\r\n')
-			try:
-				ser.expect('SiK .* on', timeout=0.5)
-				ser.send('\r\n')
-				time.sleep(0.2)
-				ser.send('AT&UPDATE\r\n')
-				time.sleep(0.7)
-				if self.atbaudrate != 115200:
-					self.port.setBaudrate(115200)
-				return True
-			except fdpexpect.TIMEOUT:
-				continue
+			self.send('\r\nATI\r\n')
+                        if not self.expect('SiK .* on', timeout=0.5):
+                                continue
+                        self.send('\r\n')
+                        time.sleep(0.2)
+                        self.send('AT&UPDATE\r\n')
+                        time.sleep(0.7)
+                        if self.atbaudrate != 115200:
+                                self.port.setBaudrate(115200)
+                        return True
 		if self.atbaudrate != 115200:
 			self.port.setBaudrate(115200)
 		return False
