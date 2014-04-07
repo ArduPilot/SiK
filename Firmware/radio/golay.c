@@ -82,19 +82,19 @@ static void
 golay_encode24(void)
 {
 	__pdata uint16_t v;
-	__pdata uint32_t codeword;
+	__pdata uint16_t codeword;
 
 	v = g3[0] | ((uint16_t)g3[1]&0xF)<<8;
-	codeword = golay23_encode[v];
+	codeword = golay23_encode_lo[v];
 	g6[0] = codeword & 0xFF;
 	g6[1] = (codeword >> 8) & 0xFF;
-	g6[2] = (codeword >> 16) & 0xFF;
+	g6[2] = v >> 5; // v/32  //(codeword >> 16) & 0xFF;
 
 	v = g3[2] | ((uint16_t)g3[1]&0xF0)<<4;
-	codeword = golay23_encode[v];
+	codeword = golay23_encode_lo[v];
 	g6[3] = codeword & 0xFF;
 	g6[4] = (codeword >> 8) & 0xFF;
-	g6[5] = (codeword >> 16) & 0xFF;
+	g6[5] = v >> 5; // v/32  //(codeword >> 16) & 0xFF;
 }
 
 // encode n bytes of data into 2n coded bytes. n must be a multiple 3
