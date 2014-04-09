@@ -116,7 +116,7 @@ golay_decode24(void)
 
 // decode n bytes of coded data into n/2 bytes of original data
 // n must be a multiple of 6
-// decoding takes about 20 microseconds per input byte
+// decoding takes about 4 microseconds per input byte
 // the number of 12 bit words that required correction is returned
 uint8_t 
 golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out)
