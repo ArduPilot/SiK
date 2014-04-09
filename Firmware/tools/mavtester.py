@@ -158,6 +158,7 @@ def recv_vehicle():
     if m.get_type() in ['RADIO','RADIO_STATUS']:
         stats.vehicle_radio_received += 1
         stats.vehicle_txbuf = m.txbuf
+        stats.vehicle_fixed = m.fixed
     if m.get_type() == 'RC_CHANNELS_OVERRIDE':
         process_override(m)
     return True
@@ -186,6 +187,7 @@ def recv_GCS():
     if m.get_type() in ['RADIO','RADIO_STATUS']:
         stats.gcs_radio_received += 1            
         stats.gcs_txbuf = m.txbuf
+        stats.gcs_fixed = m.fixed
     return True
     
 
@@ -213,6 +215,8 @@ class PacketStats(object):
         self.last_vehicle_radio = None
         self.vehicle_txbuf = 100
         self.gcs_txbuf = 100
+        self.vehicle_fixed = 0
+        self.gcs_fixed = 0
 
     def __str__(self):
         gcs_bytes_sent = gcs.mav.total_bytes_sent - self.gcs_last_bytes_sent
@@ -224,7 +228,7 @@ class PacketStats(object):
         if stats.latency_count != 0:
             avg_latency = stats.latency_total / stats.latency_count
         
-        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u loss:%u:%u%%/%u:%u%%" % (
+        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u loss:%u:%u%%/%u:%u%% fixed:%u/%u" % (
             self.vehicle_sent,
             self.vehicle_received,
             self.vehicle_received - self.vehicle_radio_received,
@@ -244,7 +248,9 @@ class PacketStats(object):
             gcs.mav_loss,
             gcs.packet_loss(),
             vehicle.mav_loss,
-            vehicle.packet_loss())
+            vehicle.packet_loss(),
+            stats.vehicle_fixed,
+            stats.gcs_fixed)
                                  
     
 '''
