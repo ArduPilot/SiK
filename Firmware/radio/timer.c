@@ -35,7 +35,7 @@
 static __data volatile uint8_t delay_counter;
 
 /// high 16 bits of timer2 SYSCLK/12 interrupt
-static __data volatile uint16_t timer2_high;
+static __pdata volatile uint16_t timer2_high;
 
 
 INTERRUPT(T3_ISR, INTERRUPT_TIMER3)

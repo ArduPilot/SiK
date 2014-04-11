@@ -84,9 +84,9 @@ golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * 
 static uint8_t 
 golay_decode24(void)
 {
-	__data uint16_t v;
-	__data uint16_t syn;
-	__data uint16_t e;
+	__pdata uint16_t v;
+	__pdata uint16_t syn;
+	__pdata uint16_t e;
 	__pdata uint8_t errcount = 0;
 
 	v = (g6[2] & 0x7F) << 5 | (g6[1] & 0xF8) >> 3;

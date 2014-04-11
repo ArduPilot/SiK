@@ -137,7 +137,7 @@ int16_t extract_hipri(uint8_t max_xmit)
 static 
 uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
-	__data uint16_t slen, offset = 0, high_offset;
+	__pdata uint16_t slen, offset = 0, high_offset;
 
     //
     // There is already a packet sitting waiting here

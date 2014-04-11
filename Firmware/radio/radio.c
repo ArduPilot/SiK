@@ -77,9 +77,9 @@ bool
 radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
 	__xdata uint8_t gout[3];
-	__data uint16_t crc1, crc2;
-	__data uint8_t errcount = 0;
-	__data uint8_t elen;
+	__pdata uint16_t crc1, crc2;
+	__pdata uint8_t errcount = 0;
+	__pdata uint8_t elen;
 
 	if (!packet_received) {
 		return false;
