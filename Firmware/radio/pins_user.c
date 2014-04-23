@@ -73,18 +73,6 @@ pins_user_init(void)
 		pins_user_set_value(i, pin_values[i].pin_dir);
 	}
 	
-//	// configure timer 0 for pin change checking
-//	TR0 	 = 0;						// timer off
-//	TMOD	 = (TMOD & ~0x0f) | 0x01;	// 16-bit timer
-//	// Use the system clock as serial is using timer 1 and prescale bits
-//	CKCON	|= 0x04;
-//	TF0		 = 0;						// Clear the Overflow Flag
-////	TL0		 = 0x0f;
-////	TH0		 = 0x0f;
-//	TR0		 = 1;						// timer on
-//	ET0		 = 1;						// Timer 0 Interrupt Enable
-	
-	
 // Client Application Hack
 //	pins_user_set_value(3,PIN_HIGH);
 }
@@ -139,6 +127,7 @@ pins_user_set_io(__pdata uint8_t pin, bool in_out)
 				break;
 				
 			default:
+				SFRPAGE	= LEGACY_PAGE;
 				return false;
 		}
 		SFRPAGE	= LEGACY_PAGE;
@@ -229,10 +218,10 @@ pins_user_get_adc(__pdata uint8_t pin)
 	return PIN_ERROR;
 }
 
-uint8_t p, p_count;
 void
 pins_user_check()
 {
+//	static uint8_t p, p_count;
 //	if (pins_user_get_adc(5) != p || p_count != 0) {
 //		if(pins_user_get_adc(5) != p)
 //		{
@@ -254,13 +243,3 @@ pins_user_check()
 }
 
 #endif // PIN_MAX > 0
-
-//// timer0 interrupt called every x microseconds
-//INTERRUPT(T0_ISR, INTERRUPT_TIMER0)
-//{
-////	TF0 = 0; // Does this get cleared automagicaly?
-//
-//#if PIN_MAX > 0
-////	pins_user_check();
-//#endif // PIN_MAX > 0
-//}

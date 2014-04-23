@@ -76,12 +76,10 @@ static void	clear_status_registers(void);
 bool
 radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
-#ifdef INCLUDE_GOLAY
 	__xdata uint8_t gout[3];
 	__data uint16_t crc1, crc2;
-	__data uint8_t elen;
-#endif // INCLUDE_GOLAY
 	__data uint8_t errcount = 0;
+	__data uint8_t elen;
 
 	if (!packet_received) {
 		return false;
@@ -100,18 +98,14 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 #endif
 
-// If GOLAY not included always run this code..
-#ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
-#endif
 		// simple unencoded packets
 		*length = receive_packet_length;
 		memcpy(buf, radio_buffer, receive_packet_length);
 		radio_receiver_on();
 		return true;
-		
-#ifdef INCLUDE_GOLAY
 	}
+
 	// decode it in the callers buffer. This relies on the
 	// in-place decode properties of the golay code. Decoding in
 	// this way allows us to overlap decoding with the next receive
@@ -127,7 +121,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		debug("rx len invalid %u\n", (unsigned)elen);
 		goto failed;
 	}
-	
+
 	// decode the header
 	errcount = golay_decode(6, buf, gout);
 	if (gout[0] != netid[0] ||
@@ -180,7 +174,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	}
 
 	return true;
-#endif // INCLUDE_GOLAY
+
 failed:
 	if (errors.rx_errors != 0xFFFF) {
 		errors.rx_errors++;
@@ -421,7 +415,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	return false;
 }
 
-#ifdef INCLUDE_GOLAY
+
 // start transmitting a packet from the transmit FIFO
 //
 // @param length		number of data bytes to send
@@ -471,7 +465,6 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 
 	return radio_transmit_simple(elen, radio_buffer, timeout_ticks);
 }
-#endif // INCLUDE_GOLAY
 
 // start transmitting a packet from the transmit FIFO
 //
@@ -491,16 +484,11 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
 #endif
 	
-#ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
 		ret = radio_transmit_simple(length, buf, timeout_ticks);
 	} else {
 		ret = radio_transmit_golay(length, buf, timeout_ticks);
 	}
-#else // INCLUDE_GOLAY
-	ret = radio_transmit_simple(length, buf, timeout_ticks);
-#endif // INCLUDE_GOLAY
-	
 #ifdef _BOARD_RFD900A
 	PA_ENABLE = 0;		// Set PA_Enable to off the PA after TX cycle
 #endif
@@ -545,26 +533,26 @@ bool
 radio_initialise(void)
 {
 	uint8_t status;
-	
+
 	delay_msec(50);
-	
+
 	// make sure there is a radio on the SPI bus
 	status = register_read(EZRADIOPRO_DEVICE_VERSION);
 	if (status == 0xFF || status < 5) {
 		// no valid radio there?
 		return false;
 	}
-	
+
 	// Reset the radio and setup all the registers
 	software_reset();
 	
 	status = register_read(EZRADIOPRO_DEVICE_VERSION);
-	
+
 	if ((status & EZRADIOPRO_IPOR) == 0) {
 		// it hasn't powered up cleanly, reset it
 		return software_reset();
 	}
-	
+
 	if (status & EZRADIOPRO_ICHIPRDY) {
 		// already ready
 		return true;
@@ -762,7 +750,7 @@ radio_configure(__pdata uint8_t air_rate)
 	// setup frequency and channel spacing
 	set_frequency_registers(settings.frequency);
 	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, settings.channel_spacing);
-#ifdef INCLUDE_GOLAY
+
 	if (feature_golay) {
 		// when using golay encoding we use our own crc16
 		// instead of the hardware CRC, as we need to correct
@@ -776,7 +764,6 @@ radio_configure(__pdata uint8_t air_rate)
 		// no header check
 		register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x00);
 	} else {
-#endif // INCLUDE_GOLAY
 		register_write(EZRADIOPRO_DATA_ACCESS_CONTROL,
 			       EZRADIOPRO_ENPACTX | 
 			       EZRADIOPRO_ENPACRX |
@@ -788,9 +775,7 @@ radio_configure(__pdata uint8_t air_rate)
 		register_write(EZRADIOPRO_HEADER_CONTROL_1, 0x0C);
 		register_write(EZRADIOPRO_HEADER_ENABLE_3, 0xFF);
 		register_write(EZRADIOPRO_HEADER_ENABLE_2, 0xFF);
-#ifdef INCLUDE_GOLAY
 	}
-#endif // INCLUDE_GOLAY
 
 
 	// set FIFO limits to allow for sending larger than 64 byte packets

@@ -4,7 +4,7 @@
 test MAVLink performance between two radios
 '''
 
-import sys, time, os
+import sys, time, os, threading, Queue
 
 from optparse import OptionParser
 parser = OptionParser("mavtester.py [options]")
@@ -16,6 +16,7 @@ parser.add_option("--port2", default=None, help="serial port 2")
 parser.add_option("--rate", default=4, type='float', help="initial stream rate")
 parser.add_option("--override-rate", default=1, type='float', help="RC_OVERRIDE rate")
 parser.add_option("--show", action='store_true', default=False, help="show messages")
+parser.add_option("--rtscts", action='store_true', default=False, help="enable RTSCTS hardware flow control")
 
 (opts, args) = parser.parse_args()
 
@@ -26,13 +27,40 @@ if opts.port1 is None or opts.port2 is None:
     sys.exit(1)
 
 # create GCS connection
-gcs = mavutil.mavlink_connection(opts.port1, baud=opts.baudrate)
-vehicle = mavutil.mavlink_connection(opts.port2, baud=opts.baudrate)
+gcs = mavutil.mavlink_connection(opts.port1, baud=opts.baudrate, input=True)
+gcs.setup_logfile('gcs.tlog')
+vehicle = mavutil.mavlink_connection(opts.port2, baud=opts.baudrate, input=False)
+vehicle.setup_logfile('vehicle.tlog')
+
+if opts.rtscts:
+    gcs.set_rtscts(True)
+    vehicle.set_rtscts(True)
+
+# we use thread based receive to avoid problems with serial buffer overflow in the Linux kernel. 
+def receive_thread(mav, q):
+    '''continuously receive packets are put them in the queue'''
+    while True:
+        m = mav.recv_match(blocking=True)
+        if m is not None:
+            q.put(m)
+
+# start receive threads for the 
+gcs_queue = Queue.Queue()
+gcs_thread = threading.Thread(target=receive_thread, args=(gcs, gcs_queue))
+gcs_thread.daemon = True
+gcs_thread.start()
+
+vehicle_queue = Queue.Queue()
+vehicle_thread = threading.Thread(target=receive_thread, args=(vehicle, vehicle_queue))
+vehicle_thread.daemon = True
+vehicle_thread.start()
 
 start_time = time.time()
 last_vehicle_send = time.time()
 last_gcs_send = time.time()
 last_override_send = time.time()
+vehicle_lat = 0
+gcs_lat = 0
 
 def send_telemetry():
     '''
@@ -40,7 +68,7 @@ def send_telemetry():
     the GCS. This emulates the typical pattern of telemetry in
     ArduPlane 2.75 in AUTO mode
     '''    
-    global last_vehicle_send
+    global last_vehicle_send, vehicle_lat
     now = time.time()
     # send at rate specified by user. This doesn't do rate adjustment yet (APM does adjustment
     # based on RADIO packets)
@@ -51,7 +79,7 @@ def send_telemetry():
     time_ms = time_usec // 1000
 
     vehicle.mav.heartbeat_send(1, 3, 217, 10, 4, 3)
-    vehicle.mav.global_position_int_send(time_ms, -353638070, 1491642131, 737900, 140830, 2008, -433, 224, 35616)
+    vehicle.mav.global_position_int_send(time_ms, vehicle_lat, 1491642131, 737900, 140830, 2008, -433, 224, 35616)
     vehicle.mav.rc_channels_scaled_send(time_boot_ms=time_ms, port=0, chan1_scaled=280, chan2_scaled=3278, chan3_scaled=-3023, chan4_scaled=0, chan5_scaled=0, chan6_scaled=0, chan7_scaled=0, chan8_scaled=0, rssi=0)
     vehicle.mav.servo_output_raw_send(time_usec=time_usec, port=0, servo1_raw=1470, servo2_raw=1628, servo3_raw=1479, servo4_raw=1506, servo5_raw=1500, servo6_raw=1556, servo7_raw=1500, servo8_raw=1500)
     vehicle.mav.rc_channels_raw_send(time_boot_ms=time_ms, port=0, chan1_raw=1470, chan2_raw=1618, chan3_raw=1440, chan4_raw=1509, chan5_raw=1168, chan6_raw=1556, chan7_raw=1224, chan8_raw=994, rssi=0)
@@ -67,6 +95,8 @@ def send_telemetry():
     vehicle.mav.ahrs_send(omegaIx=0.000540865410585, omegaIy=-0.00631708558649, omegaIz=0.00380697473884, accel_weight=0.0, renorm_val=0.0, error_rp=0.094664350152, error_yaw=0.0121578350663)
     vehicle.mav.hwstatus_send(Vcc=0, I2Cerr=0)
     vehicle.mav.wind_send(direction=27.729429245, speed=5.35723495483, speed_z=-1.92264056206)
+
+    vehicle_lat += 1
 
 def send_GCS():
     '''
@@ -85,6 +115,8 @@ def send_override():
     '''
     global last_override_send
     now = time.time()
+    if opts.override_rate == 0:
+        return
     if now - last_override_send < 1.0/opts.override_rate:
         return
     time_ms = int((now - start_time) * 1.0e3)
@@ -113,40 +145,51 @@ def recv_vehicle():
     '''
     receive packets in the vehicle
     '''
-    m = vehicle.recv_match(blocking=True,timeout=0.001)
-    if not m:
-        # timeout
-        return
+    try:
+        m = vehicle_queue.get(block=False)
+    except Queue.Empty:
+        return False
     if m.get_type() == 'BAD_DATA':
         stats.vehicle_bad_data += 1
-        return
+        return True
     if opts.show:
         print(m)
     stats.vehicle_received += 1
     if m.get_type() in ['RADIO','RADIO_STATUS']:
         stats.vehicle_radio_received += 1
         stats.vehicle_txbuf = m.txbuf
+        stats.vehicle_fixed = m.fixed
     if m.get_type() == 'RC_CHANNELS_OVERRIDE':
         process_override(m)
+    return True
 
 
 def recv_GCS():
     '''
     receive packets in the GCS
     '''
-    m = gcs.recv_match(blocking=True,timeout=0.001)
-    if not m:
-        # timeout
-        return    
+    try:
+        m = gcs_queue.get(block=False)
+    except Queue.Empty:
+        return False
     if m.get_type() == 'BAD_DATA':
         stats.gcs_bad_data += 1
-        return
+        return True
+    if m.get_type() == 'GLOBAL_POSITION_INT':
+        global gcs_lat
+        if gcs_lat != m.lat:
+            print("Lost %u GLOBAL_POSITION_INT messages" % (m.lat - gcs_lat))
+            gcs_lat = m.lat
+        gcs_lat += 1
     if opts.show:
         print(m)
     stats.gcs_received += 1        
     if m.get_type() in ['RADIO','RADIO_STATUS']:
         stats.gcs_radio_received += 1            
         stats.gcs_txbuf = m.txbuf
+        stats.gcs_fixed = m.fixed
+    return True
+    
 
 
 class PacketStats(object):
@@ -172,6 +215,8 @@ class PacketStats(object):
         self.last_vehicle_radio = None
         self.vehicle_txbuf = 100
         self.gcs_txbuf = 100
+        self.vehicle_fixed = 0
+        self.gcs_fixed = 0
 
     def __str__(self):
         gcs_bytes_sent = gcs.mav.total_bytes_sent - self.gcs_last_bytes_sent
@@ -183,7 +228,7 @@ class PacketStats(object):
         if stats.latency_count != 0:
             avg_latency = stats.latency_total / stats.latency_count
         
-        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u" % (
+        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u loss:%u:%u%%/%u:%u%% fixed:%u/%u" % (
             self.vehicle_sent,
             self.vehicle_received,
             self.vehicle_received - self.vehicle_radio_received,
@@ -199,7 +244,13 @@ class PacketStats(object):
             self.vehicle_bad_data,
             self.gcs_bad_data,
             self.vehicle_txbuf,
-            self.gcs_txbuf)
+            self.gcs_txbuf,
+            gcs.mav_loss,
+            gcs.packet_loss(),
+            vehicle.mav_loss,
+            vehicle.packet_loss(),
+            stats.vehicle_fixed,
+            stats.gcs_fixed)
                                  
     
 '''
@@ -217,8 +268,11 @@ while True:
     send_override()
     stats.gcs_sent = gcs.mav.total_packets_sent
 
-    recv_vehicle()
-    recv_GCS()
+    while True:
+        recv1 = recv_vehicle()
+        recv2 = recv_GCS()
+        if not recv1 and not recv2:
+            break
 
     if time.time() - last_report >= 1.0:
         print(stats)

@@ -59,13 +59,12 @@ enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
 /// When changing this structure, PINS_USER_INFO_DEFAULT and param_default() need updating
 ///
 typedef struct pins_user_info {
-	uint32_t   node_mirror;
 	uint16_t   output:4;
 	uint16_t   pin_dir:4;
 	uint16_t   pin_mirror:8;
 } pins_user_info_t;
 
-#define PINS_USER_INFO_DEFAULT {PIN_MIRROR_NULL, PIN_OUTPUT, PIN_LOW, PIN_NULL}
+#define PINS_USER_INFO_DEFAULT {PIN_OUTPUT, PIN_LOW, PIN_NULL}
 
 #if PIN_MAX > 0
 extern void pins_user_init(void);

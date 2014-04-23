@@ -59,7 +59,6 @@
 #include "serial.h"
 #include "board_info.h"
 #include "pins_user.h"
-#include "golay23.h"
 #include "parameters.h"
 #include "at.h"
 #include "flash.h"

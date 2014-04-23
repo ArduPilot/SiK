@@ -44,6 +44,7 @@
 #include "tdm.h"
 #include "crc.h"
 #include <flash_layout.h>
+#include "pins_user.h"
 
 /// In-ROM parameter info table.
 ///
@@ -54,27 +55,20 @@ __code const struct parameter_info {
 	{"FORMAT", 		PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",	57}, // match APM default of 57600
 	{"AIR_SPEED",		64}, // relies on MAVLink flow control
-	{"NETID",			25},
-	{"TXPOWER",			0},
-#ifdef INCLUDE_GOLAY
-	{"ECC",				1},
-#else
-	{"ECC",				0},
-#endif
-	{"MAVLINK",			0},
-	{"OPPRESEND",		0},
+	{"NETID",		25},
+	{"TXPOWER",		0},
+	{"ECC",			1},
+	{"MAVLINK",		1},
+	{"OPPRESEND",		1},
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
 	{"NUM_CHANNELS",	0},
 	{"DUTY_CYCLE",		100},
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
-	{"RTSCTS",			0},
+	{"RTSCTS",		0},
 	{"MAX_WINDOW",		131}
 };
-
-
-__code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 
 /// In-RAM parameter store.
 ///
@@ -84,6 +78,7 @@ __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 ///
 __xdata param_t	parameter_values[PARAM_MAX];
 #if PIN_MAX > 0
+__code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 __xdata pins_user_info_t pin_values[PIN_MAX];
 #endif
 
@@ -116,10 +111,6 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 
 	case PARAM_ECC:
-// If Golay not defined, we can't set this variable
-#ifndef INCLUDE_GOLAY
-		return false;
-#endif // INCLUDE_GOLAY
 	case PARAM_OPPRESEND:
 		// boolean 0/1 only
 		if (val > 1)
@@ -138,6 +129,7 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		if (val > 131)
 			return false;
 		break;
+
 	default:
 		// no sanity check for this value
 		break;
@@ -258,7 +250,7 @@ __critical {
 		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
-	
+
 	for (i = 0; i < sizeof(parameter_values); i++) {
 		if (!param_check(i, parameter_values[i])) {
 			parameter_values[i] = parameter_info[i].default_value;
@@ -308,7 +300,6 @@ param_default(void)
 	
 #if PIN_MAX > 0
 	for (i = 0; i < PIN_MAX; i ++) {
-		pin_values[i].node_mirror = pins_defaults.node_mirror;
 		pin_values[i].output = pins_defaults.output;
 		pin_values[i].pin_dir = pins_defaults.pin_dir;
 		pin_values[i].pin_mirror = pins_defaults.pin_mirror;

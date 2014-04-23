@@ -57,10 +57,6 @@ extern void	serial_interrupt(void)	__interrupt(INTERRUPT_UART0);
 ///
 extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
-/// Timer0 tick interrupt handler
-///
-//extern void    T0_ISR(void)            __interrupt(INTERRUPT_TIMER0);
-
 /// Timer2 tick interrupt handler
 ///
 extern void    T2_ISR(void)            __interrupt(INTERRUPT_TIMER2);

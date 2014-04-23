@@ -44,14 +44,15 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata uint8_t rx_buf[1900] = {0};
+__xdata uint8_t rx_buf[1890] = {0};
 __xdata uint8_t tx_buf[650] = {0};
 
 // FIFO insert/remove pointers
 static volatile __pdata uint16_t				rx_insert, rx_remove;
 static volatile __pdata uint16_t				tx_insert, tx_remove;
 
-
+// count of number of bytes we are allowed to send due to a RTS low reading
+static uint8_t rts_count;
 
 // flag indicating the transmitter is idle
 static volatile bool			tx_idle;
@@ -140,12 +141,19 @@ serial_interrupt(void) __interrupt(INTERRUPT_UART0)
 		// look for another byte we can send
 		if (BUF_NOT_EMPTY(tx)) {
 #ifdef SERIAL_RTS
-			if (feature_rtscts && SERIAL_RTS && !at_mode_active) {
-				// the other end doesn't have room in
-				// its serial buffer
-				tx_idle = true;
-				return;
-			}
+		if (feature_rtscts) {
+				if (SERIAL_RTS && !at_mode_active) {
+						if (rts_count == 0) {
+								// the other end doesn't have room in
+								// its serial buffer
+								tx_idle = true;
+								return;
+						}
+						rts_count--;
+				} else {
+								rts_count = 8;
+				}
+		}
 #endif
 			// fetch and send a byte
 			BUF_REMOVE(tx, c);

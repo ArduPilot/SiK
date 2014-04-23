@@ -146,6 +146,8 @@ __pdata struct tdm_trailer trailer;
 static bool send_at_command;
 static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
+#define PACKET_OVERHEAD (sizeof(trailer)+16)
+
 /// display RSSI output
 ///
 void
@@ -486,16 +488,13 @@ tdm_serial_loop(void)
 
 	_canary = 42;
 
-    
-    
 #ifdef RADIO_SPLAT_TESTING_MODE
-    for (;;) {
-        radio_set_channel(0);
-        radio_transmit(MAX_PACKET_LENGTH, pbuf, 0);
-        //        radio_receiver_on();
-    }
+		for (;;) {
+				radio_set_channel(0);
+				radio_transmit(MAX_PACKET_LENGTH, pbuf, 0);
+				//radio_receiver_on();
+		}
 #else
-    
 	for (;;) {
 		__pdata uint8_t	len;
 		__pdata uint16_t tnow, tdelta;
@@ -666,18 +665,20 @@ tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit = (tdm_state_remaining - packet_latency) / ticks_per_byte;
-		if (max_xmit < sizeof(trailer)+1) {
+		if (max_xmit < PACKET_OVERHEAD) {
 			// can't fit the trailer in with a byte to spare
 			continue;
 		}
-		max_xmit -= sizeof(trailer)+1;
+		max_xmit -= PACKET_OVERHEAD;
 		if (max_xmit > max_data_packet_length) {
 			max_xmit = max_data_packet_length;
 		}
 
-        // Check to see if any pins have changed state
-        pins_user_check();
-        
+#if PIN_MAX > 0
+		// Check to see if any pins have changed state
+		pins_user_check();
+#endif
+		
 		// ask the packet system for the next packet to send
 		if (send_at_command && 
 		    max_xmit >= strlen(remote_at_cmd)) {
@@ -897,6 +898,7 @@ tdm_init(void)
 
 	// calculate how many 16usec ticks it takes to send each byte
 	ticks_per_byte = (8+(8000000UL/(air_rate*1000UL)))/16;
+	ticks_per_byte++;
 
 	// calculate the minimum packet latency in 16 usec units
 	// we initially assume a preamble length of 40 bits, then
@@ -918,9 +920,9 @@ tdm_init(void)
 	}
 
 	// set the silence period to two times the packet latency
-        silence_period = 2*packet_latency;
+	silence_period = 2*packet_latency;
 
-        // set the transmit window to allow for 3 full sized packets
+	// set the transmit window to allow for 3 full sized packets
 	window_width = 3*(packet_latency+(max_data_packet_length*(uint32_t)ticks_per_byte));
 
 	// if LBT is enabled, we need at least 3*5ms of window width
@@ -929,8 +931,6 @@ tdm_init(void)
 		lbt_min_time = LBT_MIN_TIME_USEC/16;
 		window_width = constrain(window_width, 3*lbt_min_time, window_width);
 	}
-
-	//printf("desired %u\r\n", (unsigned) window_width);
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
@@ -947,8 +947,6 @@ tdm_init(void)
 	if (window_width > 0x1fff) {
 		window_width = 0x1fff;
 	}
-
-	//printf("shrunk %u\r\n", (unsigned) window_width);
 
 	tx_window_width = window_width;
 
