@@ -52,22 +52,22 @@ __code const struct parameter_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
-	{"FORMAT", 		PARAM_FORMAT_CURRENT},
-	{"SERIAL_SPEED",	57}, // match APM default of 57600
-	{"AIR_SPEED",		64}, // relies on MAVLink flow control
-	{"NETID",		25},
-	{"TXPOWER",		0},
-	{"ECC",			1},
-	{"MAVLINK",		1},
-	{"OPPRESEND",		1},
-	{"MIN_FREQ",		0},
-	{"MAX_FREQ",		0},
-	{"NUM_CHANNELS",	0},
-	{"DUTY_CYCLE",		100},
-	{"LBT_RSSI",		0},
-	{"MANCHESTER",		0},
-	{"RTSCTS",		0},
-	{"MAX_WINDOW",		131}
+	{"FORMAT",         PARAM_FORMAT_CURRENT},
+	{"SERIAL_SPEED",   57}, // match APM default of 57600
+	{"AIR_SPEED",      64}, // relies on MAVLink flow control
+	{"NETID",          25},
+	{"TXPOWER",         0},
+	{"ECC",             1},
+	{"MAVLINK",         1},
+	{"OPPRESEND",       1},
+	{"MIN_FREQ",        0},
+	{"MAX_FREQ",        0},
+	{"NUM_CHANNELS",    0},
+	{"DUTY_CYCLE",    100},
+	{"LBT_RSSI",        0},
+	{"MANCHESTER",      0},
+	{"RTSCTS",          0},
+	{"MAX_WINDOW",    131},
 };
 
 /// In-RAM parameter store.
@@ -77,10 +77,21 @@ __code const struct parameter_info {
 /// page anyway.
 ///
 __xdata param_t	parameter_values[PARAM_MAX];
+
+// Three extra bytes, 1 for the number of params and 2 for the checksum
+#define PARAM_FLASH_START		1
+#define PARAM_FLASH_END			(PARAM_FLASH_START + sizeof(parameter_values) + 2)
+
 #if PIN_MAX > 0
 __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 __xdata pins_user_info_t pin_values[PIN_MAX];
+
+// Place the start away from the other params to allow for expantion 2<<6 = 128
+#define PIN_FLASH_START (2<<6)
+#define PIN_FLASH_END		(PIN_FLASH_START + sizeof(pin_values) + 2)
 #endif
+
+
 
 static bool
 param_check(__pdata enum ParamID id, __data uint32_t val)
@@ -199,9 +210,9 @@ param_get(__data enum ParamID param)
 	return parameter_values[param];
 }
 
-bool read_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
+bool read_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
 {
-	uint8_t		i;
+	uint16_t		i;
 	
 	for (i = start; i < start+size; i ++)
 		input[i-start] = flash_read_scratch(i);
@@ -212,10 +223,9 @@ bool read_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
 	return true;
 }
 
-void write_params(__xdata uint8_t * __data input, uint8_t start, uint8_t size)
+void write_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
 {
-	uint8_t		i;
-	uint16_t	checksum;
+	uint16_t	i, checksum;
 
 	// save parameters to the scratch page
 	for (i = start; i < start+size; i ++)
@@ -242,7 +252,7 @@ __critical {
 		return false;
 	
 	// read and verify params
-	if(!read_params((__xdata uint8_t *)parameter_values, 1, expected))
+	if(!read_params((__xdata uint8_t *)parameter_values, PARAM_FLASH_START, expected))
 		return false;
 	
 	// decide whether we read a supported version of the structure
@@ -259,7 +269,7 @@ __critical {
 	
 	// read and verify pin params
 #if PIN_MAX > 0
-	if(!read_params((__xdata uint8_t *)pin_values, expected+3, sizeof(pin_values)))
+	if(!read_params((__xdata uint8_t *)pin_values, PIN_FLASH_START, sizeof(pin_values)))
 		return false;
 #endif
 
@@ -280,11 +290,11 @@ __critical {
 	flash_write_scratch(0, sizeof(parameter_values));
 
 	// write params
-	write_params((__xdata uint8_t *)parameter_values, 1, sizeof(parameter_values));
+	write_params((__xdata uint8_t *)parameter_values, PARAM_FLASH_START, sizeof(parameter_values));
 
 	// write pin params
 #if PIN_MAX > 0
-	write_params((__xdata uint8_t *)pin_values, sizeof(parameter_values)+3, sizeof(pin_values));
+	write_params((__xdata uint8_t *)pin_values, PIN_FLASH_START, sizeof(pin_values));
 #endif
 }
 
