@@ -326,20 +326,21 @@ at_i(void)
 
 		if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
 				idx = 5;
-				start = at_parse_number();;
+				at_parse_number();
+				start = at_num;
 			
 				if (at_cmd[idx] == ':' && isdigit(at_cmd[idx+1])) {
 						idx++;
-						end = at_parse_number();
+						at_parse_number();
+						end = at_num;
 				}
 		}
 		// convenient way of showing all parameters
 		for (id = start; id <= end; id++) {
-		for (id = 0; id < PARAM_MAX; id++) {
 			printf("S%u:%s=%lu\n",
-			       (unsigned)id, 
-			       param_name(id), 
-			       (unsigned long)param_get(id));
+						 (unsigned)id, 
+						 param_name(id), 
+						 (unsigned long)param_get(id));
 		}
 		return;
 	}
