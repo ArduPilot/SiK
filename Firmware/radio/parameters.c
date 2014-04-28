@@ -56,10 +56,10 @@ __code const struct parameter_info {
 	{"SERIAL_SPEED",   57}, // match APM default of 57600
 	{"AIR_SPEED",      64}, // relies on MAVLink flow control
 	{"NETID",          25},
-	{"TXPOWER",         0},
-	{"ECC",             1},
+	{"TXPOWER",        20},
+	{"ECC",             0},
 	{"MAVLINK",         1},
-	{"OPPRESEND",       1},
+	{"OPPRESEND",       0},
 	{"MIN_FREQ",        0},
 	{"MAX_FREQ",        0},
 	{"NUM_CHANNELS",    0},

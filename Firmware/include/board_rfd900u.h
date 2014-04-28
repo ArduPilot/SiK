@@ -72,7 +72,7 @@
 #define CPU_SI1030
 
 #define BOARD_MINTXPOWER 0		// Minimum transmit power level
-#define BOARD_MAXTXPOWER 30		// Maximum transmit power level
+#define BOARD_MAXTXPOWER 20		// Maximum transmit power level
 
 //#define WATCH_DOG_ENABLE
 
