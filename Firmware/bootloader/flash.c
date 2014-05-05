@@ -51,6 +51,11 @@
 ///
 __at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
 
+/// Patchbay for the board frequency byte.
+/// This is patched in the hex file(s) after building.
+///
+__at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
+
 /// Lock byte
 ///
 /// We explicitly initialise the lock byte to prevent code in the high
@@ -59,14 +64,9 @@ __at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
 /// combined this means that the bootloader code cannot be overwritten.
 /// RFD900A locks the bootloader as a separate step after calibration instead.
 ///
-#if !defined BOARD_rfd900a && !defined BOARD_rfd900u
-__at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
+#if !defined BOARD_rfd900a //&& !defined BOARD_rfd900u
+volatile __at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
 #endif
-
-/// Patchbay for the board frequency byte.
-/// This is patched in the hex file(s) after building.
-///
-__at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
 
 char
 flash_app_valid(void)
