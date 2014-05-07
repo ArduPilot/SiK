@@ -804,7 +804,7 @@ radio_configure(__pdata uint8_t air_rate)
 	} else {
 		control = 0x2D;
 	}
-	if (param_get(PARAM_MANCHESTER) && settings.air_data_rate <= 128) {
+	if (param_s_get(PARAM_MANCHESTER) && settings.air_data_rate <= 128) {
 		// manchester encoding is not possible at above 128kbps
 		control |= EZRADIOPRO_ENMANCH;
 	}

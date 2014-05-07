@@ -179,6 +179,8 @@ display_test_output(void)
 	if (test_display & AT_TEST_RSSI) {
 		tdm_show_rssi();
 	}
+	
+	// RSSI Power update.
 }
 
 
@@ -939,8 +941,8 @@ tdm_init(void)
 	}
 
 	// user specified window is in milliseconds
-	if (window_width > param_get(PARAM_MAX_WINDOW)*(1000/16)) {
-		window_width = param_get(PARAM_MAX_WINDOW)*(1000/16);
+	if (window_width > param_s_get(PARAM_MAX_WINDOW)*(1000/16)) {
+		window_width = param_s_get(PARAM_MAX_WINDOW)*(1000/16);
 	}
 
 	// make sure it fits in the 13 bits of the trailer window

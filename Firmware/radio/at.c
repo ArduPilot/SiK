@@ -59,6 +59,7 @@ static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
 static void	at_s(void);
+static void	at_r(void);
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
@@ -248,6 +249,9 @@ at_command(void)
 			case 'S':
 				at_s();
 				break;
+			case 'R':
+				at_r();
+				break;
 
 			case 'Z':
 				// generate a software reset
@@ -322,7 +326,7 @@ at_i(void)
 	case '5': {
 		register enum ParamID id;
 		register uint8_t start = 0;
-		register uint8_t end = PARAM_MAX-1;
+		register uint8_t end = PARAM_S_MAX-1;
 
 		if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
 				idx = 5;
@@ -339,8 +343,15 @@ at_i(void)
 		for (id = start; id <= end; id++) {
 			printf("S%u:%s=%lu\n",
 						 (unsigned)id, 
-						 param_name(id), 
-						 (unsigned long)param_get(id));
+						 param_s_name(id),
+						 (unsigned long)param_s_get(id));
+		}
+		// convenient way of showing all parameters
+		for (id = 0; id < PARAM_R_MAX; id++) {
+			printf("R%u:%s=%lu\n",
+						 (unsigned)id,
+						 param_r_name(id),
+						 (unsigned long)param_r_get(id));
 		}
 		return;
 	}
@@ -366,14 +377,14 @@ at_s(void)
 	at_parse_number();
 	sreg = at_num;
 	// validate the selected sreg
-	if (sreg >= PARAM_MAX) {
+	if (sreg >= PARAM_S_MAX) {
 		at_error();
 		return;
 	}
 
 	switch (at_cmd[idx]) {
 	case '?':
-		at_num = param_get(sreg);
+		at_num = param_s_get(sreg);
 		printf("%lu\n", at_num);
 		return;
 
@@ -381,12 +392,47 @@ at_s(void)
 		if (sreg > 0) {
 			idx++;
 			at_parse_number();
-			if (param_set(sreg, at_num)) {
+			if (param_s_set(sreg, at_num)) {
 				at_ok();
 				return;
 			}
 		}
 		break;
+	}
+	at_error();
+}
+
+static void
+at_r(void)
+{
+	__pdata uint8_t		sreg;
+	
+	// get the register number first
+	idx = 3;
+	at_parse_number();
+	sreg = at_num;
+	// validate the selected sreg
+	if (sreg >= PARAM_R_MAX) {
+		at_error();
+		return;
+	}
+	
+	switch (at_cmd[idx]) {
+		case '?':
+			at_num = param_r_get(sreg);
+			printf("%lu\n", at_num);
+			return;
+			
+		case '=':
+			if (sreg > 0) {
+				idx++;
+				at_parse_number();
+				if (param_r_set(sreg, at_num)) {
+					at_ok();
+					return;
+				}
+			}
+			break;
 	}
 	at_error();
 }
