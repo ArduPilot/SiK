@@ -255,7 +255,8 @@ param_r_set(__data enum Param_R_ID param, __pdata param_t value)
 	
 	// some parameters we update immediately
 	switch (param) {
-		
+//		case PARAM_R_TARGET_RSSI:
+//			break;
 		default:
 			break;
 	}
@@ -380,7 +381,7 @@ __critical {
 	// write R params
 	flash_write_scratch(PARAM_R_FLASH_START, sizeof(parameter_r_values));
 	write_params((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, sizeof(parameter_r_values));
-	//write_check((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, sizeof(parameter_r_values));
+	
 	// write pin params
 #if PIN_MAX > 0
 	flash_write_scratch(PIN_FLASH_START, sizeof(pin_values));

@@ -134,6 +134,10 @@ static __bit send_statistics;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
 
+// Varibles used to hunt for a target RSSI by changing the power levels
+__pdata uint8_t maxPower, presentPower, target_RSSI;
+
+
 struct tdm_trailer {
 	uint16_t window:13;
 	uint16_t command:1;
@@ -378,6 +382,7 @@ link_update(void)
 	} else {
 		unlock_count++;
 	}
+	
 	if (unlock_count < 6) {
 		LED_RADIO = LED_ON;
 	} else {
@@ -388,6 +393,7 @@ link_update(void)
 		LED_RADIO = blink_state;
 		blink_state = !blink_state;
 	}
+	
 	if (unlock_count > 40) {
 		// if we have been unlocked for 20 seconds
 		// then start frequency scanning again
@@ -405,10 +411,11 @@ link_update(void)
 			}
 			if (at_testmode & AT_TEST_TDM) {
 				printf("TDM: change timing %u/%u\n",
-				       (unsigned)old_remaining,
-				       (unsigned)tdm_state_remaining);
+								(unsigned)old_remaining,
+								(unsigned)tdm_state_remaining);
 			}
 		}
+		
 		if (at_testmode & AT_TEST_TDM) {
 			printf("TDM: scanning\n");
 		}
@@ -420,7 +427,9 @@ link_update(void)
 
 		// reset statistics when unlocked
 		statistics.receive_count = 0;
+		radio_set_transmit_power(maxPower);
 	}
+	
 	if (unlock_count > 5) {
 		memset(&remote_statistics, 0, sizeof(remote_statistics));
 	}
@@ -433,6 +442,18 @@ link_update(void)
 		// check every 2 seconds
 		temperature_update();
 		temperature_count = 0;
+	}
+}
+
+// Hunt for target RSSI using remote packet data
+static void update_rssi_target(void)
+{	
+	if(remote_statistics.average_rssi < target_RSSI)
+	{
+		radio_change_transmit_power(true, maxPower);
+	}
+	else {
+		radio_change_transmit_power(false, maxPower);
 	}
 }
 
@@ -449,8 +470,8 @@ static void
 handle_at_command(__pdata uint8_t len)
 {
 	if (len < 2 || len > AT_CMD_MAXLEN || 
-	    pbuf[0] != (uint8_t)'R' || 
-	    pbuf[1] != (uint8_t)'T') {
+			pbuf[0] != (uint8_t)'R' ||
+			pbuf[1] != (uint8_t)'T') {
 		// assume its an AT command reply
 		register uint8_t i;
 		for (i=0; i<len; i++) {
@@ -561,6 +582,8 @@ tdm_serial_loop(void)
 					memcpy(&remote_statistics, pbuf, len);
 				}
 
+				update_rssi_target();
+				
 				// don't count control packets in the stats
 				statistics.receive_count--;
 			} else if (trailer.window != 0) {
@@ -966,9 +989,13 @@ tdm_init(void)
 	packet_set_max_xmit(i);
 
 #ifdef TDM_SYNC_LOGIC
-		TDM_SYNC_PIN = false;
+	TDM_SYNC_PIN = false;
 #endif // TDM_SYNC_LOGIC
 
+	// Set the max and target RSSI for hunting mode..
+	maxPower = presentPower = param_s_get(PARAM_TXPOWER);
+	target_RSSI = param_r_get(PARAM_R_TARGET_RSSI);
+	
 	// crc_test();
 
 	// tdm_test_timing();
