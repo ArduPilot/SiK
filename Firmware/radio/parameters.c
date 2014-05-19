@@ -52,7 +52,7 @@ __code const struct parameter_s_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_s_info[PARAM_S_MAX] = {
-	{"FORMAT",         PARAM_S_FORMAT_CURRENT},
+	{"FORMAT",         PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",   57}, // match APM default of 57600
 	{"AIR_SPEED",      64}, // relies on MAVLink flow control
 	{"NETID",          25},
@@ -74,8 +74,8 @@ __code const struct parameter_r_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_r_info[PARAM_R_MAX] = {
-	{"FORMAT",         PARAM_R_FORMAT_CURRENT},
-	{"TARGET_RSSI",   255},
+	{"TARGET_RSSI",     255},
+	{"HYSTERESIS_RSSI", 50},
 };
 
 /// In-RAM parameter store.
@@ -114,8 +114,8 @@ param_s_check(__pdata enum Param_S_ID id, __data uint32_t val)
 		return false;
 
 	switch (id) {
-	case PARAM_S_FORMAT:
-		if(PARAM_S_FORMAT_CURRENT != val)
+	case PARAM_FORMAT:
+		if(PARAM_FORMAT_CURRENT != val)
 			return false;
 
 	case PARAM_SERIAL_SPEED:
@@ -232,13 +232,11 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 		return false;
 	
 	switch (id) {
-		case PARAM_R_FORMAT:
-			if(PARAM_R_FORMAT_CURRENT != val)
-				return false;
-			
 		case PARAM_R_TARGET_RSSI:
 			if (20 > val || 255 < val)
 				return false;
+			break;
+		
 		default:
 			// no sanity check for this value
 			break;
@@ -335,8 +333,8 @@ __critical {
 		return false;
 	
 	// decide whether we read a supported version of the structure
-	if ((param_t) PARAM_S_FORMAT_CURRENT != param_s_get(PARAM_S_FORMAT)) {
-		debug("parameter format %lu expecting %lu", param_s_get(PARAM_S_FORMAT), PARAM_S_FORMAT_CURRENT);
+	if ((param_t) PARAM_FORMAT_CURRENT != parameter_s_values[PARAM_FORMAT]) {
+		debug("parameter format %lu expecting %lu", parameter_s_values[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
 		return false;
 	}
 
@@ -369,7 +367,7 @@ param_save(void)
 __critical {
 
 	// tag parameters with the current format
-	parameter_s_values[PARAM_S_FORMAT] = PARAM_S_FORMAT_CURRENT;
+	parameter_s_values[PARAM_FORMAT] = PARAM_FORMAT_CURRENT;
 
 	// erase the scratch space
 	flash_erase_scratch();

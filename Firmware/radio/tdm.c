@@ -134,9 +134,15 @@ static __bit send_statistics;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
 
-// Varibles used to hunt for a target RSSI by changing the power levels
-__pdata uint8_t maxPower, presentPower, target_RSSI;
+enum RSSI_Hunt_ID {
+	RSSI_HUNT_UP = 0,
+	RSSI_HUNT_DOWN,
+	RSSI_HUNT_IDLE,
+};
 
+// Varibles used to hunt for a target RSSI by changing the power levels
+__pdata uint8_t maxPower, presentPower, target_RSSI, powerHysteresis;
+__pdata enum RSSI_Hunt_ID Hunt_RSSI;
 
 struct tdm_trailer {
 	uint16_t window:13;
@@ -158,20 +164,22 @@ void
 tdm_show_rssi(void)
 {
 	printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u ",
-	       (unsigned)statistics.average_rssi,
-	       (unsigned)remote_statistics.average_rssi,
-	       (unsigned)statistics.average_noise,
-	       (unsigned)remote_statistics.average_noise,
-	       (unsigned)statistics.receive_count);
-	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%d dco=%u\n",
-	       (unsigned)errors.tx_errors,
-	       (unsigned)errors.rx_errors,
-	       (unsigned)errors.serial_tx_overflow,
-	       (unsigned)errors.serial_rx_overflow,
-	       (unsigned)errors.corrected_errors,
-	       (unsigned)errors.corrected_packets,
-	       (int)radio_temperature(),
-	       (unsigned)duty_cycle_offset);
+		(unsigned)statistics.average_rssi,
+		(unsigned)remote_statistics.average_rssi,
+		(unsigned)statistics.average_noise,
+		(unsigned)remote_statistics.average_noise,
+		(unsigned)statistics.receive_count);
+	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u",
+		(unsigned)errors.tx_errors,
+		(unsigned)errors.rx_errors,
+		(unsigned)errors.serial_tx_overflow,
+		(unsigned)errors.serial_rx_overflow,
+		(unsigned)errors.corrected_errors,
+		(unsigned)errors.corrected_packets);
+	printf(" temp=%d dco=%u pwr=%u\n",
+		(int)radio_temperature(),
+		(unsigned)duty_cycle_offset,
+		(unsigned)presentPower);
 	statistics.receive_count = 0;
 }
 
@@ -183,8 +191,6 @@ display_test_output(void)
 	if (test_display & AT_TEST_RSSI) {
 		tdm_show_rssi();
 	}
-	
-	// RSSI Power update.
 }
 
 
@@ -255,14 +261,13 @@ sync_tx_windows(__pdata uint8_t packet_length)
 		__pdata int16_t delta;
 		delta = old_remaining - tdm_state_remaining;
 		if (old_state != tdm_state ||
-		    delta > (int16_t)packet_latency/2 ||
-		    delta < -(int16_t)packet_latency/2) {
+				delta > (int16_t)packet_latency/2 ||
+				delta < -(int16_t)packet_latency/2) {
 			printf("TDM: %u/%u len=%u ",
-			       (unsigned)old_state,
-			       (unsigned)tdm_state,
-			       (unsigned)packet_length);
-			printf(" delta: %d\n",
-			       (int)delta);
+					(unsigned)old_state,
+					(unsigned)tdm_state,
+					(unsigned)packet_length);
+			printf(" delta: %d\n",(int)delta);
 		}
 	}
 }
@@ -447,7 +452,8 @@ link_update(void)
 
 // Hunt for target RSSI using remote packet data
 static void update_rssi_target(void)
-{	
+{
+//  powerHysteresis
 	if(remote_statistics.average_rssi < target_RSSI)
 	{
 		radio_change_transmit_power(true, maxPower);
@@ -595,8 +601,8 @@ tdm_serial_loop(void)
 				if (trailer.command == 1) {
 					handle_at_command(len);
 				} else if (len != 0 && 
-					   !packet_is_duplicate(len, pbuf, trailer.resend) &&
-					   !at_mode_active) {
+							!packet_is_duplicate(len, pbuf, trailer.resend) &&
+							!at_mode_active) {
 					// its user data - send it out
 					// the serial port
 					//printf("rcv(%d,[", len);
@@ -644,7 +650,7 @@ tdm_serial_loop(void)
 		// bonus ticks
 #if USE_TICK_YIELD
 		if (tdm_state != TDM_TRANSMIT &&
-		    !(bonus_transmit && tdm_state == TDM_RECEIVE)) {
+					!(bonus_transmit && tdm_state == TDM_RECEIVE)) {
 			// we cannot transmit now
 			continue;
 		}
@@ -665,8 +671,8 @@ tdm_serial_loop(void)
 		}
 
 		if (!received_packet &&
-		    radio_preamble_detected() ||
-		    radio_receive_in_progress()) {
+					radio_preamble_detected() ||
+					radio_receive_in_progress()) {
 			// a preamble has been detected. Don't
 			// transmit for a while
 			transmit_wait = packet_latency;
@@ -706,7 +712,7 @@ tdm_serial_loop(void)
 		
 		// ask the packet system for the next packet to send
 		if (send_at_command && 
-		    max_xmit >= strlen(remote_at_cmd)) {
+						max_xmit >= strlen(remote_at_cmd)) {
 			// send a remote AT command
 			len = strlen(remote_at_cmd);
 			memcpy(pbuf, remote_at_cmd, len);
@@ -726,9 +732,9 @@ tdm_serial_loop(void)
 		trailer.resend = packet_is_resend();
 
 		if (tdm_state == TDM_TRANSMIT &&
-		    len == 0 && 
-		    send_statistics && 
-		    max_xmit >= sizeof(statistics)) {
+						len == 0 &&
+						send_statistics &&
+						max_xmit >= sizeof(statistics)) {
 			// send a statistics packet
 			send_statistics = 0;
 			memcpy(pbuf, &statistics, sizeof(statistics));
@@ -774,7 +780,7 @@ tdm_serial_loop(void)
 
 		// start transmitting the packet
 		if (!radio_transmit(len + sizeof(trailer), pbuf, tdm_state_remaining + (silence_period/2)) &&
-		    len != 0 && trailer.window != 0 && trailer.command == 0) {
+				len != 0 && trailer.window != 0 && trailer.command == 0) {
 			packet_force_resend();
 		}
 
@@ -848,9 +854,9 @@ tdm_build_timing_table(void)
 		}
 		if (j > 0) {
 			printf("{ %u, %u, %u },\n",
-			       (unsigned)(radio_air_rate()),
-			       (unsigned)(latency_sum/j),
-			       (unsigned)(per_byte_sum/j));
+						(unsigned)(radio_air_rate()),
+						(unsigned)(latency_sum/j),
+						(unsigned)(per_byte_sum/j));
 		}
 	}
 	feature_golay = golay_saved;
@@ -870,8 +876,8 @@ crc_test(void)
 	crc16(MAX_PACKET_LENGTH/2, pbuf);
 	t2 = timer2_tick();
 	printf("crc %u bytes took %u 16usec ticks\n",
-	       (unsigned)MAX_PACKET_LENGTH/2,
-	       t2-t1);
+				(unsigned)MAX_PACKET_LENGTH/2,
+				t2-t1);
 }
 
 // test golay encoding
@@ -888,8 +894,8 @@ golay_test(void)
 	golay_encode(MAX_PACKET_LENGTH/2, pbuf, buf);
 	t2 = timer2_tick();
 	printf("encode %u bytes took %u 16usec ticks\n",
-	       (unsigned)MAX_PACKET_LENGTH/2,
-	       t2-t1);
+				(unsigned)MAX_PACKET_LENGTH/2,
+				t2-t1);
 	// add an error in the middle
 	buf[MAX_PACKET_LENGTH/2] ^= 0x23;
 	buf[1] ^= 0x70;
@@ -897,8 +903,8 @@ golay_test(void)
 	golay_decode(MAX_PACKET_LENGTH, buf, pbuf);
 	t2 = timer2_tick();
 	printf("decode %u bytes took %u 16usec ticks\n",
-	       (unsigned)MAX_PACKET_LENGTH,
-	       t2-t1);
+				(unsigned)MAX_PACKET_LENGTH,
+				t2-t1);
 	for (i=0; i<MAX_PACKET_LENGTH/2; i++) {
 		if (pbuf[i] != i) {
 			printf("golay error at %u\n", (unsigned)i);
@@ -993,8 +999,10 @@ tdm_init(void)
 #endif // TDM_SYNC_LOGIC
 
 	// Set the max and target RSSI for hunting mode..
-	maxPower = presentPower = param_s_get(PARAM_TXPOWER);
+	maxPower = param_s_get(PARAM_TXPOWER);
+	presentPower = maxPower;
 	target_RSSI = param_r_get(PARAM_R_TARGET_RSSI);
+	powerHysteresis = param_r_get(PARAM_R_HYSTERESIS_RSSI);
 	
 	// crc_test();
 
