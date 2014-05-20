@@ -135,9 +135,9 @@ static __bit send_statistics;
 extern bool seen_mavlink;
 
 enum RSSI_Hunt_ID {
-	RSSI_HUNT_UP = 0,
+	RSSI_HUNT_IDLE = 0,
+	RSSI_HUNT_UP,
 	RSSI_HUNT_DOWN,
-	RSSI_HUNT_IDLE,
 };
 
 // Varibles used to hunt for a target RSSI by changing the power levels
@@ -453,13 +453,44 @@ link_update(void)
 // Hunt for target RSSI using remote packet data
 static void update_rssi_target(void)
 {
-//  powerHysteresis
-	if(remote_statistics.average_rssi < target_RSSI)
-	{
-		radio_change_transmit_power(true, maxPower);
-	}
-	else {
-		radio_change_transmit_power(false, maxPower);
+	switch (Hunt_RSSI) {
+		case RSSI_HUNT_IDLE:
+			if((remote_statistics.average_rssi < target_RSSI - powerHysteresis) && (presentPower != maxPower))
+			{
+				presentPower = radio_change_transmit_power(true, maxPower);
+				Hunt_RSSI = RSSI_HUNT_UP;
+			}
+			else if((remote_statistics.average_rssi > target_RSSI + powerHysteresis) && (presentPower != 0)) {
+				presentPower = radio_change_transmit_power(false, maxPower);
+				Hunt_RSSI = RSSI_HUNT_DOWN;
+			}
+			break;
+		
+		case RSSI_HUNT_UP:
+			if((remote_statistics.average_rssi < target_RSSI) && (presentPower != maxPower))
+			{
+				presentPower = radio_change_transmit_power(true, maxPower);
+			}
+			else
+			{
+				Hunt_RSSI = RSSI_HUNT_IDLE;
+			}
+			break;
+			
+		case RSSI_HUNT_DOWN:
+			if((remote_statistics.average_rssi > target_RSSI) && (presentPower != 0))
+			{
+				presentPower = radio_change_transmit_power(false, maxPower);
+			}
+			else
+			{
+				Hunt_RSSI = RSSI_HUNT_IDLE;
+			}
+			break;
+			
+		default:
+			Hunt_RSSI = RSSI_HUNT_IDLE;
+			break;
 	}
 }
 
@@ -1003,6 +1034,7 @@ tdm_init(void)
 	presentPower = maxPower;
 	target_RSSI = param_r_get(PARAM_R_TARGET_RSSI);
 	powerHysteresis = param_r_get(PARAM_R_HYSTERESIS_RSSI);
+	Hunt_RSSI = RSSI_HUNT_IDLE;
 	
 	// crc_test();
 

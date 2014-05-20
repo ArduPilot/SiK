@@ -233,10 +233,15 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 	
 	switch (id) {
 		case PARAM_R_TARGET_RSSI:
-			if (20 > val || 255 < val)
+			if (val < 50 || 255 < val)
 				return false;
 			break;
-		
+
+		case PARAM_R_HYSTERESIS_RSSI:
+			if (val < 20 || 150 < val)
+				return false;
+			break;
+			
 		default:
 			// no sanity check for this value
 			break;

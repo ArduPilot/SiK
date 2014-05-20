@@ -424,13 +424,11 @@ at_r(void)
 			return;
 			
 		case '=':
-			if (sreg > 0) {
-				idx++;
-				at_parse_number();
-				if (param_r_set(sreg, at_num)) {
-					at_ok();
-					return;
-				}
+			idx++;
+			at_parse_number();
+			if (param_r_set(sreg, at_num)) {
+				at_ok();
+				return;
 			}
 			break;
 	}

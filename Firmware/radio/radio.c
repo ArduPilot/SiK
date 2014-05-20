@@ -911,14 +911,14 @@ radio_change_transmit_power(bool increment, uint8_t maxPower)
 	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
 	
 	if (increment) {
-		power++;
+		power += 2;
 		if(power > maxPower) {
 			return settings.transmit_power;
 		}
 	}
 	else if(power != 0)
 	{
-		power--;
+		power -= 2;
 	}
 	
 	i = calibration_get(power);
