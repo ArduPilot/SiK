@@ -455,12 +455,16 @@ static void update_rssi_target(void)
 {
 	switch (Hunt_RSSI) {
 		case RSSI_HUNT_IDLE:
-			if((remote_statistics.average_rssi < target_RSSI - powerHysteresis) && (presentPower != maxPower))
+			if((target_RSSI > powerHysteresis) &&
+				 (remote_statistics.average_rssi < target_RSSI - powerHysteresis) &&
+				 (presentPower != maxPower))
 			{
 				presentPower = radio_change_transmit_power(true, maxPower);
 				Hunt_RSSI = RSSI_HUNT_UP;
 			}
-			else if((remote_statistics.average_rssi > target_RSSI + powerHysteresis) && (presentPower != 0)) {
+			else if(((uint16_t)target_RSSI + (uint16_t)powerHysteresis > 255) &&
+							(remote_statistics.average_rssi > target_RSSI + powerHysteresis) &&
+							(presentPower != 0)) {
 				presentPower = radio_change_transmit_power(false, maxPower);
 				Hunt_RSSI = RSSI_HUNT_DOWN;
 			}

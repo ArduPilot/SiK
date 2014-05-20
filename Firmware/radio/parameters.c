@@ -238,7 +238,7 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 			break;
 
 		case PARAM_R_HYSTERESIS_RSSI:
-			if (val < 20 || 150 < val)
+			if (val < 20 || 50 < val)
 				return false;
 			break;
 			
