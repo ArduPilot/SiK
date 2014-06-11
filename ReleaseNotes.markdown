@@ -1,5 +1,25 @@
 #Release Notes:
 
+##SiK 1.10:
+
+###Alterations
+* Fixed bug that could have caused stability issues
+
+###NEW FEATURES!!
+* Added new parameter segment for AT Parameters
+    
+    ATS will be used for Andrew Tridgell branch
+    
+    ATR will be used for RFDesign's new features
+
+* ATR0 Target RSSI, This will change the TXPower (ATS4) until target is found. Set ATS4 to the maxiumim power allowed (Default 255).
+* ATR1 Hysteresis RSSI, The level of change from the target before the power level is changed again.
+
+##SiK 1.9:
+
+###Alterations
+* Golay and ECC restored using new efficent code
+
 ##SiK 1.8:
 
 ###Alterations
