@@ -12,7 +12,7 @@
     
     ATR will be used for RFDesign's new features
 
-* ATR0 Target RSSI, This will change the TXPower (ATS4) until target is found. Set ATS4 to the maxiumim power allowed (Default 255).
+* ATR0 Target RSSI, This will change the TXPower (ATS4) until target is found. Set ATS4 to the maximum power allowed (Default 255).
 * ATR1 Hysteresis RSSI, The level of change from the target before the power level is changed again.
 
 ##SiK 1.9:
