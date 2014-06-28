@@ -52,8 +52,8 @@ __pdata struct radio_settings settings;
 static void	register_write(uint8_t reg, uint8_t value) __reentrant;
 static uint8_t	register_read(uint8_t reg);
 static bool	software_reset(void);
-static void	set_frequency_registers(uint32_t frequency);
-static uint32_t scale_uint32(uint32_t value, uint32_t scale);
+static void	set_frequency_registers(__pdata uint32_t frequency);
+static uint32_t scale_uint32(__pdata uint32_t value, __pdata uint32_t scale);
 static void	clear_status_registers(void);
 
 // save and restore radio interrupt. We use this rather than
@@ -299,6 +299,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 {
 	__pdata uint16_t tstart;
 	bool transmit_started;
+	bool just_refilled_tx;
 	__data uint8_t n;
 
 	if (length > sizeof(radio_buffer)) {
@@ -309,10 +310,10 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 
 	register_write(EZRADIOPRO_TRANSMIT_PACKET_LENGTH, length);
 
-	// put packet in the FIFO
+	// put packet bytes in the FIFO, leaving room for the CRC
 	n = length;
-	if (n > TX_FIFO_THRESHOLD_LOW) {
-		n = TX_FIFO_THRESHOLD_LOW;
+	if (n > TX_FIFO_THRESHOLD_HIGH) {
+		n = TX_FIFO_THRESHOLD_HIGH;
 	}
 	radio_write_transmit_fifo(n, buf);
 	length -= n;
@@ -324,6 +325,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 
 	preamble_detected = 0;
 	transmit_started = false;
+	just_refilled_tx = true;
 
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
@@ -331,86 +333,65 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	// wait for transmit complete or timeout
 	tstart = timer2_tick();
 	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
-		__data uint8_t status;
-
-		// see if we can put some more bytes into the FIFO
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		if (transmit_started && length != 0 && (status & EZRADIOPRO_ITXFFAEM)) {
-			// the FIFO is below the low threshold. We
-			// should be able to put in
-			// 64-TX_FIFO_THRESHOLD_LOW more bytes, but 
-			// it seems that this gives us an occasional
-			// fifo overflow error, so put in just 4 bytes
-			// at a time
-			n = 4;
-			if (n > length) {
-				n = length;
-			}
-			radio_write_transmit_fifo(n, buf);
-			length -= n;
-			buf += n;
-			continue;
-		}
-		if (transmit_started && length != 0 && (status & EZRADIOPRO_ITXFFAFULL) == 0) {
-			// the FIFO is below the high threshold. See
-			// comment above on how many bytes we add to
-			// the FIFO
-			n = 4;
-			if (n > length) {
-				n = length;
-			}
-			radio_write_transmit_fifo(n, buf);
-			length -= n;
-			buf += n;
-			continue;
-		}
-
-		if (status & EZRADIOPRO_IFFERR) {
-			// we ran out of bytes in the FIFO
-			radio_clear_transmit_fifo();
-			debug("FFERR %u\n", (unsigned)length);
-			if (errors.tx_errors != 0xFFFF) {
-				errors.tx_errors++;
-			}
-			return false;
-		}
-
+		register uint8_t interrupt_status;
+		
+		if (!transmit_started && register_read(EZRADIOPRO_DEVICE_STATUS) & 0x02) {
+			transmit_started = true;
+			
 		// the interrupt status bits only become valid once
 		// the transmitter is in full tx state
-		status = register_read(EZRADIOPRO_DEVICE_STATUS);
-		if (status & 0x02) {
-			// the chip power status is in TX mode
-			transmit_started = true;
-			continue;
-		}
-		if (transmit_started && (status & 0x02) == 0) {
-			// transmitter has finished. See if we got the
-			// whole packet out
+		} else if (transmit_started) {
 			if (length != 0) {
-				debug("TX short %u\n", (unsigned)length);
-				if (errors.tx_errors != 0xFFFF) {
-					errors.tx_errors++;
+				// see if we can put some more bytes into the FIFO.
+				// Use hysteresis when sampling the almost empty bit
+				// since it updates only on internal TX domain clock
+				// cycles (see EZRadioPro detailed register
+				// descriptions, AN440).
+				interrupt_status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
+				if ((interrupt_status & EZRADIOPRO_ITXFFAEM) == 0) {
+					just_refilled_tx = false;
+				} else if (!just_refilled_tx) {
+					n = TX_FIFO_THRESHOLD_HIGH - (TX_FIFO_THRESHOLD_LOW + 1);
+					if (n > length) {
+						n = length;
+					}
+					radio_write_transmit_fifo(n, buf);
+					just_refilled_tx = true;
+					length -= n;
+					buf += n;
 				}
-				return false;
+				
+				if (interrupt_status & EZRADIOPRO_IFFERR) {
+					// we ran out of bytes in the FIFO
+					radio_clear_transmit_fifo();
+					debug("FFERR %u\n", (unsigned)length);
+					goto txfail;
+				}
+			} else if ((register_read(EZRADIOPRO_DEVICE_STATUS) & 0x02) == 0) {
+				// transmitter has finished. See if we got the
+				// whole packet out
+				if (length != 0) {
+					debug("TX short %u\n", (unsigned)length);
+					goto txfail;
+				}
+				return true;
 			}
-			return true;			
 		}
-
 	}
-
+	
 	// transmit timeout ... clear the FIFO
 	debug("TX timeout %u ts=%u tn=%u len=%u\n",
-	       timeout_ticks,
-	       tstart,
-	       timer2_tick(),
-	       (unsigned)length);
+		  timeout_ticks,
+		  tstart,
+		  timer2_tick(),
+		  (unsigned)length);
+txfail:
 	if (errors.tx_errors != 0xFFFF) {
 		errors.tx_errors++;
 	}
-
+	
 	return false;
 }
-
 
 // start transmitting a packet from the transmit FIFO
 //
