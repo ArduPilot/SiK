@@ -44,7 +44,7 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata uint8_t rx_buf[1900] = {0};
+__xdata uint8_t rx_buf[1600] = {0};
 __xdata uint8_t tx_buf[650] = {0};
 
 // FIFO insert/remove pointers
