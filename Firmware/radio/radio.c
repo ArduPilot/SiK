@@ -508,40 +508,44 @@ radio_initialise(void)
 
 	delay_msec(50);
 
-	// make sure there is a radio on the SPI bus
+	status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
+
+	if ((status & EZRADIOPRO_IPOR) == 0) {
+		// it hasn't powered up cleanly, reset it
+		if(!software_reset()) {
+			return false;
+		}
+	}
+
+	if ((status & EZRADIOPRO_ICHIPRDY) == 0) {
+		// enable chip ready interrupt
+		register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
+		register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
+		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_XTON);
+
+		// wait for the chip ready bit for 10ms
+		delay_set(50);
+		while (!delay_expired()) {
+			status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
+			status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
+			if (status & EZRADIOPRO_ICHIPRDY) {
+				break;
+			}
+		}
+	}
+	
+	if ((status & EZRADIOPRO_ICHIPRDY) == 0) {
+		return false;
+	}
+	
+	// make sure the radio version is valid
 	status = register_read(EZRADIOPRO_DEVICE_VERSION);
 	if (status == 0xFF || status < 5) {
 		// no valid radio there?
 		return false;
 	}
 
-	status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-
-	if ((status & EZRADIOPRO_IPOR) == 0) {
-		// it hasn't powered up cleanly, reset it
-		return software_reset();
-	}
-
-	if (status & EZRADIOPRO_ICHIPRDY) {
-		// already ready
-		return true;
-	}
-
-	// enable chip ready interrupt
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
-
-	// wait for the chip ready bit for 10ms
-	delay_set(50);
-	while (!delay_expired()) {
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-		if (status & EZRADIOPRO_ICHIPRDY) {
-			return true;
-		}
-	}
-
-	return false;
+	return true;
 }
 
 
