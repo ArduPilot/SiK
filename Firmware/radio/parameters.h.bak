@@ -62,8 +62,6 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
-	PARAM_MAIN_FREQUENCY,		// Main Frquenct FREQ_433   FREQ_470  FREQ_868   FREQ_915  FREQ_NONE
-
 	PARAM_MAX			// must be last
 };
 

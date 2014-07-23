@@ -1,5 +1,36 @@
 # SiK - Firmware for SiLabs Si1000 ISM radios
 
+=====================================================
+Change Main Frequency Feature:
+I added parameter #16 where you can change the frequency of Telemetry using AT commands only. No need to upgrade Firmware.
+
+Please make sure to use proper Antenna for the selected frequency.
+
+
+The AT commands of the Telemetry can be found here http://copter.ardupilot.com/wiki/common-using-the-3dr-radio-for-telemetry-with-apm-and-px4/
+The new commands is #16 called "Main_Freq".
+
+Values that should be set there are:
+
+
+        FREQ_433	= 0x43,
+        FREQ_470	= 0x47,
+        FREQ_868	= 0x86,
+        FREQ_915	= 0x91,
+
+		i.e. ATS16=145  sets frequency to 915 MHz.
+		
+		
+Typical steps to change frequency are:
+	+++   to enter AT commands mode.
+	ATS16=67    to change to 433 MHz
+	AT&W	    to save settings
+	ATZ			to reboot (Mandatory)
+	
+=====================================================
+	
+	
+
 For user documentation please see this site:
 
  http://code.google.com/p/ardupilot-mega/wiki/3DRadio

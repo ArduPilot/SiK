@@ -39,7 +39,7 @@
 /// with an 8-bit XOR checksum appended to the end of the flash range.
 ///
 
-#include "board_info.h"
+
 #include "radio.h"
 #include "tdm.h"
 #include <flash_layout.h>
@@ -65,8 +65,7 @@ __code const struct parameter_info {
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
 	{"RTSCTS",		0},
-	{"MAX_WINDOW",		131},
-	{"Main_FREQ",		FREQ_433}
+	{"MAX_WINDOW",		131}
 };
 
 /// In-RAM parameter store.
