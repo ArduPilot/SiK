@@ -143,10 +143,10 @@ class ATCommandSet(object):
         
         # Will raise a timeout exception if already in command mode
         # (due to another process leaving it that way?)
-        time.sleep(1)
+        time.sleep(0.5)
         if not self.__send('+++'):
             return False
-        time.sleep(1)
+        time.sleep(0.5)
         if not self.__expect(['OK']):
             return False
         
@@ -221,6 +221,35 @@ class ATCommandSet(object):
             self.is_command = False
         return True
 
+    # Unstick local radio from bootloader mode (must be out of command mode)
+    # NOTE: based on a hack found in the ardupilot code
+    # TODO: this breaks the underlying abstraction; consider revising
+    def unstick(self):
+        if self.is_command:
+            return False
+        try:
+            old_baudrate = self.port.baudrate
+            old_rtscts = self.port.rtscts
+            old_dsrdtr = self.port.dsrdtr
+            old_xonxoff = self.port.xonxoff
+            self.port.baudrate = 115200
+            self.port.rtscts = False
+            self.port.dsrdtr = False
+            self.port.xonxoff = False
+            for i in range(3):
+                time.sleep(0.001)
+                self.port.write(str(0x30))
+                self.port.write(str(0x20))
+            time.sleep(1)  # Let the radio reset
+            self.port.baudrate = old_baudrate
+            self.port.rtscts = old_rtscts
+            self.port.dsrdtr = old_dsrdtr
+            self.port.xonxoff = old_xonxoff
+        except Exception as ex:
+            print "Unsticking error: " + ex.args[0]
+            return False
+        return True
+
 ### User Interface ###
 
 if __name__ == '__main__':
@@ -248,7 +277,7 @@ if __name__ == '__main__':
     parser.add_argument("--rtscts", action='store_true', default=False, help='connect using rtscts')
     parser.add_argument("--dsrdtr", action='store_true', default=False, help='connect using dsrdtr')
     parser.add_argument("--xonxoff", action='store_true', default=False, help='connect using xonxoff')
-    parser.add_argument("--force", action='store_true', default=False, help='cycle command mode first')
+    parser.add_argument("--force", action='store_true', default=False, help='try to unstick radio first')
     parser.add_argument("--debug", action='store_true', default=False, help='intermix raw AT traffic')
     parser.add_argument("--list-local", action='store_true', default=False, 
                         help='list local parameters and exit')
@@ -305,9 +334,12 @@ if __name__ == '__main__':
     
     # In case the radio was left in command mode, we can force it out
     # (Could just not "enter" command mode, but this seems safer somehow)
+    # 08/06/2014 - Added "unstick" from bootloader mode
     if args.force:
         print "Forcing out of command mode first..."
         at.leave_command_mode_force()
+        print "Unsticking from bootloader mode..."
+        at.unstick()
     
     # Try to enter command mode, bail if radio doesn't give expected response
     print "Entering command mode..."
