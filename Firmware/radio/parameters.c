@@ -153,6 +153,10 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		// Make sure second nibble (crypto type) is valid: 0, 1
 		if (((val>>4) & 0xf) > 1)
 			return false;
+		// Make sure that if second nibble (crypto type) is > 0,
+		// the first nibble (key length) is not zero.
+		if (((val>>4) & 0xf) > 0 && (val & 0xf ) == 0)
+			return false;
 		break;
 #endif
 	default:

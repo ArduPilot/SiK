@@ -138,8 +138,7 @@ main(void)
 	}
 
 #ifdef CPU_SI1030
-// At present, any value of encryption > 0, <=3 will trigger the test
-// Later on, the value of this will determine key size
+	// Initialise Encryption
 	if (! aes_init(feature_encryption)) {
 		panic("failed to initialise aes");
 	}

@@ -127,7 +127,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 #ifdef CPU_SI1030
 	if (aes_get_encryption_level() > 0) {
 		if (aes_decrypt(radio_buffer, receive_packet_length, pbuf_decrypted, &len_decrypted) != 0) {
-			panic("Error while trying to encrypt data");
+			panic("error while trying to decrypt data");
 		}
 		*length = len_decrypted;
 		memcpy(buf, pbuf_decrypted, len_decrypted);
@@ -219,7 +219,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 #ifdef CPU_SI1030
         if (aes_get_encryption_level() > 0) {
                 if (aes_decrypt(buf, gout[2], pbuf_decrypted, &len_decrypted) != 0) {
-                        panic("Error while trying to encrypt data");
+                        panic("error while trying to decrypt data");
                 }
                 *length = len_decrypted;
                 memcpy(buf, pbuf_decrypted, len_decrypted);
@@ -553,7 +553,7 @@ radio_transmit(uint8_t len, __xdata uint8_t * __pdata data, __pdata uint16_t tim
 #ifdef CPU_SI1030
         if (aes_get_encryption_level() > 0) {
                 if (aes_encrypt(data, len, pbuf_encrypted, &len_encrypted) != 0) {
-                        panic("Error while trying to encrypt data");
+                        panic("error while trying to encrypt data");
                 }
                 length = len_encrypted;
                 buf = &pbuf_encrypted[0];
