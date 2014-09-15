@@ -116,7 +116,7 @@ bool aes_init(uint8_t encryption_level)
 	// Load Encryption Key
 	aes_initkey();
 
-	// Generate Decryption Key
+	// Generate Decryption Key (Only required by CBC)
 	status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, key_size_code);
 	if (status != 0) return false;
 
@@ -132,8 +132,7 @@ bool aes_init(uint8_t encryption_level)
 			aesCopyInit2(InitialVector, ReferenceInitialVector);
 			break;
 		case 1:
-			// Initialise CTR
-			aesCopyInit2(Counter, Nonce);
+			// Nothing to do. We init "Counter" everytime we do encrypt/decrypt
 			break;
 		default:
 			// Initialise IV
@@ -185,7 +184,21 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 	// ENCRYPTION_128_BITS,                // 0x04
 	// ENCRYPTION_192_BITS,                // 0x05
 	// ENCRYPTION_256_BITS,                // 0x06
-	key_size_code = BITS(encryption) + 3;
+	switch (BITS(encryption))
+	{
+		case 1:
+			key_size_code = ENCRYPTION_128_BITS;
+			break;	
+		case 2:
+			key_size_code = ENCRYPTION_192_BITS;
+			break;	
+		case 3:
+			key_size_code = ENCRYPTION_256_BITS;
+			break;	
+		default:
+			key_size_code = ENCRYPTION_128_BITS;
+	}
+
 
 	// Get crypto type...
 	// 0 - CBC
@@ -199,7 +212,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 	// last byte is a 01...is padding
 
 	// Copy String into XDATA
-	pt = aes_pad(in_str, in_len);  // NOTE...later this might be a padded version of in_str
+	pt = aes_pad(in_str, in_len); 
 
 	// Calculate # of blocks we need to encrypt
 	blocks = 1 + (in_len>>4); // Number of 16-byte blocks to encrypt
@@ -213,6 +226,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 			break;
 		case 1:
 			// Perform CTR Mode decryption
+			aesCopyInit2(Counter, Nonce);
 			status = CTR_EncryptDecrypt (key_size_code, pt, out_str, Counter, EncryptionKey, blocks);
 			break;
 		default:
@@ -251,18 +265,32 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 	// DECRYPTION_128_BITS = 0,            // 0x00
 	// DECRYPTION_192_BITS,                // 0x01
 	// DECRYPTION_256_BITS,                // 0x02
-	key_size_code = BITS(encryption) - 1;
+	switch (BITS(encryption))
+	{
+		case 1:
+			key_size_code = DECRYPTION_128_BITS;
+			break;	
+		case 2:
+			key_size_code = DECRYPTION_192_BITS;
+			break;	
+		case 3:
+			key_size_code = DECRYPTION_256_BITS;
+			break;	
+		default:
+			key_size_code = DECRYPTION_128_BITS;
+	}
+
 
 	// Get crypto type...
 	// 0 - CBC
 	// 1 - CTR
 	crypto_type = CRYPTO(encryption);
 
-	// Pad out in_str  to X 16-Byte blocks
+	// Calculate # of 16-byte blocks
 	blocks = in_len>>4; 
 
 	// Initialise CipherText
-	ct = in_str; // NOTE...later this might be a padded version of in_str
+	ct = in_str; 
 
 	// Based on crypto_type, perform the decryption
 	switch(crypto_type)
@@ -272,8 +300,9 @@ uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 			status = CBC_EncryptDecrypt (key_size_code, out_str, ct, InitialVector, DecryptionKey, blocks);
 			break;
 		case 1:
-			// Perform CTR Mode decryption
-			status = CTR_EncryptDecrypt (key_size_code, out_str, ct, Counter, DecryptionKey, blocks);
+			// Perform CTR Mode decryption  (For CTR - DecryptionKey = EncryptionKey)
+			aesCopyInit2(Counter, Nonce);
+			status = CTR_EncryptDecrypt (key_size_code, out_str, ct, Counter, EncryptionKey, blocks);
 			break;
 		default:
 			// Perform CBC Mode decryption
