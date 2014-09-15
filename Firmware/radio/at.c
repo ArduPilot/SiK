@@ -37,6 +37,10 @@
 #include "flash_layout.h"
 #include "at.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 // canary data for ram wrap. It is in at.c as the compiler
 // assigns addresses in alphabetial order and we want this at a low
 // address
@@ -388,7 +392,7 @@ at_s(void)
 static void 
 at_e(void)
 {
-
+	__xdata uint8_t 	key_length, encryption_level;
         __pdata uint8_t         sreg;
         __xdata unsigned char   *val;
 
@@ -403,8 +407,15 @@ at_e(void)
 
         switch (at_cmd[idx]) {
         case '?':
+		// Get the encryption level, so we know # of bits
+		encryption_level = aes_get_encryption_level();
+
+		// Deduce key length (bytes) from level: 1 -> 16, 2 -> 24, 3 -> 32
+		key_length = AES_KEY_LENGTH(encryption_level);
+
+		// Get the encryption key
                 val = param_get_encryption_key();
-		print_hex_codes(val);
+		print_hex_codes(val, key_length);
                 return;
 
         case '=':

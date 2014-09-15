@@ -45,6 +45,10 @@
 #include "crc.h"
 #include <flash_layout.h>
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 /// In-ROM parameter info table.
 ///
 __code const struct parameter_info {
@@ -66,10 +70,8 @@ __code const struct parameter_info {
 	{"LBT_RSSI",		0},
 	{"MANCHESTER",		0},
 	{"RTSCTS",			0},
-	{"MAX_WINDOW",		131}
-#ifdef CPU_SI1030
-	,{"ENCRYPTION",		0}
-#endif
+	{"MAX_WINDOW",		131},
+	{"ENCRYPTION",		0}
 };
 
 
@@ -78,7 +80,7 @@ __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
 
 #ifdef CPU_SI1030
 // Holds the encrpytion string
-__xdata unsigned char encryption_key[16]; 
+__xdata unsigned char encryption_key[32]; 
 #endif
 
 /// In-RAM parameter store.
@@ -145,7 +147,11 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 #ifdef CPU_SI1030
 	case PARAM_ENCRYPTION:
-		if (val >3)
+		// Make sure first nibble (key length) is valid: 0, 1, 2
+		if ((val & 0xf ) > 3)
+			return false;
+		// Make sure second nibble (crypto type) is valid: 0, 1
+		if (((val>>4) & 0xf) > 1)
 			return false;
 		break;
 #endif
@@ -343,7 +349,6 @@ param_default(void)
 		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
 	}
 #endif
-	// result = param_set_encryption_key('\0');
 }
 
 enum ParamID
@@ -491,11 +496,10 @@ uint8_t read_hex_nibble(const uint8_t c) __reentrant __nonbanked
 
 /// Convert string to hex codes
 ///
-void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_out)
+void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_out, 
+	uint8_t key_length)
 {
-	uint8_t i, key_length, num;
-
-	key_length = 16;
+	uint8_t i, num;
 
 	for (i=0;i<key_length;i++) {
 		num = read_hex_nibble(str_in[2 * i])<<4;
@@ -506,25 +510,45 @@ void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_ou
 
 
 #ifdef CPU_SI1030
+/// Set default encryption key
+//
+void param_set_default_encryption_key(uint8_t key_length)
+{
+        uint8_t i;
+        __xdata unsigned char b[] = {0x62};
+
+        for (i=0;i< key_length;i++) {
+                // Set default key to b's
+                memcpy(&encryption_key[i], &b, 1);
+        }
+}
+
+
 /// set the encryption key
+///
+/// Note: There is a reliance on the encryption level as this determines
+///       how many characters we need. So we need to set ATS16 first, THEN
+///       save and then Set the encryption key.
 ///
 bool param_set_encryption_key(__xdata unsigned char *key)
 {
-	uint8_t len, key_length;
-	uint8_t i; 
-	__xdata unsigned char b[] = {0x62};
+	uint8_t len, key_length, encryption_level;
 
 	
-	key_length = 16;
+ 	// Get the encryption level, so we know # of bits
+	encryption_level = aes_get_encryption_level();
+
+	// Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
+	key_length = AES_KEY_LENGTH(encryption_level);
 	len = strlen(key);
 
- 	if (len < 32 ) {	
-		for (i=0;i< key_length;i++) {
-			// Set default key to b's
-			memcpy(&encryption_key[i], &b, 1);
-		}
+	// If not enough characters (2 char per byte), then set default
+ 	if (len < 2 * key_length ) {	
+		param_set_default_encryption_key(key_length);
 	} else {
-		convert_to_hex(key, encryption_key);
+		// We have sufficient characters for the encryption key.
+		// If too many characters, then it will just ignore extra ones
+		convert_to_hex(key, encryption_key, key_length);
 	}
 
  return true;
@@ -533,10 +557,9 @@ bool param_set_encryption_key(__xdata unsigned char *key)
 
 /// Print hex codes for given string
 ///
-void print_hex_codes(__xdata unsigned char *in_str)
+void print_hex_codes(__xdata unsigned char *in_str, uint8_t key_length)
 {
-	uint8_t i, key_length;
-	key_length = 16;
+	uint8_t i;
 
 	for (i=0; i<key_length; i++) {
 		printf("%x",in_str[i]);
