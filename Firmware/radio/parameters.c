@@ -83,11 +83,6 @@ __code const struct parameter_r_info {
 	{"ENCRYPTION",		0}
 };
 
-#ifdef CPU_SI1030
-// Holds the encrpytion string
-__xdata unsigned char encryption_key[32];
-#endif // CPU_SI1030
-
 /// In-RAM parameter store.
 ///
 /// It seems painful to have to do this, but we need somewhere to
@@ -124,6 +119,8 @@ typedef char r2pCheck[(PARAM_R_FLASH_END < PIN_FLASH_START) ? 0 : -1];
 
 // Place the start away from the other params to allow for expantion 2<<7 +128 = 384
 #ifdef CPU_SI1030
+// Holds the encrpytion string
+__xdata unsigned char encryption_key[32];
 
 #define PARAM_E_FLASH_START   (2<<7) + 128
 #define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 2)
@@ -446,6 +443,7 @@ __critical {
 #endif
 
 #ifdef CPU_SI1030
+	flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
 	write_params((__xdata unsigned char *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
 #endif
 

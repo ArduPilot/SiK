@@ -48,19 +48,19 @@ static __pdata uint8_t last_sent_len;
 static __pdata uint8_t last_recv_len;
 
 // serial speed in 16usecs/byte
-static __pdata uint16_t serial_rate;
+static __xdata uint16_t serial_rate;
 
 // the length of a pending MAVLink packet, or zero if no MAVLink
 // packet is expected
-static __pdata uint8_t mav_pkt_len;
+static __xdata uint8_t mav_pkt_len;
 
 // the timer2_tick time when the MAVLink header was seen
-static __pdata uint16_t mav_pkt_start_time;
+static __xdata uint16_t mav_pkt_start_time;
 
 // the number of timer2 ticks this packet should take on the serial link
-static __pdata uint16_t mav_pkt_max_time;
+static __xdata uint16_t mav_pkt_max_time;
 
-static __pdata uint8_t mav_max_xmit;
+static __xdata uint8_t mav_max_xmit;
 
 // true if we have a injected packet to send
 static bool injected_packet;
@@ -138,11 +138,11 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 {
 	__data uint16_t slen, offset = 0, high_offset;
 
-    //
-    // There is already a packet sitting waiting here
-    //
-    // but this optimization is redundant with the loop below.  By letting the very slightly
-    // more expensive version its thing we can ensure we skip _all_ redundant rc_override msgs
+	//
+	// There is already a packet sitting waiting here
+	//
+	// but this optimization is redundant with the loop below.  By letting the very slightly
+	// more expensive version its thing we can ensure we skip _all_ redundant rc_override msgs
 #if 0
 	serial_read_buf(last_sent, mav_pkt_len);
 	last_sent_len = mav_pkt_len;
@@ -237,10 +237,10 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 	slen = serial_read_available();
 	if (force_resend ||
-	    (feature_opportunistic_resend &&
-	     last_sent_is_resend == false && 
-	     last_sent_len != 0 && 
-	     slen < PACKET_RESEND_THRESHOLD)) {
+			(feature_opportunistic_resend &&
+			 last_sent_is_resend == false && 
+			 last_sent_len != 0 && 
+			 slen < PACKET_RESEND_THRESHOLD)) {
 		if (max_xmit < last_sent_len) {
 			return 0;
 		}

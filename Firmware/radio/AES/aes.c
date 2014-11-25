@@ -54,7 +54,7 @@ const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01
 #define	CRYPTO(_l)	(_l>>4)&0xf
 
 // Variables
-uint8_t encryption_level;
+SEG_XDATA uint8_t encryption_level;
 
 
 // Indicate if encryption subsystem initialised and ready.
@@ -62,7 +62,7 @@ uint8_t encryption_level;
 // returns a bool
 uint8_t aes_get_encryption_level()
 {
-        return encryption_level;
+	return encryption_level;
 }
 
 
@@ -70,7 +70,7 @@ uint8_t aes_get_encryption_level()
 //
 void aes_set_encryption_level(uint8_t encryption)
 {
-        encryption_level = encryption;
+	encryption_level = encryption;
 }
 
 
@@ -86,7 +86,7 @@ void aes_initkey()
 // Perform Copying of data, to help prepare for encryption
 void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 {
-	uint8_t i;
+	SEG_XDATA uint8_t i;
 
 	for(i=16;i>0;i--) {
 		*dest++ = *source++;
@@ -99,10 +99,10 @@ void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 // returns true if successful, or false if not
 bool aes_init(uint8_t encryption_level)
 {
-	uint8_t crypto_type;
-	uint8_t status;
-	int8_t key_size_code;
-	uint8_t bits;
+	SEG_XDATA uint8_t crypto_type;
+	SEG_XDATA uint8_t status;
+	SEG_XDATA int8_t key_size_code;
+	SEG_XDATA uint8_t bits;
 
 	aes_set_encryption_level(0);  // Initially set to zero - no encryption
 
@@ -149,8 +149,8 @@ bool aes_init(uint8_t encryption_level)
 // returns the padded string
 __xdata unsigned char *aes_pad(__xdata unsigned char *in_str, uint8_t len)
 {
-	volatile uint8_t  pad_length;
-	uint8_t i;
+	volatile SEG_XDATA uint8_t  pad_length;
+	SEG_XDATA uint8_t i;
 
 	pad_length = 16 - (len%16);
 
@@ -167,12 +167,12 @@ __xdata unsigned char *aes_pad(__xdata unsigned char *in_str, uint8_t len)
 uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str,
 			uint8_t *out_len)
 {
-	uint8_t encryption;
-	uint8_t crypto_type;
-	int8_t key_size_code;
-	uint8_t status;
-	uint8_t blocks;
-	__xdata unsigned char *pt;
+	SEG_XDATA uint8_t encryption;
+	SEG_XDATA uint8_t crypto_type;
+	SEG_XDATA int8_t key_size_code;
+	SEG_XDATA uint8_t status;
+	SEG_XDATA uint8_t blocks;
+	SEG_XDATA unsigned char *pt;
 
 	// Make sure we have something to encrypt
 	if (in_len == 0) return 0;
@@ -248,12 +248,12 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str,
 			uint8_t *out_len)
 {
-	uint8_t encryption;
-	uint8_t crypto_type;
-	int8_t key_size_code;
-	uint8_t status;
-	uint8_t blocks;
-	__xdata unsigned char *ct;
+	SEG_XDATA uint8_t encryption;
+	SEG_XDATA uint8_t crypto_type;
+	SEG_XDATA int8_t key_size_code;
+	SEG_XDATA uint8_t status;
+	SEG_XDATA uint8_t blocks;
+	SEG_XDATA unsigned char *ct;
 
 	// Make sure we have something to decrypt
 	if (in_len == 0) return 0;

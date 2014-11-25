@@ -1199,7 +1199,7 @@ static void
 set_frequency_registers(__pdata uint32_t frequency)
 {
 	uint8_t band;
-	__pdata uint16_t carrier;
+	__xdata uint16_t carrier;
 
 	if (frequency > 480000000UL) {
 		frequency -= 480000000UL;

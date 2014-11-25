@@ -66,15 +66,15 @@
 //-----------------------------------------------------------------------------
 enum PERIPHERAL_REQUEST_Enum
 {
-   ENC0_IN_PERIPHERAL_REQUEST = 0,     // 0x0
-   ENC0_OUT_PERIPHERAL_REQUEST,        // 0x1
-   CRC1_PERIPHERAL_REQUEST,            // 0x2
-   SPI1_IN_PERIPHERAL_REQUEST,         // 0x3
-   SPI1_OUT_PERIPHERAL_REQUEST,        // 0x4
-   AES0KIN_PERIPHERAL_REQUEST,         // 0x5
-   AES0BIN_PERIPHERAL_REQUEST,         // 0x6
-   AES0XIN_PERIPHERAL_REQUEST,         // 0x7
-   AES0YOUT_PERIPHERAL_REQUEST         // 0x8
+	ENC0_IN_PERIPHERAL_REQUEST = 0,     // 0x0
+	ENC0_OUT_PERIPHERAL_REQUEST,        // 0x1
+	CRC1_PERIPHERAL_REQUEST,            // 0x2
+	SPI1_IN_PERIPHERAL_REQUEST,         // 0x3
+	SPI1_OUT_PERIPHERAL_REQUEST,        // 0x4
+	AES0KIN_PERIPHERAL_REQUEST,         // 0x5
+	AES0BIN_PERIPHERAL_REQUEST,         // 0x6
+	AES0XIN_PERIPHERAL_REQUEST,         // 0x7
+	AES0YOUT_PERIPHERAL_REQUEST         // 0x8
 };
 //-----------------------------------------------------------------------------
 // defines used with DMA0NCF sfr

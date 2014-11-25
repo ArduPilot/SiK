@@ -112,236 +112,236 @@
 //
 //-----------------------------------------------------------------------------
 CBC_ENCRYPT_DECRYPT_STATUS
-   CBC_EncryptDecrypt (CBC_ENCRYPT_DECRYPT_OPERATION operation,
-   VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(initialVector, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
-   U16 blocks)
+	CBC_EncryptDecrypt (CBC_ENCRYPT_DECRYPT_OPERATION operation,
+	VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(initialVector, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
+	U16 blocks)
 {
-   // Unions used for compiler independent endianness.
-   UU16 length;                        // Length in bytes for all blocks.
-   UU16 addr;                          // Union used to access pointer bytes.
+	// Unions used for compiler independent endianness.
+	SEG_XDATA UU16 length;                        // Length in bytes for all blocks.
+	SEG_XDATA UU16 addr;                          // Union used to access pointer bytes.
 
-   U8 keyLength;                       // Used to calculate key length in bytes.
+	SEG_XDATA U8 keyLength;                       // Used to calculate key length in bytes.
 
-   // check first for valid operation
-   if((operation == DECRYPTION_UNDEFINED)||(operation >= ENCRYPTION_UNDEFINED))
-   {
-      return ERROR_INVALID_PARAMETER;
-   }
-   else
-   {
-      // Calculate key length in bytes based on operation parameter.
-      keyLength = (((operation & 0x03) + 2) << 3);
-   }
+	// check first for valid operation
+	if((operation == DECRYPTION_UNDEFINED)||(operation >= ENCRYPTION_UNDEFINED))
+	{
+		return ERROR_INVALID_PARAMETER;
+	}
+	else
+	{
+		// Calculate key length in bytes based on operation parameter.
+		keyLength = (((operation & 0x03) + 2) << 3);
+	}
 
-   // Calculate plaintext and ciphertext total length.
-   // Using <<4 in lieu of * 16 for code efficiency.
-   length.U16 = (blocks << 4);
+	// Calculate plaintext and ciphertext total length.
+	// Using <<4 in lieu of * 16 for code efficiency.
+	length.U16 = (blocks << 4);
 
-   // From this point on, blocks is used to count remaining blocks.
-   blocks--;
+	// From this point on, blocks is used to count remaining blocks.
+	blocks--;
 
-   SFRPAGE = DPPE_PAGE;
+	SFRPAGE = DPPE_PAGE;
 
-   AES0BCFG = 0x00;                      // disable for now
-   AES0DCFG = 0x00;                      // disable for now
+	AES0BCFG = 0x00;                      // disable for now
+	AES0DCFG = 0x00;                      // disable for now
 
-   // Disable AES0KIN, AES0BIN, AES0XIN, & AES0YOUT channels.
-   DMA0EN &= ~AES0_KBXY_MASK;
+	// Disable AES0KIN, AES0BIN, AES0XIN, & AES0YOUT channels.
+	DMA0EN &= ~AES0_KBXY_MASK;
 
-   // Configure AES key input channel using key pointer.
-   // Set length to calculated key length.
-   // Set DMA0NMD to disable key wrapping.
-   // This is necessary because we want the key DMA channel
-   // to stop after the first block.
+	// Configure AES key input channel using key pointer.
+	// Set length to calculated key length.
+	// Set DMA0NMD to disable key wrapping.
+	// This is necessary because we want the key DMA channel
+	// to stop after the first block.
 
-   DMA0SEL = AES0KIN_CHANNEL;
-   DMA0NCF = AES0KIN_PERIPHERAL_REQUEST;
-   DMA0NMD = NO_WRAPPING;
-   addr.U16 = (U16)(key);
-   DMA0NBAL = addr.U8[LSB];
-   DMA0NBAH = addr.U8[MSB];
-   DMA0NSZH = 0;
-   DMA0NSZL = keyLength;
-   DMA0NAOL = 0;
-   DMA0NAOH = 0;
+	DMA0SEL = AES0KIN_CHANNEL;
+	DMA0NCF = AES0KIN_PERIPHERAL_REQUEST;
+	DMA0NMD = NO_WRAPPING;
+	addr.U16 = (U16)(key);
+	DMA0NBAL = addr.U8[LSB];
+	DMA0NBAH = addr.U8[MSB];
+	DMA0NSZH = 0;
+	DMA0NSZL = keyLength;
+	DMA0NAOL = 0;
+	DMA0NAOH = 0;
 
-   // AES block input is plaintext for encryption operation or ciphertext
-   // for decryption operation.
+	// AES block input is plaintext for encryption operation or ciphertext
+	// for decryption operation.
 
-   if(operation & ENCRYPTION_MODE)
-      addr.U16 = (U16)(plainText);
-   else
-      addr.U16 = (U16)(cipherText);
+	if(operation & ENCRYPTION_MODE)
+		addr.U16 = (U16)(plainText);
+	else
+		addr.U16 = (U16)(cipherText);
 
-   // Configure AES block input channel using corresponding address.
-   // Set length to 16 for first block only.
-   // Clear DMA0NMD to disable wrapping.
+	// Configure AES block input channel using corresponding address.
+	// Set length to 16 for first block only.
+	// Clear DMA0NMD to disable wrapping.
 
-   DMA0SEL = AES0BIN_CHANNEL;
-   DMA0NCF = AES0BIN_PERIPHERAL_REQUEST;
-   DMA0NMD = NO_WRAPPING;
-   DMA0NBAL = addr.U8[LSB];
-   DMA0NBAH = addr.U8[MSB];
-   DMA0NSZL = 16;                      // one block
-   DMA0NSZH = 0;
-   DMA0NAOL = 0;
-   DMA0NAOH = 0;
+	DMA0SEL = AES0BIN_CHANNEL;
+	DMA0NCF = AES0BIN_PERIPHERAL_REQUEST;
+	DMA0NMD = NO_WRAPPING;
+	DMA0NBAL = addr.U8[LSB];
+	DMA0NBAH = addr.U8[MSB];
+	DMA0NSZL = 16;                      // one block
+	DMA0NSZH = 0;
+	DMA0NAOL = 0;
+	DMA0NAOH = 0;
 
-   // Configure AES X input channel using initialization vector address.
-   // Set length to 16 for first block only.
-   // Clear DMA0NMD to disable wrapping.
+	// Configure AES X input channel using initialization vector address.
+	// Set length to 16 for first block only.
+	// Clear DMA0NMD to disable wrapping.
 
-   DMA0SEL = AES0XIN_CHANNEL;
-   DMA0NCF = AES0XIN_PERIPHERAL_REQUEST;
-   DMA0NMD = NO_WRAPPING;
-   addr.U16 = (U16)(initialVector);
-   DMA0NBAL = addr.U8[LSB];
-   DMA0NBAH = addr.U8[MSB];
-   DMA0NSZL = 16;                      // one block
-   DMA0NSZH = 0;
-   DMA0NAOL = 0;
-   DMA0NAOH = 0;
+	DMA0SEL = AES0XIN_CHANNEL;
+	DMA0NCF = AES0XIN_PERIPHERAL_REQUEST;
+	DMA0NMD = NO_WRAPPING;
+	addr.U16 = (U16)(initialVector);
+	DMA0NBAL = addr.U8[LSB];
+	DMA0NBAH = addr.U8[MSB];
+	DMA0NSZL = 16;                      // one block
+	DMA0NSZH = 0;
+	DMA0NAOL = 0;
+	DMA0NAOH = 0;
 
-   // AES Y output is ciphertext  for encryption operation or
-   // plaintext for decryption operation.
+	// AES Y output is ciphertext  for encryption operation or
+	// plaintext for decryption operation.
 
-   if(operation & ENCRYPTION_MODE)
-      addr.U16 = (U16)(cipherText);
-   else
-      addr.U16 = (U16)(plainText);
+	if(operation & ENCRYPTION_MODE)
+		addr.U16 = (U16)(cipherText);
+	else
+		addr.U16 = (U16)(plainText);
 
-   // Configure AES Y output channel using corresponding address
-   // Set length to 16 for first block only.
-   // Clear DMA0NMD to disable wrapping.
+	// Configure AES Y output channel using corresponding address
+	// Set length to 16 for first block only.
+	// Clear DMA0NMD to disable wrapping.
 
-   DMA0SEL = AES0YOUT_CHANNEL;
-   DMA0NCF = AES0YOUT_PERIPHERAL_REQUEST|DMA_INT_EN;
-   DMA0NMD = NO_WRAPPING;
-   DMA0NBAL = addr.U8[LSB];
-   DMA0NBAH = addr.U8[MSB];
-   DMA0NSZL = 16;                      // one block
-   DMA0NSZH = 0;
-   DMA0NAOH = 0;
-   DMA0NAOL = 0;
+	DMA0SEL = AES0YOUT_CHANNEL;
+	DMA0NCF = AES0YOUT_PERIPHERAL_REQUEST|DMA_INT_EN;
+	DMA0NMD = NO_WRAPPING;
+	DMA0NBAL = addr.U8[LSB];
+	DMA0NBAH = addr.U8[MSB];
+	DMA0NSZL = 16;                      // one block
+	DMA0NSZH = 0;
+	DMA0NAOH = 0;
+	DMA0NAOL = 0;
 
-   // Clear KBXY (Key, Block, X in, and Y out) bits in DMA0INT sfr using mask.
-   DMA0INT &= ~AES0_KBXY_MASK;
+	// Clear KBXY (Key, Block, X in, and Y out) bits in DMA0INT sfr using mask.
+	DMA0INT &= ~AES0_KBXY_MASK;
 
-   // Set KBXY (Key, Block, Xin, and Y out) bits in DMA0EN sfr using mask.
-   // This enables the DMA. But the encryption/decryption operation
-   // won't start until the AES block is enabled.
-   DMA0EN  |=  AES0_KBXY_MASK;
+	// Set KBXY (Key, Block, Xin, and Y out) bits in DMA0EN sfr using mask.
+	// This enables the DMA. But the encryption/decryption operation
+	// won't start until the AES block is enabled.
+	DMA0EN  |=  AES0_KBXY_MASK;
 
-   // Configure AES0DCFG depending on ENCRYPTION or DECRYPION operation.
-   // For CBC Mode, the XOR operation is on the input for encryption or
-   // on the output for decryption.
-   if(operation & ENCRYPTION_MODE)
-      AES0DCFG = XOR_ON_INPUT;          // XOR on input - CBC Encryption
-   else
-      AES0DCFG = XOR_ON_OUTPUT;         // XOR on output - CBC Decryption
+	// Configure AES0DCFG depending on ENCRYPTION or DECRYPION operation.
+	// For CBC Mode, the XOR operation is on the input for encryption or
+	// on the output for decryption.
+	if(operation & ENCRYPTION_MODE)
+		AES0DCFG = XOR_ON_INPUT;          // XOR on input - CBC Encryption
+	else
+		AES0DCFG = XOR_ON_OUTPUT;         // XOR on output - CBC Decryption
 
-   // Configure AES0BCFG for encryption or decryption operation according
-   // to operation parameter.
-   AES0BCFG = operation;
+	// Configure AES0BCFG for encryption or decryption operation according
+	// to operation parameter.
+	AES0BCFG = operation;
 
-   // Enabled AES module to start encryption/decryption operation.
-   AES0BCFG |= AES_ENABLE;               // enable AES
+	// Enabled AES module to start encryption/decryption operation.
+	AES0BCFG |= AES_ENABLE;               // enable AES
 
-   EIE2 |= 0x20;                 // enable DMA interrupt to terminate Idle mode
+	EIE2 |= 0x20;                 // enable DMA interrupt to terminate Idle mode
 
-   // This do...while loop ensures that the CPU will remain in Idle mode
-   // until AES0YOUT DMA channel transfer is complete.
-   do
-   {
-      #ifdef DMA_TRANSFERS_USE_IDLE
-      PCON |= 0x01;                    // go to Idle mode
-      #endif
-   }  while((DMA0INT&AES0YOUT_MASK)==0);
+	// This do...while loop ensures that the CPU will remain in Idle mode
+	// until AES0YOUT DMA channel transfer is complete.
+	do
+	{
+		#ifdef DMA_TRANSFERS_USE_IDLE
+		PCON |= 0x01;                    // go to Idle mode
+		#endif
+	} while((DMA0INT&AES0YOUT_MASK)==0);
 
 
-   if(blocks)                          // if blocks remaining
-   {
-      // It is necessary to either pause the AES DMA channels
-      // or disable the AES block while changing the setup.
-      // Both steps are taken in this example to be extra safe.
+	if(blocks)                          // if blocks remaining
+	{
+		// It is necessary to either pause the AES DMA channels
+		// or disable the AES block while changing the setup.
+		// Both steps are taken in this example to be extra safe.
 
-      // Disable AES block.
-      // This also clears the AES contents and resets the state machine.
-      // It is not necessary to reset the AES core between blocks.
-      // But it is recommended to disable the core while changing the set-up.
-      AES0BCFG &= ~AES_ENABLE;
+		// Disable AES block.
+		// This also clears the AES contents and resets the state machine.
+		// It is not necessary to reset the AES core between blocks.
+		// But it is recommended to disable the core while changing the set-up.
+		AES0BCFG &= ~AES_ENABLE;
 
-      // Pause DMA channels used by AES block.
-      DMA0EN &= ~AES0_KBXY_MASK;
+		// Pause DMA channels used by AES block.
+		DMA0EN &= ~AES0_KBXY_MASK;
 
-      // AESKIN DMA reset address offset and enable wrapping.
-      DMA0SEL = AES0KIN_CHANNEL;
-      DMA0NMD = WRAPPING;
-      DMA0NAOL = 0;
-      DMA0NAOH = 0;
+		// AESKIN DMA reset address offset and enable wrapping.
+		DMA0SEL = AES0KIN_CHANNEL;
+		DMA0NMD = WRAPPING;
+		DMA0NAOL = 0;
+		DMA0NAOH = 0;
 
-      // AESBIN DMA channel change length only.
-      // Set length to calculated total plaintext/ciphertext length.
-      DMA0SEL = AES0BIN_CHANNEL;
-      DMA0NSZL = length.U8[LSB];
-      DMA0NSZH = length.U8[MSB];
+		// AESBIN DMA channel change length only.
+		// Set length to calculated total plaintext/ciphertext length.
+		DMA0SEL = AES0BIN_CHANNEL;
+		DMA0NSZL = length.U8[LSB];
+		DMA0NSZH = length.U8[MSB];
 
-      // AESXIN DMA channel point to ciphertext for
-      // both encryption and decryption.
-      // Set length to calculated total plaintext/ciphertext length.
-      DMA0SEL = AES0XIN_CHANNEL;
-      addr.U16 = (U16)(cipherText);
-      DMA0NBAL = addr.U8[LSB];
-      DMA0NBAH = addr.U8[MSB];
-      DMA0NSZL = length.U8[LSB];
-      DMA0NSZH = length.U8[MSB];
-      DMA0NAOL = 0;
-      DMA0NAOH = 0;
+		// AESXIN DMA channel point to ciphertext for
+		// both encryption and decryption.
+		// Set length to calculated total plaintext/ciphertext length.
+		DMA0SEL = AES0XIN_CHANNEL;
+		addr.U16 = (U16)(cipherText);
+		DMA0NBAL = addr.U8[LSB];
+		DMA0NBAH = addr.U8[MSB];
+		DMA0NSZL = length.U8[LSB];
+		DMA0NSZH = length.U8[MSB];
+		DMA0NAOL = 0;
+		DMA0NAOH = 0;
 
-      // AESYOUT DMA channel change length only
-      // Set length to calculated total plaintext/ciphertext length.
-      DMA0SEL = AES0YOUT_CHANNEL;
-      DMA0NSZL = length.U8[LSB];
-      DMA0NSZH = length.U8[MSB];
+		// AESYOUT DMA channel change length only
+		// Set length to calculated total plaintext/ciphertext length.
+		DMA0SEL = AES0YOUT_CHANNEL;
+		DMA0NSZL = length.U8[LSB];
+		DMA0NSZH = length.U8[MSB];
 
-      // Clear KBXY (Key, Block, X in, and Y out) bits in DMA0INT sfr using mask.
-      DMA0INT &= ~AES0_KBXY_MASK;
+		// Clear KBXY (Key, Block, X in, and Y out) bits in DMA0INT sfr using mask.
+		DMA0INT &= ~AES0_KBXY_MASK;
 
-      // Set KBXY (Key, Block, Xin, and Y out) bits in DMA0EN sfr using mask.
-      // This enables the DMA. But the encryption/decryption operation
-      // won't start until the AES block is enabled.
-      DMA0EN  |=  AES0_KBXY_MASK;
+		// Set KBXY (Key, Block, Xin, and Y out) bits in DMA0EN sfr using mask.
+		// This enables the DMA. But the encryption/decryption operation
+		// won't start until the AES block is enabled.
+		DMA0EN  |=  AES0_KBXY_MASK;
 
-      // Enabled AES module to start encryption/decryption operation.
-      AES0BCFG |= AES_ENABLE;               // enable AES
+		// Enabled AES module to start encryption/decryption operation.
+		AES0BCFG |= AES_ENABLE;               // enable AES
 
-      // enable DMA interrupt to terminate Idle mode
-      EIE2 |= 0x20;                 // enable DMA interrupt to terminate Idle mode
+		// enable DMA interrupt to terminate Idle mode
+		EIE2 |= 0x20;                 // enable DMA interrupt to terminate Idle mode
 
-      // This do...while loop ensures that the CPU will remain in Idle mode
-      // until AES0YOUT DMA channel transfer is complete.
-      do
-      {
-         #ifdef DMA_TRANSFERS_USE_IDLE
-         PCON |= 0x01;                    // go to Idle mode
-         #endif
-      }  while((DMA0INT & AES0YOUT_MASK)==0);
-   }
+		// This do...while loop ensures that the CPU will remain in Idle mode
+		// until AES0YOUT DMA channel transfer is complete.
+		do
+		{
+			#ifdef DMA_TRANSFERS_USE_IDLE
+			PCON |= 0x01;                    // go to Idle mode
+			#endif
+		} while((DMA0INT & AES0YOUT_MASK)==0);
+	}
 
-   //Clear AES Block
-   AES0BCFG = 0x00;
-   AES0DCFG = 0x00;
+	//Clear AES Block
+	AES0BCFG = 0x00;
+	AES0DCFG = 0x00;
 
-   // Clear KXBY (Key, Block, XOR, and Y out) bits in DMA0EN sfr using mask.
-   DMA0EN &= ~AES0_KBXY_MASK;
+	// Clear KXBY (Key, Block, XOR, and Y out) bits in DMA0EN sfr using mask.
+	DMA0EN &= ~AES0_KBXY_MASK;
 
-   // Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
-   DMA0INT &= ~AES0_KBXY_MASK;
+	// Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
+	DMA0INT &= ~AES0_KBXY_MASK;
 
-   return SUCCESS;
+	return SUCCESS;
 }
 //=============================================================================
 // End of file

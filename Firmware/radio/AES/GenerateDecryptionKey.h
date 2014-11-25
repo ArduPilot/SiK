@@ -47,10 +47,10 @@ typedef U8 GENERATE_DECRYPTION_KEY_STATUS;
 // Function Prototypes (API)
 //=============================================================================
 GENERATE_DECRYPTION_KEY_STATUS
-   GenerateDecryptionKey (
-   VARIABLE_SEGMENT_POINTER(encryptionKey, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(decryptionKey, U8, SEG_XDATA),
-   U8 GENERATE_DECRYPTION_KEY_SIZE);
+	GenerateDecryptionKey (
+	VARIABLE_SEGMENT_POINTER(encryptionKey, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(decryptionKey, U8, SEG_XDATA),
+	U8 GENERATE_DECRYPTION_KEY_SIZE);
 //=============================================================================
 // End of file
 //=============================================================================

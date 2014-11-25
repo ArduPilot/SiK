@@ -48,12 +48,12 @@ typedef U8 CBC_ENCRYPT_DECRYPT_STATUS;
 // Function Prototypes (API)
 //=============================================================================
 CBC_ENCRYPT_DECRYPT_STATUS
-   CBC_EncryptDecrypt (CBC_ENCRYPT_DECRYPT_OPERATION operation,
-   VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(initialVector, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
-   U16 blocks);
+	CBC_EncryptDecrypt (CBC_ENCRYPT_DECRYPT_OPERATION operation,
+	VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(initialVector, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
+	U16 blocks);
 //=============================================================================
 // End of file
 //=============================================================================

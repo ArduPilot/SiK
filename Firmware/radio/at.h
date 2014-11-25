@@ -69,7 +69,7 @@ extern void	at_input(register uint8_t c);
 extern void	at_command(void);
 
 /// AT_TEST_* test modes
-extern __pdata uint8_t  at_testmode;    ///< AT_TEST_* bits
+extern __xdata uint8_t  at_testmode;    ///< AT_TEST_* bits
 
 #define AT_TEST_RSSI 1
 #define AT_TEST_TDM  2
@@ -82,7 +82,7 @@ extern __pdata uint8_t  at_testmode;    ///< AT_TEST_* bits
 #endif
 
 // AT command buffer
-extern __pdata char at_cmd[AT_CMD_MAXLEN + 1];
-extern __pdata uint8_t at_cmd_len;
+extern __xdata char at_cmd[AT_CMD_MAXLEN + 1];
+extern __xdata uint8_t at_cmd_len;
 
 #endif	// _AT_H_

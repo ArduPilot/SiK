@@ -48,12 +48,12 @@ typedef U8 CTR_ENCRYPT_DECRYPT_STATUS;
 // Function Prototypes (API)
 //=============================================================================
 CTR_ENCRYPT_DECRYPT_STATUS
-   CTR_EncryptDecrypt (CTR_ENCRYPT_DECRYPT_OPERATION operation,
-   VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(counter, U8, SEG_XDATA),
-   VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
-   U16 blocks);
+	CTR_EncryptDecrypt (CTR_ENCRYPT_DECRYPT_OPERATION operation,
+	VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(counter, U8, SEG_XDATA),
+	VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
+	U16 blocks);
 //=============================================================================
 // End of file
 //=============================================================================

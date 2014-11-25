@@ -60,15 +60,15 @@ __pdata static uint16_t tdm_state_remaining;
 
 /// This is enough to hold at least 3 packets and is based
 /// on the configured air data rate.
-__pdata static uint16_t tx_window_width;
+__xdata static uint16_t tx_window_width;
 
 /// the maximum data packet size we can fit
-__pdata static uint8_t max_data_packet_length;
+__xdata static uint8_t max_data_packet_length;
 
 /// the silence period between transmit windows
 /// This is calculated as the number of ticks it would take to transmit
 /// two zero length packets
-__pdata static uint16_t silence_period;
+__xdata static uint16_t silence_period;
 
 /// whether we can transmit in the other radios transmit window
 /// due to the other radio yielding to us
@@ -88,10 +88,10 @@ static __bit blink_state;
 static __bit received_packet;
 
 /// the latency in 16usec timer2 ticks for sending a zero length packet
-__pdata static uint16_t packet_latency;
+__xdata static uint16_t packet_latency;
 
 /// the time in 16usec ticks for sending one byte
-__pdata static uint16_t ticks_per_byte;
+__xdata static uint16_t ticks_per_byte;
 
 /// number of 16usec ticks to wait for a preamble to turn into a packet
 /// This is set when we get a preamble interrupt, and causes us to delay
@@ -99,7 +99,7 @@ __pdata static uint16_t ticks_per_byte;
 /// that two radios that happen to be exactly in sync in their sends
 /// will eventually get a packet through and get their transmit windows
 /// sorted out
-__pdata uint16_t transmit_wait;
+__xdata uint16_t transmit_wait;
 
 /// the long term duty cycle we are aiming for
 __pdata uint8_t duty_cycle;
@@ -120,17 +120,17 @@ __pdata static uint16_t transmitted_ticks;
 __pdata uint8_t lbt_rssi;
 
 /// how long we have listened for for LBT
-__pdata static uint16_t lbt_listen_time;
+__xdata static uint16_t lbt_listen_time;
 
 /// how long we have to listen for before LBT is OK
-__pdata static uint16_t lbt_min_time;
+__xdata static uint16_t lbt_min_time;
 
 /// random addition to LBT listen time (see European regs)
-__pdata static uint16_t lbt_rand;
+__xdata static uint16_t lbt_rand;
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
-__pdata uint8_t test_display;
+__xdata uint8_t test_display;
 
 /// set when we should send a statistics packet on the next round
 static __bit send_statistics;

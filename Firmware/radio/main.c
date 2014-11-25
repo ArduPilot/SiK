@@ -179,7 +179,7 @@ panic(char *fmt, ...)
 static void
 hardware_init(void)
 {
-	__pdata uint16_t	i;
+	__xdata uint16_t	i;
 
 	// Disable the watchdog timer
 	PCA0MD	&= ~0x40;
@@ -293,8 +293,8 @@ static void
 radio_init(void)
 {
 	__pdata uint32_t freq_min, freq_max;
-	__pdata uint32_t channel_spacing;
-	__pdata uint8_t txpower;
+	__xdata uint32_t channel_spacing;
+	__xdata uint8_t txpower;
 
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
