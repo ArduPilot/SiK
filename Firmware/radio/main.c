@@ -102,12 +102,6 @@ void
 main(void)
 {
 #ifdef CPU_SI1030
-	uint8_t i, len1, len2;
-	__xdata unsigned char str[240];
-	__xdata unsigned char strtmp[240];
-	__xdata unsigned char strtmp2[240];
-	__xdata unsigned char *in_str;
-	__xdata unsigned char *out_str;
 	PSBANK = 0x33;
 #endif
 
@@ -144,52 +138,10 @@ main(void)
 	}
 
 #ifdef CPU_SI1030
-// At present, any value of encryption > 0, <=3 will trigger the test
-// Later on, the value of this will determine key size
+	// Initialise Encryption
 	if (! aes_init(feature_encryption)) {
 		panic("failed to initialise aes");
 	}
-#endif
-
-
-
-// KEEP THIS A LITTLE BIT LONGER TO TEST OUT OTHER CIPHERS
-#ifdef CPU_SI1030
-if (aes_get_encryption_level() > 0 ) {
-// Initial testing
- memcpy(str, "Message to decrypt..", 20);
- in_str = str;
- out_str = strtmp;
-
- // encrypt String - outputs string and length of cipherText
- if (aes_encrypt(in_str, strlen(in_str), out_str, &len1) != 0) {
- 	panic("Error while trying to encrypt data");
- }
-
- // Print out the Encrypted Text
- printf("Encrypted Ciper:");
-         for (i=0; i<len1; i++) {
-                 printf("%d ",out_str[i]);
-         }
- printf("\n");
-
- in_str = out_str;
- out_str = strtmp2; // It is important that in_str and out_str have their own allocated memory
-                    // as CBC uses previously data for decryption.
-
- // decrypt ciperText. We provide string and length and it outputs string pointer and length
- // of string.
- if (aes_decrypt(in_str, len1, out_str, &len2) != 0) {
- 	panic("Error while trying to decrypt data");
- }
-
- // Print out the Plain Text
- printf("Decrypted Ciper:");
-         for (i=0; i<len2; i++) {
-		putchar(out_str[i]);
-         }
- printf("\n");
-}
 #endif
 
 

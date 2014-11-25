@@ -32,18 +32,28 @@
 #include "GenerateDecryptionKey.h"
 #include "AES_BlockCipher.h"
 #include "CBC_EncryptDecrypt.h"
+#include "CTR_EncryptDecrypt.h"
 #include <stdlib.h>
 
 /* SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA); */
 __xdata unsigned char *EncryptionKey;
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
 SEGMENT_VARIABLE (InitialVector[16], U8, SEG_XDATA);
+SEGMENT_VARIABLE (Counter[16], U8, SEG_XDATA);
 
 // The following four will eventually be provided by user and by other means
 // They are here at present, to get the encryption/decryption working
+const SEGMENT_VARIABLE (Nonce[16], U8, SEG_CODE) = {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff};
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 
+/* Helper definitions  */
+// First nibble = code for # of bits - 1 = 128, 2 = 192, 3 = 256 
+#define	BITS(_l)	(_l)&0xf
+// Second nibble = crypto 0 = CBC, 1 = CTR
+#define	CRYPTO(_l)	(_l>>4)&0xf
+
+// Variables
 uint8_t encryption_level;
 
 
@@ -76,12 +86,11 @@ void aes_initkey()
 // Perform Copying of data, to help prepare for encryption
 void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 {
-   uint8_t i;
+	uint8_t i;
 
-   for(i=16;i>0;i--)
-   {
-      *dest++ = *source++;
-   }
+	for(i=16;i>0;i--) {
+		*dest++ = *source++;
+	}
 }
 
 
@@ -90,36 +99,49 @@ void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
 // returns true if successful, or false if not
 bool aes_init(uint8_t encryption_level)
 {
-   uint8_t status;
-//   uint8_t i;  // DEBUGGING
+	uint8_t crypto_type;
+	uint8_t status;
+	int8_t key_size_code;
+	uint8_t bits;
 
-   aes_set_encryption_level(0);  // Initially set to zero
+	aes_set_encryption_level(0);  // Initially set to zero - no encryption
 
-   // If encyption level is 0, no encryption
-   if (encryption_level == 0) return true;
+	// If encryption level  (first nibble == encryption bits) is zero...no encryption
+	bits = BITS(encryption_level);
+	if (bits == 0) return true;
 
-   // Load Key
-   aes_initkey();
+	// From the encryption level, determine code for # of bits for AES functions
+	key_size_code = bits - 1;
 
-// DEBUGGING
-//   printf("ENC Key:");
-//         for (i=0; i<16; i++) {
-//                 printf("%u ",EncryptionKey[i]);
-//         }
-//         printf("\n");
+	// Load Encryption Key
+	aes_initkey();
 
-   // Generate Decryption Key
-   status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, KEY_SIZE_128_BITS);
-   if (status != 0) {
-   	return false;
-   }
+	// Generate Decryption Key (Only required by CBC)
+	status = GenerateDecryptionKey(EncryptionKey, DecryptionKey, key_size_code);
+	if (status != 0) return false;
 
-   // Initialise IV
-   aesCopyInit2(InitialVector, ReferenceInitialVector);
+	// Get Crypto algo type 
+	crypto_type = CRYPTO(encryption_level);
 
-   aes_set_encryption_level(encryption_level);  // If up to here, must have been successful
+	// Based on the crypto algoithm chosen, determine what other step needs to be 
+	// done and do them
+	switch(crypto_type)
+	{
+		case 0:
+			// Initialise IV
+			aesCopyInit2(InitialVector, ReferenceInitialVector);
+			break;
+		case 1:
+			// Nothing to do. We init "Counter" everytime we do encrypt/decrypt
+			break;
+		default:
+			// Initialise IV
+			aesCopyInit2(InitialVector, ReferenceInitialVector);
+	}
 
-   return true;
+	aes_set_encryption_level(encryption_level);  // If up to here, must have been successful
+
+	return true;
 }
 
 // Pad out the string to encrypt to a multiple of 16 x bytes
@@ -145,39 +167,73 @@ __xdata unsigned char *aes_pad(__xdata unsigned char *in_str, uint8_t len)
 uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str,
 			uint8_t *out_len)
 {
+	uint8_t encryption;
+	uint8_t crypto_type;
+	int8_t key_size_code;
 	uint8_t status;
 	uint8_t blocks;
 	__xdata unsigned char *pt;
-//        uint8_t  i;   // FOR DEBUGGING
 
 	// Make sure we have something to encrypt
-	if (in_len == 0) {
-		return -1;
+	if (in_len == 0) return 0;
+
+	// Get Encryption Level
+	encryption = aes_get_encryption_level();
+
+	// From the encryption level, determine code for # of bits for AES functions
+	// ENCRYPTION_128_BITS,                // 0x04
+	// ENCRYPTION_192_BITS,                // 0x05
+	// ENCRYPTION_256_BITS,                // 0x06
+	switch (BITS(encryption))
+	{
+		case 1:
+			key_size_code = ENCRYPTION_128_BITS;
+			break;	
+		case 2:
+			key_size_code = ENCRYPTION_192_BITS;
+			break;	
+		case 3:
+			key_size_code = ENCRYPTION_256_BITS;
+			break;	
+		default:
+			key_size_code = ENCRYPTION_128_BITS;
 	}
+
+
+	// Get crypto type...
+	// 0 - CBC
+	// 1 - CTR
+	crypto_type = CRYPTO(encryption);
 	
-	// We Always Pad the last 16 bytes.
+	// We always pad the blocks with up to max 16 bytes.
 	// If we don't find a pile of 10 10 10....10 in the last block
 	// then we know that the last block was incomplete
 	// e.g. 01 02 03 05 06 01 02 03 05 06 06 01 was just 15 bytes long...and the
 	// last byte is a 01...is padding
 
 	// Copy String into XDATA
-	pt = aes_pad(in_str, in_len);  // NOTE...later this might be a padded version of in_str
+	pt = aes_pad(in_str, in_len); 
 
 	// Calculate # of blocks we need to encrypt
 	blocks = 1 + (in_len>>4); // Number of 16-byte blocks to encrypt
 
+	// Based on crypto_type, perform the encryption
+	switch(crypto_type)
+	{
+		case 0:
+			// Validate CBC Mode encryption
+			status = CBC_EncryptDecrypt (key_size_code, pt, out_str, InitialVector, EncryptionKey, blocks);
+			break;
+		case 1:
+			// Perform CTR Mode decryption
+			aesCopyInit2(Counter, Nonce);
+			status = CTR_EncryptDecrypt (key_size_code, pt, out_str, Counter, EncryptionKey, blocks);
+			break;
+		default:
+			// Validate CBC Mode encryption
+			status = CBC_EncryptDecrypt (key_size_code, pt, out_str, InitialVector, EncryptionKey, blocks);
+	}
 
-// DEBUGGING
-//   printf("PRE ENC %u:", blocks);
-//         for (i=0; i<(16 * blocks); i++) {
-//                 printf("%d ",pt[i]);
-//         }
-//         printf("\n");
-
-
-	// Validate 128-bit CBC Mode encryption
-	status = CBC_EncryptDecrypt (ENCRYPTION_128_BITS, pt, out_str, InitialVector, EncryptionKey, blocks);
 	// Set size of encrypted cipher in bytes
 	*out_len = 16 * blocks;
 
@@ -192,38 +248,70 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 uint8_t aes_decrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str,
 			uint8_t *out_len)
 {
+	uint8_t encryption;
+	uint8_t crypto_type;
+	int8_t key_size_code;
 	uint8_t status;
 	uint8_t blocks;
 	__xdata unsigned char *ct;
-//        uint8_t  i;   // FOR DEBUGGING
 
 	// Make sure we have something to decrypt
-	if (in_len == 0) {
-		return -1;
+	if (in_len == 0) return 0;
+
+	// Get Encryption Level
+	encryption = aes_get_encryption_level();
+
+	// From the encryption level, determine code for # of bits for AES functions
+	// DECRYPTION_128_BITS = 0,            // 0x00
+	// DECRYPTION_192_BITS,                // 0x01
+	// DECRYPTION_256_BITS,                // 0x02
+	switch (BITS(encryption))
+	{
+		case 1:
+			key_size_code = DECRYPTION_128_BITS;
+			break;	
+		case 2:
+			key_size_code = DECRYPTION_192_BITS;
+			break;	
+		case 3:
+			key_size_code = DECRYPTION_256_BITS;
+			break;	
+		default:
+			key_size_code = DECRYPTION_128_BITS;
 	}
 
-	// Pad out in_str  to X 16-Byte blocks
+
+	// Get crypto type...
+	// 0 - CBC
+	// 1 - CTR
+	crypto_type = CRYPTO(encryption);
+
+	// Calculate # of 16-byte blocks
 	blocks = in_len>>4; 
 
 	// Initialise CipherText
-	ct = in_str; // NOTE...later this might be a padded version of in_str
+	ct = in_str; 
 
-// DEBUGGING
-//   printf("PRE DEC %u:", blocks);
-//         for (i=0; i<strlen(ct); i++) {
-//                 printf("%d ",ct[i]);
-//         }
-//         printf("\n");
-
-
-	// Perform 128-bit CBC Mode decryption
-	status = CBC_EncryptDecrypt (DECRYPTION_128_BITS, out_str, ct, InitialVector, DecryptionKey, blocks);
+	// Based on crypto_type, perform the decryption
+	switch(crypto_type)
+	{
+		case 0:
+			// Perform CBC Mode decryption
+			status = CBC_EncryptDecrypt (key_size_code, out_str, ct, InitialVector, DecryptionKey, blocks);
+			break;
+		case 1:
+			// Perform CTR Mode decryption  (For CTR - DecryptionKey = EncryptionKey)
+			aesCopyInit2(Counter, Nonce);
+			status = CTR_EncryptDecrypt (key_size_code, out_str, ct, Counter, EncryptionKey, blocks);
+			break;
+		default:
+			// Perform CBC Mode decryption
+			status = CBC_EncryptDecrypt (key_size_code, out_str, ct, InitialVector, DecryptionKey, blocks);
+	}
+			
 
 	// Set size of decrypted ciper text, taking into account the padding
 	*out_len = in_len - out_str[16 * blocks - 1];
 
 	return status;
 }
-
-
-
