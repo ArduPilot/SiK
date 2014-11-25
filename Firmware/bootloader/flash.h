@@ -91,7 +91,7 @@ void	flash_write_byte(uint16_t address, uint8_t c);
 ///
 uint8_t	flash_read_byte(uint16_t address);
 #endif // FLASH_BANKS
-#if defined BOARD_rfd900a //|| defined BOARD_rfd900u
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 void flash_transfer_calibration();
 #endif
 

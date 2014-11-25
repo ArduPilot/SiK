@@ -72,7 +72,7 @@
 //
 #define FLASH_FREQUENCY_BYTE	(FLASH_LOCK_BYTE - 1)
 
-#ifdef BOARD_rfd900a
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 // locked and unlocked areas to store power calibration info
 #define FLASH_CALIBRATION_AREA_SIZE (31)
 #define FLASH_CALIBRATION_CRC_HIGH  (FLASH_FREQUENCY_BYTE - 1)

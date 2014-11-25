@@ -183,7 +183,7 @@ hardware_init(void)
 	P0SKIP  =  0xCF;
 	P1SKIP  =  0xFF;
 	P2SKIP  =  0xF0;
-#elif defined _BOARD_RFD900A		// Redefine port skips to override bootloader defs
+#elif defined BOARD_rfd900a		// Redefine port skips to override bootloader defs
 	P0SKIP  =  0xCF;				// P0 UART avail on XBAR
 	P1SKIP  =  0xF8;				// P1 SPI1 avail on XBAR
 	P2SKIP  =  0xCF;				// P2 CEX0 avail on XBAR P2.4, rest GPIO
@@ -197,7 +197,7 @@ hardware_init(void)
 	XBR0	 =  0x01;		// UART enable
 
 	// SPI1
-#ifdef _BOARD_RFD900A
+#ifdef BOARD_rfd900a
 	XBR1	|= 0x44;	// enable SPI in 3-wire mode
 	P1MDOUT	|= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
 	P2MDOUT	|= 0xFF;	// SCK1, MOSI1, MISO1 push-pull
@@ -241,7 +241,7 @@ hardware_init(void)
 	// global interrupt enable
 	EA = 1;
 
-#ifdef _BOARD_RFD900U
+#ifdef CPU_SI1030
 	SFRPAGE  = CONFIG_PAGE;
 	P3MDOUT |= 0xC0;		/* Leds */
 	P3DRV   |= 0xC0;		/* Leds */
@@ -259,7 +259,7 @@ hardware_init(void)
 	ADC0MX = 0x1B;	// Set ADC0MX to temp sensor
 	REF0CN = 0x07;	// Define reference and enable temp sensor
 
-#ifdef _BOARD_RFD900A
+#ifdef BOARD_rfd900a
 	// PCA0, CEX0 setup and enable.
 	PCA0MD = 0x88;
 	PCA0PWM = 0x00;

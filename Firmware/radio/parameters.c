@@ -468,7 +468,7 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 
 // rfd900a calibration stuff
 // Change for next rfd900 revision
-#ifdef BOARD_rfd900a
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
 static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
 
