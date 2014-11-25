@@ -28,7 +28,7 @@
 #
 
 VERSION_MAJOR	 =	1
-VERSION_MINOR	 =	10
+VERSION_MINOR	 =	11
 
 PRODUCT		 =	radio~$(BOARD)
 PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
@@ -37,5 +37,7 @@ CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR
 CFLAGS		+=	$(CFLAG_MODEL) --opt-code-speed --Werror --std-sdcc99 --fomit-frame-pointer
 #CFLAGS		+=	--fverbose-asm 
 PRODUCT_SUPPORT_BANKING = 1
+INC_DIR_CC1030	 = AES
 
 include $(SRCROOT)/include/rules.mk
+# LDFLAGS		+=	-V

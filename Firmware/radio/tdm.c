@@ -42,6 +42,10 @@
 #include "freq_hopping.h"
 #include "crc.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 #define USE_TICK_YIELD 1
 
 /// the state of the tdm system
@@ -735,7 +739,21 @@ tdm_serial_loop(void)
 			// can't fit the trailer in with a byte to spare
 			continue;
 		}
-		max_xmit -= PACKET_OVERHEAD;
+		//max_xmit -= PACKET_OVERHEAD;
+		max_xmit -= sizeof(trailer)+1;
+
+#ifdef CPU_SI1030
+		if (aes_get_encryption_level() > 0) {
+			if (max_xmit < 16) {
+				// With AES, the cipher is up to 16 bytes larger than the text
+				// we are encrypting. So we make sure we have sufficient space
+				// i.e. min size of any cipher text is 16 bytes
+				continue;
+			}
+			max_xmit -= 16;
+		}
+#endif
+		
 		if (max_xmit > max_data_packet_length) {
 			max_xmit = max_data_packet_length;
 		}
@@ -782,7 +800,17 @@ tdm_serial_loop(void)
 			// calculate the control word as the number of
 			// 16usec ticks that will be left in this
 			// tdm state after this packet is transmitted
+
+#ifdef CPU_SI1030
+			if (aes_get_encryption_level() > 0) {
+				// Calculation here gives length of cipher text (= same length of padded block)
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 * (1 + (len+sizeof(trailer)>>4))));
+			} else {
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));		
+			}
+#else
 			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
+#endif
 		}
 
 		// set right transmit channel

@@ -42,6 +42,10 @@
 #include "timer.h"
 #include "freq_hopping.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
 ///
@@ -93,6 +97,10 @@ bool feature_opportunistic_resend;
 uint8_t feature_mavlink_framing;
 bool feature_rtscts;
 
+#ifdef CPU_SI1030
+uint8_t feature_encryption;
+#endif
+
 void
 main(void)
 {
@@ -117,6 +125,10 @@ main(void)
 	feature_golay = param_s_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_s_get(PARAM_RTSCTS)?true:false;
 
+#ifdef CPU_SI1030
+	feature_encryption = param_r_get(PARAM_ENCRYPTION);
+#endif
+
 	// Do hardware initialisation.
 	hardware_init();
 
@@ -133,6 +145,13 @@ main(void)
 	pins_user_init();
 #endif
 	
+#ifdef CPU_SI1030
+	// Initialise Encryption
+	if (! aes_init(feature_encryption)) {
+		panic("failed to initialise aes");
+	}
+#endif
+
 	tdm_serial_loop();
 }
 
@@ -435,3 +454,19 @@ radio_init(void)
 	tdm_init();
 }
 
+#ifdef CPU_SI1030
+//-----------------------------------------------------------------------------
+// DMA_ISR
+// description:
+//
+// This ISR is needed to support the DMA Idle mode wake up, which is used
+// in the AES functions. Bit 5 of EIE2 should be enabled before going into
+// idle mode. This ISR will disable further interrupts. EA must also be
+// enabled.
+//
+//-----------------------------------------------------------------------------
+INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
+{
+	EIE2 &= ~0x20;                       // disable further interrupts
+}
+#endif

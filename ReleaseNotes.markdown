@@ -1,5 +1,10 @@
 #Release Notes:
 
+##SiK 1.11:
+###NEW FEATURES!!
+* Added AES encryption when using new RFD900u and RFD900p boards
+
+----
 ##SiK 1.10:
 
 ###Alterations
@@ -7,19 +12,19 @@
 
 ###NEW FEATURES!!
 * Added new parameter segment for AT Parameters
-    
-    ATS will be used for Andrew Tridgell branch
-    
-    ATR will be used for RFDesign's new features
+  - ATS will be used for Andrew Tridgell branch
+  - ATR will be used for RFDesign's new features
+* RSSI Targeting for battery saving - Alpha Release
+  - ATR0 Target RSSI, This will change the TXPower (ATS4) until target is found. Set ATS4 to the maximum power allowed (Default 255).
+  - ATR1 Hysteresis RSSI, The level of change from the target before the power level is changed again.
 
-* ATR0 Target RSSI, This will change the TXPower (ATS4) until target is found. Set ATS4 to the maximum power allowed (Default 255).
-* ATR1 Hysteresis RSSI, The level of change from the target before the power level is changed again.
-
+----
 ##SiK 1.9:
 
 ###Alterations
 * Golay and ECC restored using new efficent code
 
+----
 ##SiK 1.8:
 
 ###Alterations
@@ -57,6 +62,7 @@ Pin  | Port
 0    | 1.0
 1    | 1.1
 
+----
 ##SiK 1.7:
 
 ###Improvements
