@@ -129,7 +129,7 @@ SBIT(PA_ENABLE,    SFR_P2, 5);         // Power Amplifier Enable
 #define EZRADIOPRO_OSC_CAP_VALUE 0xB6 // Measured on RFD900 V1.1
 #define ENABLE_RFD900_SWITCH 1        // Define RF switches on the module (V1.1 are V1.2 the same)
 #define RFD900_DIVERSITY 1            // Enable/Disable diversity on RFD900 (V1.1 are V1.2 the same)
-SBIT(IRQ,  SFR_P0, 7);                // Connection within RFD900 module, P0.7 is connected to nIRQ
+SBIT(IRQ,  SFR_P0, 1);                // Connection within RFD900 module, P0.1 is connected to nIRQ
 SBIT(NSS1, SFR_P2, 3);                // SI1020 Internal Connection
 
 #endif // _BOARD_RFD900P

@@ -275,7 +275,7 @@ flash_read_byte(uint16_t address)
 
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 __at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
-__at(FLASH_CALIBRATION_CRC_HIGH) uint8_t __code calibration_crc;
+__at(FLASH_CALIBRATION_CRC_HIGH)	uint8_t __code calibration_crc;
 
 void
 flash_transfer_calibration()
@@ -313,4 +313,4 @@ flash_transfer_calibration()
 	}
 	flash_write_byte(FLASH_CALIBRATION_CRC, calibration_crc);
 }
-#endif //BOARD_rfd900a / BOARD_rfd900p
+#endif //BOARD_rfd900a/p
