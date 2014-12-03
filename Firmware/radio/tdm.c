@@ -432,7 +432,7 @@ link_update(void)
 
 		// reset statistics when unlocked
 		statistics.receive_count = 0;
-		radio_set_transmit_power(maxPower);
+		//radio_set_transmit_power(maxPower);
 	}
 	
 	if (unlock_count > 5) {

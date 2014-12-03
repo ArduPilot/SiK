@@ -1,5 +1,10 @@
 #Release Notes:
 
+##SiK 1.11:
+
+###Alterations
+* Adding support for new rfd900p (plus) radio modem
+
 ##SiK 1.10:
 
 ###Alterations

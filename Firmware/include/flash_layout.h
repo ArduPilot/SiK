@@ -48,18 +48,18 @@
 
 #if defined BOARD_rfd900u || defined BOARD_rfd900p
 // WARNING You need to select Bank 3 for these address to work. (p125)
-#define FLASH_INFO_PAGE		0xFC00		// 1 page reserved for bootloader (In Bank3)
-#define FLASH_LOCK_BYTE		0xFFFF		// Bank3
-#define FLASH_SCRATCH		0xF800		// We don't have a scratch page so lets define one in code space (bank3).
-#define FLASH_BANKS			3			// 0-Home, 1-Bank1, 2-Bank2, 3-Bank3
-#define FLASH_SIGNATURE_BYTES	(FLASH_SCRATCH - 2) // Location of the flash signature
+#define FLASH_INFO_PAGE   0xFC00    // 1 page reserved for bootloader (In Bank3)
+#define FLASH_LOCK_BYTE   0xFFFF    // Bank3
+#define FLASH_SCRATCH     0xF800    // We don't have a scratch page so lets define one in code space (bank3).
+#define FLASH_BANKS            3    // 0-Home, 1-Bank1, 2-Bank2, 3-Bank3
+#define FLASH_SIGNATURE_BYTES   (FLASH_SCRATCH - 2) // Location of the flash signature
 
 #else  // BOARD_rfd900u (p144)
 
-#define FLASH_INFO_PAGE		0xf800		// 1 page reserved for bootloader
-#define FLASH_LOCK_BYTE		0xfbff
-#define FLASH_SIGNATURE_BYTES	(FLASH_INFO_PAGE - 2) // Location of the flash signature
-#define FLASH_SCRATCH		0x00	// Define the start of the scratch page
+#define FLASH_INFO_PAGE         0xf800		// 1 page reserved for bootloader
+#define FLASH_LOCK_BYTE         0xfbff
+#define FLASH_SIGNATURE_BYTES   (FLASH_INFO_PAGE - 2) // Location of the flash signature
+#define FLASH_SCRATCH           0x00	// Define the start of the scratch page
 
 #endif // BOARD_rfd900u
 
@@ -70,15 +70,26 @@
 
 // Bootloader patchbay for frequency code
 //
-#define FLASH_FREQUENCY_BYTE	(FLASH_LOCK_BYTE - 1)
+#define FLASH_FREQUENCY_BYTE  (FLASH_LOCK_BYTE - 1)
 
-#if defined BOARD_rfd900a || defined BOARD_rfd900p
+#ifdef BOARD_rfd900a
+
 // locked and unlocked areas to store power calibration info
-#define FLASH_CALIBRATION_AREA_SIZE (31)
-#define FLASH_CALIBRATION_CRC_HIGH  (FLASH_FREQUENCY_BYTE - 1)
-#define FLASH_CALIBRATION_AREA_HIGH  (FLASH_CALIBRATION_CRC_HIGH - FLASH_CALIBRATION_AREA_SIZE)
-#define FLASH_CALIBRATION_CRC  (FLASH_SIGNATURE_BYTES - 1)
-#define FLASH_CALIBRATION_AREA  (FLASH_CALIBRATION_CRC - FLASH_CALIBRATION_AREA_SIZE)
+#define FLASH_CALIBRATION_AREA_SIZE   (31)
+#define FLASH_CALIBRATION_CRC_HIGH    (FLASH_FREQUENCY_BYTE - 1)
+#define FLASH_CALIBRATION_AREA_HIGH   (FLASH_CALIBRATION_CRC_HIGH - FLASH_CALIBRATION_AREA_SIZE)
+#define FLASH_CALIBRATION_CRC         (FLASH_SIGNATURE_BYTES - 1)
+#define FLASH_CALIBRATION_AREA        (FLASH_CALIBRATION_CRC - FLASH_CALIBRATION_AREA_SIZE)
+
+#elif defined BOARD_rfd900p
+
+// locked and unlocked areas to store power calibration info
+#define FLASH_CALIBRATION_AREA_SIZE   (31)
+#define FLASH_CALIBRATION_CRC_HIGH    (FLASH_FREQUENCY_BYTE - 2)
+#define FLASH_CALIBRATION_AREA_HIGH   (FLASH_CALIBRATION_CRC_HIGH - FLASH_CALIBRATION_AREA_SIZE)
+#define FLASH_CALIBRATION_CRC         (FLASH_SIGNATURE_BYTES - 2)
+#define FLASH_CALIBRATION_AREA        (FLASH_CALIBRATION_CRC - FLASH_CALIBRATION_AREA_SIZE)
+
 #endif
 
 #endif	// _FLASH_LAYOUT_H

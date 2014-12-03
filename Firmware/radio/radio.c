@@ -873,7 +873,7 @@ radio_set_transmit_power(uint8_t power)
 	uint8_t i;
 
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
+	register_write(EZRADIOPRO_TX_POWER, RFD900_INT_TX_POW); // Set output power of Si1002 to 6 = +10dBm as a nominal level
 	i = calibration_get(power);
 	if (i != 0xFF)
 	{
@@ -908,7 +908,7 @@ radio_change_transmit_power(bool increment, uint8_t maxPower)
 	uint8_t i, power = settings.transmit_power;
 	
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
+	register_write(EZRADIOPRO_TX_POWER, RFD900_INT_TX_POW); // Set output power of Si1002 to 6 = +10dBm as a nominal level
 	
 	if (increment) {
 		power += 2;
