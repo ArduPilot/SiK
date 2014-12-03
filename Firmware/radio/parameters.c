@@ -503,7 +503,6 @@ calibration_set(uint8_t idx, uint8_t value) __reentrant
 		if (flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx) == 0xFF)
 		{
 			flash_write_byte(FLASH_CALIBRATION_AREA_HIGH + idx, value);
-      flash_write_byte(FLASH_CALIBRATION_AREA + idx,      value);
 			return true;
 		}
 	}
