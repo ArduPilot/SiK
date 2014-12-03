@@ -273,7 +273,7 @@ flash_read_byte(uint16_t address)
 #endif // FLASH_BANKS
 
 
-#if defined BOARD_rfd900a
+#if defined BOARD_rfd900a || BOARD_rfd900p
 __at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
 __at(FLASH_CALIBRATION_CRC_HIGH)	uint8_t __code calibration_crc;
 
@@ -311,46 +311,5 @@ flash_transfer_calibration()
 		flash_write_byte((FLASH_CALIBRATION_AREA + idx), calibration[idx]);
 	}
 	flash_write_byte(FLASH_CALIBRATION_CRC, calibration_crc);
-}
-#elif defined BOARD_rfd900p
-__at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
-__at(FLASH_CALIBRATION_CRC_HIGH)	uint16_t __code calibration_crc;
-
-void
-flash_transfer_calibration()
-{
-  uint8_t idx; //, crc = 0;
-  
-  // ensure the user area (plus crc byte) is all 0xFF
-  for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
-  {
-    if (flash_read_byte(FLASH_CALIBRATION_AREA + idx) != 0xFF)
-    {
-      return;
-    }
-  }
-  if (flash_read_byte(FLASH_CALIBRATION_CRC) != 0xFF)
-  {
-    return;
-  }
-  
-//  // ensure valid data is available
-//  for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
-//  {
-//    crc ^= calibration[idx];
-//  }
-//  if (crc != calibration_crc)
-//  {
-//    return;
-//  }
-  
-  // transfer calibration data from bootloader area to user area
-  for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
-  {
-    flash_write_byte((FLASH_CALIBRATION_AREA + idx), calibration[idx]);
-  }
-  
-  flash_write_byte(FLASH_CALIBRATION_CRC, calibration_crc&0xFF);
-  flash_write_byte(FLASH_CALIBRATION_CRC+1, calibration_crc>>8);
 }
 #endif //BOARD_rfd900a/p

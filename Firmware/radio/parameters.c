@@ -470,13 +470,7 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 // Change for next rfd900 revision
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
-
-//#ifdef BOARD_rfd900p
-//static __at(FLASH_CALIBRATION_CRC) uint16_t __code calibration_crc;
-//       __xdata uint8_t calData[FLASH_CALIBRATION_AREA_SIZE];
-//#else
 static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
-//#endif
 
 static void
 flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
@@ -498,6 +492,10 @@ flash_read_byte(uint16_t address) __reentrant
 bool
 calibration_set(uint8_t idx, uint8_t value) __reentrant
 {
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
 	// if level is valid
 	if (idx <= BOARD_MAXTXPOWER && value != 0xFF)
 	{
@@ -512,65 +510,16 @@ calibration_set(uint8_t idx, uint8_t value) __reentrant
 	return false;
 }
 
-//#ifdef BOARD_rfd900p
-//uint8_t
-//calibration_get(uint8_t level) __reentrant
-//{
-//	uint16_t crc = 0;
-//  
-//  // calculate checksum
-//  printf("val1 %d - val2 %d\n",calibration[0], calibration[1]);
-//  memcpy(calData, calibration, FLASH_CALIBRATION_AREA_SIZE);
-//  
-//  crc = crc16(FLASH_CALIBRATION_AREA_SIZE, calibration);
-//  
-//	if (calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER)
-//	{
-//    printf("crca %d - crcb %d - calret %d", calibration_crc, crc, calibration[level]);
-//		return calibration[level];
-//	}
-//  printf("Nope - crca %d - crcb %d - calret %d", calibration_crc, crc, calibration[level]);
-//	return 0xFF;
-//}
-//
-//bool
-//calibration_lock() __reentrant
-//{
-//	uint8_t idx;
-//	uint16_t crc = 0;
-//	
-//  
-//	// check that all entries are written
-//	if (flash_read_byte(FLASH_CALIBRATION_CRC_HIGH) == 0xFF)
-//	{
-//		for (idx=0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
-//		{
-//			if (flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx) == 0xFF)
-//			{
-//				printf("dBm level %u not calibrated\n",idx);
-//				return false;
-//			}
-//		}
-//		
-//    // write checksum
-//    crc = crc16(FLASH_CALIBRATION_AREA_SIZE, calibration);
-//		flash_write_byte(FLASH_CALIBRATION_CRC_HIGH, crc&0xFF);
-//    flash_write_byte(FLASH_CALIBRATION_CRC_HIGH+1, crc>>8);
-//    
-//		// lock the first and last pages
-//		// can only be reverted by reflashing the bootloader
-//		flash_write_byte(FLASH_LOCK_BYTE, 0xFE);
-//		return true;
-//	}
-//	return false;
-//}
-//#else
 uint8_t
 calibration_get(uint8_t level) __reentrant
 {
 	uint8_t idx;
 	uint8_t crc = 0;
 
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
 	// Change for next board revision
 	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
 	{
@@ -590,6 +539,10 @@ calibration_lock() __reentrant
 	uint8_t idx;
 	uint8_t crc = 0;
 
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
 	// check that all entries are written
 	if (flash_read_byte(FLASH_CALIBRATION_CRC_HIGH) == 0xFF)
 	{
@@ -613,5 +566,4 @@ calibration_lock() __reentrant
 	}
 	return false;
 }
-//#endif // BOARD_rfd900p
 #endif // BOARD_rfd900a/p
