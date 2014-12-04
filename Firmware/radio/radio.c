@@ -1168,15 +1168,28 @@ set_frequency_registers(__pdata uint32_t frequency)
 int16_t
 radio_temperature(void)
 {
-	register int16_t temp_local;
+#ifdef TEMP_OFFSET
+	register int16_t temp_local, temp_offset;
 
+  SFRPAGE	 = TOFF_PAGE;
+  temp_offset = (TOFFH << 2) | (TOFFL >> 6);
+  SFRPAGE	 = LEGACY_PAGE;
+  
 	AD0BUSY = 1;		// Start ADC conversion
 	while (AD0BUSY) ;  	// Wait for completion of conversion
 
 	temp_local = (ADC0H << 8) | ADC0L;
-	temp_local *= 1.64060;  // convert reading into mV ( (val/1024) * 1680 )  vref=1680mV
-	temp_local = 25.0 + (temp_local - 1025) / 3.4; // convert mV reading into degC.
-
+	temp_local = TEMP_OFFSET + (temp_local - temp_offset) / 2; // convert reading into degC.
+#else
+  register int16_t temp_local;
+  
+  AD0BUSY = 1;		// Start ADC conversion
+  while (AD0BUSY) ;  	// Wait for completion of conversion
+  
+  temp_local = (ADC0H << 8) | ADC0L;
+  temp_local *= 1.64060;  // convert reading into mV ( (val/1024) * 1680 )  vref=1680mV
+  temp_local = 25.0 + (temp_local - 1025) / 3.4; // convert mV reading into degC.
+#endif
 	return temp_local;
 }
 

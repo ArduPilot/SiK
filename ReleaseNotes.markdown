@@ -4,6 +4,7 @@
 
 ###Alterations
 * Fixed issue where setting power to zero would not be persistent on reboot
+* Change onboard temperature reading calculation to be within +/-5 DegC by using manufacturer register.
 
 ###NEW FEATURES!!
 * Adding support for new rfd900p (plus) radio modem
