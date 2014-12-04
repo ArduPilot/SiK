@@ -3,6 +3,9 @@
 ##SiK 1.11:
 
 ###Alterations
+* Fixed issue where setting power to zero would not be persistent on reboot
+
+###NEW FEATURES!!
 * Adding support for new rfd900p (plus) radio modem
 
 ##SiK 1.10:

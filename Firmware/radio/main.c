@@ -324,7 +324,7 @@ radio_init(void)
 	if (param_s_get(PARAM_MAX_FREQ) != 0) {
 		freq_max        = param_s_get(PARAM_MAX_FREQ) * 1000UL;
 	}
-	if (param_s_get(PARAM_TXPOWER) != 0) {
+	if (param_s_get(PARAM_TXPOWER) <= BOARD_MAXTXPOWER) {
 		txpower = param_s_get(PARAM_TXPOWER);
 	}
 
