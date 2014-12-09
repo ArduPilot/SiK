@@ -310,6 +310,22 @@ at_parse_number() __reentrant
 	}
 }
 
+static void print_ID_vals(char param, uint8_t end,
+                          const char *__code (*param_name)(__data enum ParamID param),
+                          param_t (*param_get)(__data enum Param_S_ID param)
+                          )
+{
+  register enum ParamID id;
+  // convenient way of showing all parameters
+  for (id = 0; id < end; id++) {
+    printf("%c%u:%s=%lu\n",
+      param,
+      (unsigned)id,
+      param_name(id),
+      (unsigned long)param_get(id));
+  }
+}
+
 static void
 at_i(void)
 {
@@ -331,35 +347,32 @@ at_i(void)
 		printf("%u\n", g_board_bl_version);
 		return;
 	case '5': {
-		register enum ParamID id;
-		register uint8_t start = 0;
-		register uint8_t end = PARAM_S_MAX-1;
-
-		if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
-				idx = 5;
-				at_parse_number();
-				start = at_num;
-			
-				if (at_cmd[idx] == ':' && isdigit(at_cmd[idx+1])) {
-						idx++;
-						at_parse_number();
-						end = at_num;
-				}
-		}
-		// convenient way of showing all parameters
-		for (id = start; id <= end; id++) {
-			printf("S%u:%s=%lu\n",
-						 (unsigned)id, 
-						 param_s_name(id),
-						 (unsigned long)param_s_get(id));
-		}
-//		// convenient way of showing all parameters
-//		for (id = 0; id < PARAM_R_MAX; id++) {
-//			printf("R%u:%s=%lu\n",
-//						 (unsigned)id,
-//						 param_r_name(id),
-//						 (unsigned long)param_r_get(id));
+//    register enum ParamID id;
+//		register uint8_t start = 0;
+//		register uint8_t end = PARAM_S_MAX-1;
+//
+//		if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
+//				idx = 5;
+//				at_parse_number();
+//				start = at_num;
+//			
+//				if (at_cmd[idx] == ':' && isdigit(at_cmd[idx+1])) {
+//						idx++;
+//						at_parse_number();
+//						end = at_num;
+//				}
 //		}
+//
+//    // convenient way of showing all parameters
+//    for (id = start; id <= end; id++) {
+//      printf("%s%u:%s=%lu\n",
+//             param,
+//             (unsigned)id,
+//             param_s_name(id),
+//             (unsigned long)param_s_get(id));
+//    }
+    print_ID_vals('S', PARAM_S_MAX, param_s_name, param_s_get);
+    print_ID_vals('R', PARAM_R_MAX, param_r_name, param_r_get);
 		return;
 	}
 	case '6':
@@ -454,33 +467,33 @@ at_s(void)
 static void
 at_r(void)
 {
-//	__pdata uint8_t		sreg;
-//	
-//	// get the register number first
-//	idx = 3;
-//	at_parse_number();
-//	sreg = at_num;
-//	// validate the selected sreg
-//	if (sreg >= PARAM_R_MAX) {
-//		at_error();
-//		return;
-//	}
-//	
-//	switch (at_cmd[idx]) {
-//		case '?':
-//			at_num = param_r_get(sreg);
-//			printf("%lu\n", at_num);
-//			return;
-//			
-//		case '=':
-//			idx++;
-//			at_parse_number();
-//			if (param_r_set(sreg, at_num)) {
-//				at_ok();
-//				return;
-//			}
-//			break;
-//	}
+	__pdata uint8_t		sreg;
+	
+	// get the register number first
+	idx = 3;
+	at_parse_number();
+	sreg = at_num;
+	// validate the selected sreg
+	if (sreg >= PARAM_R_MAX) {
+		at_error();
+		return;
+	}
+	
+	switch (at_cmd[idx]) {
+		case '?':
+			at_num = param_r_get(sreg);
+			printf("%lu\n", at_num);
+			return;
+			
+		case '=':
+			idx++;
+			at_parse_number();
+			if (param_r_set(sreg, at_num)) {
+				at_ok();
+				return;
+			}
+			break;
+	}
 	at_error();
 }
 

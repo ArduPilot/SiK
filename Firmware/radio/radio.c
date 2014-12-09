@@ -481,7 +481,7 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 {
 	__pdata uint16_t crc;
 	__xdata uint8_t gin[3];
-	__data uint8_t elen, rlen;
+	__pdata uint8_t elen, rlen;
 
 	if (length > (sizeof(radio_buffer)/2)-6) {
 		debug("golay packet size %u\n", (unsigned)length);
