@@ -139,7 +139,7 @@ main(void)
 	
 #ifdef CPU_SI1030
 	// Initialise Encryption
-	if (! aes_init(param_r_get(PARAM_ENCRYPTION))) {
+	if (! aes_init(param_r_get(PARAM_R_ENCRYPTION))) {
 		panic("failed to initialise aes");
 	}
 #endif

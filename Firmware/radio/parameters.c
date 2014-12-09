@@ -273,7 +273,7 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 			break;
 
 #ifdef CPU_SI1030
-		case PARAM_ENCRYPTION:
+		case PARAM_R_ENCRYPTION:
 			// Make sure first nibble (key length) is valid: 0, 1, 2
 			if ((val & 0xf ) > 3)
 				return false;

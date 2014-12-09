@@ -68,7 +68,7 @@ enum Param_S_ID {
 enum Param_R_ID {
 	PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
 	PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
-	PARAM_ENCRYPTION,				// AES Encryption on or off flag
+	PARAM_R_ENCRYPTION,			// AES Encryption on or off flag
 	PARAM_R_MAX             // Must be last
 };
 
