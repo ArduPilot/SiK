@@ -36,10 +36,13 @@
 
 #define MAX_FREQ_CHANNELS 50
 
+/// Randomly shuffle fixed variables for entoropy
+///
+extern void shuffleRand(void);
+
 /// initialise frequency hopping logic
 ///
-/// @param netid	Our assigned network ID.
-extern void fhop_init(uint16_t netid);
+extern void fhop_init(void);
 
 /// tell the TDM code what channel to transmit on
 ///

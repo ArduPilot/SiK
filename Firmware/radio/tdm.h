@@ -68,10 +68,10 @@ extern void tdm_show_rssi(void);
 /// the long term duty cycle we are aiming for
 extern __pdata uint8_t duty_cycle;
 
-/// Have we manualy set the power (during calibration)
-extern __pdata uint8_t powerManualSet;
-
 /// the LBT threshold
 extern __pdata uint8_t lbt_rssi;
+
+/// Disable the hunting of the rssi power levels
+extern void disable_rssi_hunt();
 
 #endif // _TDM_H_

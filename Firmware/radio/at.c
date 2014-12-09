@@ -329,24 +329,24 @@ static void print_ID_vals(char param, uint8_t end,
 static void
 at_i(void)
 {
-	switch (at_cmd[3]) {
-	case '\0':
-	case '0':
-		printf("%s\n", g_banner_string);
-		return;
-	case '1':
-		printf("%s\n", g_version_string);
-		return;
-	case '2':
-		printf("%u\n", BOARD_ID);
-		break;
-	case '3':
-		printf("%u\n", g_board_frequency);
-		break;
-	case '4':
-		printf("%u\n", g_board_bl_version);
-		return;
-	case '5': {
+  switch (at_cmd[3]) {
+  case '\0':
+  case '0':
+    printf("%s\n", g_banner_string);
+    return;
+  case '1':
+    printf("%s\n", g_version_string);
+    return;
+  case '2':
+    printf("%u\n", BOARD_ID);
+    break;
+  case '3':
+    printf("%u\n", g_board_frequency);
+    break;
+  case '4':
+    printf("%u\n", g_board_bl_version);
+    return;
+  case '5': {
 //    register enum ParamID id;
 //		register uint8_t start = 0;
 //		register uint8_t end = PARAM_S_MAX-1;
@@ -373,18 +373,18 @@ at_i(void)
 //    }
     print_ID_vals('S', PARAM_S_MAX, param_s_name, param_s_get);
     print_ID_vals('R', PARAM_R_MAX, param_r_name, param_r_get);
-		return;
-	}
-	case '6':
-		tdm_report_timing();
-		return;
-	case '7':
-		tdm_show_rssi();
-		return;
-	default:
-		at_error();
-		return;
-	}
+    return;
+  }
+  case '6':
+    tdm_report_timing();
+    return;
+  case '7':
+    tdm_show_rssi();
+    return;
+  default:
+    at_error();
+    return;
+  }
 }
 
 static void
@@ -622,55 +622,55 @@ static void
 at_plus(void)
 {
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-	__pdata uint8_t		creg;
-
-	// get the register number first
-	idx = 4;
-	at_parse_number();
-	creg = at_num;
-
-	switch (at_cmd[3])
-	{
-	case 'P': // AT+P=x set power level pwm to x immediately
-		if (at_cmd[4] != '=')
-		{
-			break;
-		}
-		idx = 5;
-		at_parse_number();
-		PCA0CPH0 = at_num & 0xFF;
-		radio_set_diversity(false);
-		powerManualSet = true;
-		at_ok();
-		return;
-	case 'C': // AT+Cx=y write calibration value
-		switch (at_cmd[idx])
-		{
-		case '?':
-			at_num = calibration_get(creg);
-			printf("%lu\n",at_num);
-			return;
-		case '=':
-			idx++;
-			at_parse_number();
-			if (calibration_set(creg, at_num&0xFF))
-			{
-				at_ok();
-			} else {
-				at_error();
-			}
-			return;
-		}
-		break;
-	case 'L': // AT+L lock bootloader area if all calibrations written
-		if (calibration_lock())
-		{
-			at_ok();
-		} else {
-			at_error();
-		}
-		return;
-	}
+  __pdata uint8_t		creg;
+  
+  // get the register number first
+  idx = 4;
+  at_parse_number();
+  creg = at_num;
+  
+  switch (at_cmd[3])
+  {
+  case 'P': // AT+P=x set power level pwm to x immediately
+    if (at_cmd[4] != '=')
+    {
+      break;
+    }
+    idx = 5;
+    at_parse_number();
+    PCA0CPH0 = at_num & 0xFF;
+    radio_set_diversity(false);
+    disable_rssi_hunt();
+    at_ok();
+    return;
+  case 'C': // AT+Cx=y write calibration value
+    switch (at_cmd[idx])
+    {
+    case '?':
+      at_num = calibration_get(creg);
+      printf("%lu\n",at_num);
+      return;
+    case '=':
+      idx++;
+      at_parse_number();
+      if (calibration_set(creg, at_num&0xFF))
+      {
+        at_ok();
+      } else {
+        at_error();
+      }
+      return;
+    }
+    break;
+  case 'L': // AT+L lock bootloader area if all calibrations written
+    if (calibration_lock())
+    {
+      at_ok();
+    } else {
+      at_error();
+    }
+    return;
+  }
 #endif //BOARD_rfd900a / BOARD_rfd900p
-	at_error();
+  at_error();
 }
