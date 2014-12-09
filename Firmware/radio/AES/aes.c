@@ -30,9 +30,9 @@
 #include <stdarg.h>
 #include "../radio.h"
 #include "GenerateDecryptionKey.h"
-//#include "AES_BlockCipher.h"
+#include "AES_BlockCipher.h"
 #include "CBC_EncryptDecrypt.h"
-//#include "CTR_EncryptDecrypt.h"
+#include "CTR_EncryptDecrypt.h"
 #include <stdlib.h>
 
 /* SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA); */
@@ -224,11 +224,11 @@ uint8_t aes_encrypt(SEG_XDATA unsigned char *in_str, uint8_t in_len, SEG_XDATA u
 			// Validate CBC Mode encryption
 			status = CBC_EncryptDecrypt (key_size_code, pt, out_str, InitialVector, EncryptionKey, blocks);
 			break;
-//		case 1:
-//			// Perform CTR Mode decryption
-//			aesCopyInit2(Counter, Nonce);
-//			status = CTR_EncryptDecrypt (key_size_code, pt, out_str, Counter, EncryptionKey, blocks);
-//			break;
+		case 1:
+			// Perform CTR Mode decryption
+			aesCopyInit2(Counter, Nonce);
+			status = CTR_EncryptDecrypt (key_size_code, pt, out_str, Counter, EncryptionKey, blocks);
+			break;
 		default:
 			// Validate CBC Mode encryption
 			status = CBC_EncryptDecrypt (key_size_code, pt, out_str, InitialVector, EncryptionKey, blocks);
@@ -298,11 +298,11 @@ uint8_t aes_decrypt(SEG_XDATA unsigned char *in_str, SEG_PDATA uint8_t in_len, S
 			// Perform CBC Mode decryption
 			status = CBC_EncryptDecrypt (key_size_code, out_str, ct, InitialVector, DecryptionKey, blocks);
 			break;
-//		case 1:
-//			// Perform CTR Mode decryption  (For CTR - DecryptionKey = EncryptionKey)
-//			aesCopyInit2(Counter, Nonce);
-//			status = CTR_EncryptDecrypt (key_size_code, out_str, ct, Counter, EncryptionKey, blocks);
-//			break;
+		case 1:
+			// Perform CTR Mode decryption  (For CTR - DecryptionKey = EncryptionKey)
+			aesCopyInit2(Counter, Nonce);
+			status = CTR_EncryptDecrypt (key_size_code, out_str, ct, Counter, EncryptionKey, blocks);
+			break;
 		default:
 			// Perform CBC Mode decryption
 			status = CBC_EncryptDecrypt (key_size_code, out_str, ct, InitialVector, DecryptionKey, blocks);

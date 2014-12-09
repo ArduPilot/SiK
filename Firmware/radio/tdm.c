@@ -224,7 +224,7 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 static void
 sync_tx_windows(__pdata uint8_t packet_length)
 {
-	__data enum tdm_state old_state = tdm_state;
+	__pdata enum tdm_state old_state = tdm_state;
 	__pdata uint16_t old_remaining = tdm_state_remaining;
 
 	if (trailer.bonus) {
