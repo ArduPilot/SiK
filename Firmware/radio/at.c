@@ -38,13 +38,17 @@
 #include "at.h"
 #include "board.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 // canary data for ram wrap. It is in at.c as the compiler
 // assigns addresses in alphabetial order and we want this at a low
 // address
 __pdata uint8_t pdata_canary = 0x41;
 
 // AT command buffer
-__pdata char at_cmd[AT_CMD_MAXLEN + 1];
+__xdata char at_cmd[AT_CMD_MAXLEN + 1];
 __pdata uint8_t	at_cmd_len;
 
 // mode flags
@@ -63,6 +67,7 @@ static void	at_r(void);
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
+static void	at_e(void);
 
 #pragma save
 #pragma nooverlay
@@ -252,7 +257,9 @@ at_command(void)
 			case 'R':
 				at_r();
 				break;
-
+			case 'E':
+				at_e();
+				break;
 			case 'Z':
 				// generate a software reset
 				RSTSRC |= (1 << 4);
@@ -346,13 +353,13 @@ at_i(void)
 						 param_s_name(id),
 						 (unsigned long)param_s_get(id));
 		}
-		// convenient way of showing all parameters
-		for (id = 0; id < PARAM_R_MAX; id++) {
-			printf("R%u:%s=%lu\n",
-						 (unsigned)id,
-						 param_r_name(id),
-						 (unsigned long)param_r_get(id));
-		}
+//		// convenient way of showing all parameters
+//		for (id = 0; id < PARAM_R_MAX; id++) {
+//			printf("R%u:%s=%lu\n",
+//						 (unsigned)id,
+//						 param_r_name(id),
+//						 (unsigned long)param_r_get(id));
+//		}
 		return;
 	}
 	case '6':
@@ -365,6 +372,48 @@ at_i(void)
 		at_error();
 		return;
 	}
+}
+
+static void
+at_e(void)
+{
+#ifdef CPU_SI1030
+	__pdata uint8_t 	key_length, encryption_level;
+	__pdata uint8_t		sreg;
+	__xdata unsigned char   *val;
+	
+	// get the register number first
+	idx = 3;
+	at_parse_number();
+	sreg = at_num;
+	// validate the selected sreg
+	if (sreg >= PARAM_R_MAX) {
+		at_error();
+		return;
+	}
+	
+	switch (at_cmd[idx]) {
+		case '?':
+			// Get the encryption level, so we know # of bits
+			encryption_level = aes_get_encryption_level();
+			
+			// Deduce key length (bytes) from level: 1 -> 16, 2 -> 24, 3 -> 32
+			key_length = AES_KEY_LENGTH(encryption_level);
+			
+			// Get the encryption key
+			val = param_get_encryption_key();
+			print_hex_codes(val, key_length);
+			return;
+			
+		case '=':
+			if (param_set_encryption_key((__xdata unsigned char *)&at_cmd[4])) {
+				at_ok();
+				return;
+			}
+			break;
+	}
+#endif // CPU_SI1030
+	at_error();
 }
 
 static void
@@ -405,33 +454,33 @@ at_s(void)
 static void
 at_r(void)
 {
-	__pdata uint8_t		sreg;
-	
-	// get the register number first
-	idx = 3;
-	at_parse_number();
-	sreg = at_num;
-	// validate the selected sreg
-	if (sreg >= PARAM_R_MAX) {
-		at_error();
-		return;
-	}
-	
-	switch (at_cmd[idx]) {
-		case '?':
-			at_num = param_r_get(sreg);
-			printf("%lu\n", at_num);
-			return;
-			
-		case '=':
-			idx++;
-			at_parse_number();
-			if (param_r_set(sreg, at_num)) {
-				at_ok();
-				return;
-			}
-			break;
-	}
+//	__pdata uint8_t		sreg;
+//	
+//	// get the register number first
+//	idx = 3;
+//	at_parse_number();
+//	sreg = at_num;
+//	// validate the selected sreg
+//	if (sreg >= PARAM_R_MAX) {
+//		at_error();
+//		return;
+//	}
+//	
+//	switch (at_cmd[idx]) {
+//		case '?':
+//			at_num = param_r_get(sreg);
+//			printf("%lu\n", at_num);
+//			return;
+//			
+//		case '=':
+//			idx++;
+//			at_parse_number();
+//			if (param_r_set(sreg, at_num)) {
+//				at_ok();
+//				return;
+//			}
+//			break;
+//	}
 	at_error();
 }
 

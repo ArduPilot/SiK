@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2013 Joe Turner, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -27,17 +27,26 @@
 //
 
 ///
-/// @file	golay23.h
+/// @file       aes.h
 ///
-/// golay 23/12 error correction encoding and decoding
+/// Definitions for the radio application AES
 ///
 
-#ifndef INCLUDE_GOLAY
-/// encode n bytes of data into 2n coded bytes. n must be a multiple 3
-extern void golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
 
 
-/// decode n bytes of coded data into n/2 bytes of original data
-/// n must be a multiple of 6
-extern uint8_t golay_decode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
-#endif // INCLUDE_GOLAY
+//=============================================================================
+// Function Prototypes
+//-----------------------------------------------------------------------------
+
+extern bool aes_init(uint8_t encryption_level);
+
+extern uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
+
+extern uint8_t aes_decrypt(__xdata unsigned char *in_str,  uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
+
+extern uint8_t aes_get_encryption_level();
+
+void aes_set_encryption_level(__pdata uint8_t encryption);
+
+
+#define AES_KEY_LENGTH(_l)    8*(1 +(_l&0xf))

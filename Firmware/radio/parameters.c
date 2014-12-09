@@ -46,6 +46,10 @@
 #include <flash_layout.h>
 #include "pins_user.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif // CPU_SI1030
+
 /// In-ROM parameter info table.
 ///
 __code const struct parameter_s_info {
@@ -76,6 +80,7 @@ __code const struct parameter_r_info {
 } parameter_r_info[PARAM_R_MAX] = {
 	{"TARGET_RSSI",     255},
 	{"HYSTERESIS_RSSI", 50},
+	{"ENCRYPTION",		0}
 };
 
 /// In-RAM parameter store.
@@ -85,15 +90,20 @@ __code const struct parameter_r_info {
 /// page anyway.
 ///
 __xdata param_t	parameter_s_values[PARAM_S_MAX];
-__xdata param_t	parameter_r_values[PARAM_R_MAX];
+//__xdata param_t	parameter_r_values[PARAM_R_MAX];
 
 // Three extra bytes, 1 for the number of params and 2 for the checksum
 #define PARAM_S_FLASH_START   0
 #define PARAM_S_FLASH_END     (PARAM_S_FLASH_START + sizeof(parameter_s_values) + 3)
 
-// Three extra bytes, 1 for the number of params and 2 for the checksum, starts at position 128
-#define PARAM_R_FLASH_START   (2<<6)
-#define PARAM_R_FLASH_END     (PARAM_R_FLASH_START + sizeof(parameter_r_values) + 3)
+//// Three extra bytes, 1 for the number of params and 2 for the checksum, starts at position 128
+//#define PARAM_R_FLASH_START   (2<<6)
+//#define PARAM_R_FLASH_END     (PARAM_R_FLASH_START + sizeof(parameter_r_values) + 3)
+//
+//// Check to make sure the End of the S and the beginning of R dont overlap
+//typedef char s2rCheck[(PARAM_S_FLASH_END < PARAM_R_FLASH_START) ? 0 : -1];
+#define PARAM_R_FLASH_END PARAM_S_FLASH_END
+
 
 #if PIN_MAX > 0
 __code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
@@ -102,8 +112,30 @@ __xdata pins_user_info_t pin_values[PIN_MAX];
 // Place the start away from the other params to allow for expantion 2<<7 = 256
 #define PIN_FLASH_START       (2<<7)
 #define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 2)
-#endif
 
+// Check to make sure the End of the r and the beginning of pins dont overlap
+typedef char r2pCheck[(PARAM_R_FLASH_END < PIN_FLASH_START) ? 0 : -1];
+#else // PIN_MAX
+#define PIN_FLASH_END PARAM_R_FLASH_END
+#endif // PIN_MAX
+
+// Place the start away from the other params to allow for expantion 2<<7 +128 = 384
+#ifdef CPU_SI1030
+// Holds the encrpytion string
+__xdata unsigned char encryption_key[16];
+
+#define PARAM_E_FLASH_START   (2<<7) + 128
+#define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 2)
+
+// Check to make sure the End of the pins and the beginning of encryption dont overlap
+typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
+#else
+#define PARAM_E_FLASH_END PIN_FLASH_END
+#endif // CPU_SI1030
+
+
+// Check to make sure we dont overflow off the page
+typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
 
 
 static bool
@@ -224,58 +256,73 @@ param_s_get(__data enum Param_S_ID param)
 	return parameter_s_values[param];
 }
 
-static bool
-param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
-{
-	// parameter value out of range - fail
-	if (id >= PARAM_R_MAX)
-		return false;
-	
-	switch (id) {
-		case PARAM_R_TARGET_RSSI:
-			if (val < 50 || 255 < val)
-				return false;
-			break;
-
-		case PARAM_R_HYSTERESIS_RSSI:
-			if (val < 20 || 50 < val)
-				return false;
-			break;
-			
-		default:
-			// no sanity check for this value
-			break;
-	}
-	return true;
-}
-
-bool
-param_r_set(__data enum Param_R_ID param, __pdata param_t value)
-{
-	// Sanity-check the parameter value first.
-	if (!param_r_check(param, value))
-		return false;
-	
-	// some parameters we update immediately
-	switch (param) {
+//static bool
+//param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
+//{
+//	// parameter value out of range - fail
+//	if (id >= PARAM_R_MAX)
+//		return false;
+//	
+//	switch (id) {
 //		case PARAM_R_TARGET_RSSI:
+//			if (val < 50 || 255 < val)
+//				return false;
 //			break;
-		default:
-			break;
-	}
-	
-	parameter_r_values[param] = value;
-	
-	return true;
-}
-
-param_t
-param_r_get(__data enum Param_R_ID param)
-{
-	if (param >= PARAM_R_MAX)
-		return 0;
-	return parameter_r_values[param];
-}
+//
+//		case PARAM_R_HYSTERESIS_RSSI:
+//			if (val < 20 || 50 < val)
+//				return false;
+//			break;
+//			
+//#ifdef CPU_SI1030
+//		case PARAM_ENCRYPTION:
+//			// Make sure first nibble (key length) is valid: 0, 1, 2
+//			if ((val & 0xf ) > 3)
+//				return false;
+//			// Make sure second nibble (crypto type) is valid: 0, 1
+//			if (((val>>4) & 0xf) > 1)
+//				return false;
+//			// Make sure that if second nibble (crypto type) is > 0,
+//			// the first nibble (key length) is not zero.
+//			if (((val>>4) & 0xf) > 0 && (val & 0xf ) == 0)
+//				return false;
+//			break;
+//#endif
+//			
+//		default:
+//			// no sanity check for this value
+//			break;
+//	}
+//	return true;
+//}
+//
+//bool
+//param_r_set(__data enum Param_R_ID param, __pdata param_t value)
+//{
+//	// Sanity-check the parameter value first.
+//	if (!param_r_check(param, value))
+//		return false;
+//	
+//	// some parameters we update immediately
+//	switch (param) {
+////		case PARAM_R_TARGET_RSSI:
+////			break;
+//		default:
+//			break;
+//	}
+//	
+//	parameter_r_values[param] = value;
+//	
+//	return true;
+//}
+//
+//param_t
+//param_r_get(__data enum Param_R_ID param)
+//{
+//	if (param >= PARAM_R_MAX)
+//		return 0;
+//	return parameter_r_values[param];
+//}
 
 static bool
 read_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
@@ -330,12 +377,12 @@ __critical {
 	if(!read_params((__xdata uint8_t *)parameter_s_values, PARAM_S_FLASH_START+1, expected))
 		return false;
 
-	// read and verify params
-	expected = flash_read_scratch(PARAM_R_FLASH_START);
-	if (expected > sizeof(parameter_r_values))
-		return false;
-	if(!read_params((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, expected))
-		return false;
+//	// read and verify params
+//	expected = flash_read_scratch(PARAM_R_FLASH_START);
+//	if (expected > sizeof(parameter_r_values))
+//		return false;
+//	if(!read_params((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, expected))
+//		return false;
 	
 	// decide whether we read a supported version of the structure
 	if ((param_t) PARAM_FORMAT_CURRENT != parameter_s_values[PARAM_FORMAT]) {
@@ -349,21 +396,27 @@ __critical {
 		}
 	}
 	
-	for (i = 0; i < PARAM_R_MAX; i++) {
-		if (!param_r_check(i, parameter_r_values[i])) {
-			parameter_r_values[i] = parameter_r_info[i].default_value;
-		}
-	}
+//	for (i = 0; i < PARAM_R_MAX; i++) {
+//		if (!param_r_check(i, parameter_r_values[i])) {
+//			parameter_r_values[i] = parameter_r_info[i].default_value;
+//		}
+//	}
 	
 	// read and verify pin params
 #if PIN_MAX > 0
 	expected = flash_read_scratch(PIN_FLASH_START);
 	if (expected != sizeof(pin_values))
 		return false;
+	
 	if(!read_params((__xdata uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values)))
 		return false;
 #endif
 
+	// read and verify encryption params
+#ifdef CPU_SI1030
+	if(!read_params((__xdata unsigned char *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
+		return false;
+#endif
 	return true;
 }
 
@@ -381,15 +434,21 @@ __critical {
 	flash_write_scratch(PARAM_S_FLASH_START, sizeof(parameter_s_values));
 	write_params((__xdata uint8_t *)parameter_s_values, PARAM_S_FLASH_START+1, sizeof(parameter_s_values));
 
-	// write R params
-	flash_write_scratch(PARAM_R_FLASH_START, sizeof(parameter_r_values));
-	write_params((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, sizeof(parameter_r_values));
+//	// write R params
+//	flash_write_scratch(PARAM_R_FLASH_START, sizeof(parameter_r_values));
+//	write_params((__xdata uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, sizeof(parameter_r_values));
 	
 	// write pin params
 #if PIN_MAX > 0
 	flash_write_scratch(PIN_FLASH_START, sizeof(pin_values));
 	write_params((__xdata uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values));
 #endif
+
+//#ifdef CPU_SI1030
+//	flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
+//	write_params((__xdata unsigned char *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
+//#endif
+
 }
 
 void
@@ -402,10 +461,10 @@ param_default(void)
 		parameter_s_values[i] = parameter_s_info[i].default_value;
 	}
 
-	// set all parameters to their default values
-	for (i = 0; i < PARAM_R_MAX; i++) {
-		parameter_r_values[i] = parameter_r_info[i].default_value;
-	}
+//	// set all parameters to their default values
+//	for (i = 0; i < PARAM_R_MAX; i++) {
+//		parameter_r_values[i] = parameter_r_info[i].default_value;
+//	}
 	
 #if PIN_MAX > 0
 	for (i = 0; i < PIN_MAX; i ++) {
@@ -437,26 +496,26 @@ param_s_name(__data enum ParamID param)
 	return 0;
 }
 
-enum ParamID
-param_r_id(__data char * __pdata name)
-{
-	__pdata uint8_t i;
-	
-	for (i = 0; i < PARAM_R_MAX; i++) {
-		if (!strcmp(name, parameter_r_info[i].name))
-			break;
-	}
-	return i;
-}
-
-const char *__code
-param_r_name(__data enum ParamID param)
-{
-	if (param < PARAM_R_MAX) {
-		return parameter_r_info[param].name;
-	}
-	return 0;
-}
+//enum ParamID
+//param_r_id(__data char * __pdata name)
+//{
+//	__pdata uint8_t i;
+//	
+//	for (i = 0; i < PARAM_R_MAX; i++) {
+//		if (!strcmp(name, parameter_r_info[i].name))
+//			break;
+//	}
+//	return i;
+//}
+//
+//const char *__code
+//param_r_name(__data enum ParamID param)
+//{
+//	if (param < PARAM_R_MAX) {
+//		return parameter_r_info[param].name;
+//	}
+//	return 0;
+//}
 
 // constraint for parameter values
 uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max)
@@ -566,3 +625,111 @@ calibration_lock() __reentrant
 	return false;
 }
 #endif // BOARD_rfd900a/p
+
+#ifdef CPU_SI1030
+// Used to convert individial Hex digits into Integers
+//
+uint8_t read_hex_nibble(const uint8_t c) __reentrant
+{
+  return c;
+//	if ((c >='0') && (c <= '9'))
+//	{
+//		return c - '0';
+//	}
+//	else if ((c >='A') && (c <= 'F'))
+//	{
+//		return c - 'A' + 10;
+//	}
+//	else if ((c >='a') && (c <= 'f'))
+//	{
+//		return c - 'a' + 10;
+//	}
+//	else
+//	{
+//		// printf("[%u] read_hex_nibble: Error char not in supported range",nodeId);
+//		return 0;
+//	}
+}
+
+
+/// Convert string to hex codes
+///
+void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_out,	__pdata uint8_t key_length)
+{
+	__pdata uint8_t i, num;
+
+	for (i=0;i<key_length;i++) {
+		num = read_hex_nibble(str_in[2 * i])<<4;
+		num += read_hex_nibble(str_in[2 * i + 1]);
+		str_out[i] = num;
+	}
+}
+
+/// Set default encryption key
+//
+void param_set_default_encryption_key(__pdata uint8_t key_length)
+{
+  (void) key_length;
+//	__pdata uint8_t i;
+//	__xdata unsigned char b[] = {0x62};
+//
+//	for (i=0;i< key_length;i++) {
+//		// Set default key to b's
+//		memcpy(&encryption_key[i], &b, 1);
+//	}
+}
+
+/// set the encryption key
+///
+/// Note: There is a reliance on the encryption level as this determines
+///       how many characters we need. So we need to set ATS16 first, THEN
+///       save and then Set the encryption key.
+///
+bool
+param_set_encryption_key(__xdata unsigned char *key)
+{
+  (void) key;
+//	__pdata uint8_t len, key_length, encryption_level;
+//
+//	
+//	// Get the encryption level, so we know # of bits
+//	encryption_level = aes_get_encryption_level();
+//
+//	// Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
+//	key_length = AES_KEY_LENGTH(encryption_level);
+//	len = strlen(key);
+//
+//	// If not enough characters (2 char per byte), then set default
+//	if (len < 2 * key_length ) {
+//		param_set_default_encryption_key(key_length);
+//	} else {
+//		// We have sufficient characters for the encryption key.
+//		// If too many characters, then it will just ignore extra ones
+//		convert_to_hex(key, encryption_key, key_length);
+//	}
+
+	return true;
+}
+
+/// Print hex codes for given string
+///
+void
+print_hex_codes(__xdata unsigned char *in_str, __pdata uint8_t key_length)
+{
+//	__pdata uint8_t i;
+//
+//	for (i=0; i<key_length; i++) {
+//		printf("%x",in_str[i]);
+//	}
+//	printf("\n");
+  (void) in_str;
+  (void) key_length;
+}
+
+/// get the encryption key
+///
+__xdata unsigned char* param_get_encryption_key()
+{
+	return encryption_key;
+}
+#endif // CPU_SI1030

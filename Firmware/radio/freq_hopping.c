@@ -57,7 +57,7 @@ __pdata static volatile uint8_t receive_channel;
 /// map between hopping channel numbers and physical channel numbers
 __xdata static uint8_t channel_map[MAX_FREQ_CHANNELS];
 
-// a vary simple array shuffle
+// a very simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
 static inline void shuffle(__xdata uint8_t *array, uint8_t n)

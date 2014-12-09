@@ -42,6 +42,10 @@
 #include "freq_hopping.h"
 #include "crc.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 #define USE_TICK_YIELD 1
 
 /// the state of the tdm system
@@ -104,7 +108,7 @@ __pdata uint16_t transmit_wait;
 __pdata uint8_t duty_cycle;
 
 /// the average duty cycle we have been transmitting
-__data static float average_duty_cycle;
+__pdata static float average_duty_cycle;
 
 /// duty cycle offset due to temperature
 __pdata uint8_t duty_cycle_offset;
@@ -129,7 +133,7 @@ __pdata static uint16_t lbt_rand;
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
-__pdata uint8_t test_display;
+__xdata uint8_t test_display;
 
 /// set when we should send a statistics packet on the next round
 static __bit send_statistics;
@@ -740,7 +744,21 @@ tdm_serial_loop(void)
 			// can't fit the trailer in with a byte to spare
 			continue;
 		}
-		max_xmit -= PACKET_OVERHEAD;
+		//max_xmit -= PACKET_OVERHEAD;
+		max_xmit -= sizeof(trailer)+1;
+
+#ifdef CPU_SI1030
+		if (aes_get_encryption_level() > 0) {
+			if (max_xmit < 16) {
+				// With AES, the cipher is up to 16 bytes larger than the text
+				// we are encrypting. So we make sure we have sufficient space
+				// i.e. min size of any cipher text is 16 bytes
+				continue;
+			}
+			max_xmit -= 16;
+		}
+#endif
+		
 		if (max_xmit > max_data_packet_length) {
 			max_xmit = max_data_packet_length;
 		}
@@ -787,7 +805,17 @@ tdm_serial_loop(void)
 			// calculate the control word as the number of
 			// 16usec ticks that will be left in this
 			// tdm state after this packet is transmitted
+
+#ifdef CPU_SI1030
+			if (aes_get_encryption_level() > 0) {
+				// Calculation here gives length of cipher text (= same length of padded block)
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 * (1 + (len+sizeof(trailer)>>4))));
+			} else {
+				trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));		
+			}
+#else
 			trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
+#endif
 		}
 
 		// set right transmit channel
@@ -840,7 +868,7 @@ tdm_serial_loop(void)
 			LED_ACTIVITY = LED_OFF;
 		}
 	}
-#endif
+#endif // RADIO_SPLAT_TESTING_MODE
 }
 
 #if 0
@@ -958,9 +986,9 @@ golay_test(void)
 void
 tdm_init(void)
 {
-	__pdata uint16_t i;
-	__pdata uint8_t air_rate = radio_air_rate();
-	__pdata uint32_t window_width;
+	__xdata uint16_t i;
+	__xdata uint8_t air_rate = radio_air_rate();
+	__xdata uint32_t window_width;
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
 #define LBT_MIN_TIME_USEC 5000
@@ -1041,8 +1069,8 @@ tdm_init(void)
 	// Set the max and target RSSI for hunting mode..
 	maxPower = param_s_get(PARAM_TXPOWER);
 	presentPower = maxPower;
-	target_RSSI = param_r_get(PARAM_R_TARGET_RSSI);
-	powerHysteresis = param_r_get(PARAM_R_HYSTERESIS_RSSI);
+  target_RSSI = 255; //param_r_get(PARAM_R_TARGET_RSSI);
+  powerHysteresis = 50; //param_r_get(PARAM_R_HYSTERESIS_RSSI);
 	Hunt_RSSI = RSSI_HUNT_IDLE;
 	
 	// crc_test();

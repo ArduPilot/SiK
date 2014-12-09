@@ -68,6 +68,7 @@ enum Param_S_ID {
 enum Param_R_ID {
 	PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
 	PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
+	PARAM_ENCRYPTION,				// AES Encryption on or off flag
 	PARAM_R_MAX             // Must be last
 };
 
@@ -91,7 +92,7 @@ extern pins_user_info_t pin_values[];
 /// @return			True if the parameter's value is valid.
 ///
 extern bool param_s_set(__data enum Param_S_ID param, __pdata param_t value);
-extern bool param_r_set(__data enum Param_R_ID param, __pdata param_t value);
+//extern bool param_r_set(__data enum Param_R_ID param, __pdata param_t value);
 
 /// Get a parameter
 ///
@@ -100,7 +101,7 @@ extern bool param_r_set(__data enum Param_R_ID param, __pdata param_t value);
 ///				argument is invalid.
 ///
 extern param_t param_s_get(__data enum Param_S_ID param);
-extern param_t param_r_get(__data enum Param_R_ID param);
+//extern param_t param_r_get(__data enum Param_R_ID param);
 
 /// Look up a parameter by name
 ///
@@ -109,7 +110,7 @@ extern param_t param_r_get(__data enum Param_R_ID param);
 ///				parameter is not known.
 ///
 extern enum ParamID param_s_id(__data char * __pdata name);
-extern enum ParamID param_r_id(__data char * __pdata name);
+//extern enum ParamID param_r_id(__data char * __pdata name);
 
 /// Return the name of a parameter.
 ///
@@ -118,7 +119,7 @@ extern enum ParamID param_r_id(__data char * __pdata name);
 ///				or NULL if the parameter is not known.
 ///
 extern const char *__code param_s_name(__data enum ParamID param);
-extern const char *__code param_r_name(__data enum ParamID param);
+//extern const char *__code param_r_name(__data enum ParamID param);
 
 /// Load parameters from the flash scratchpad.
 ///
@@ -144,3 +145,17 @@ extern bool calibration_set(uint8_t idx, uint8_t value) __reentrant;
 extern uint8_t calibration_get(uint8_t level) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
+
+#ifdef CPU_SI1030
+/// get the encryption key
+///
+extern __xdata unsigned char *param_get_encryption_key();
+
+/// set the encryption key
+///
+extern bool param_set_encryption_key(__xdata unsigned char *key);
+
+/// Print hex codes
+///
+extern void print_hex_codes(__xdata unsigned char *in_str, __pdata uint8_t key_length);
+#endif // CPU_SI1030

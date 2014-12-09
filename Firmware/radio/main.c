@@ -42,6 +42,10 @@
 #include "timer.h"
 #include "freq_hopping.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
 ///
@@ -133,6 +137,13 @@ main(void)
 	pins_user_init();
 #endif
 	
+#ifdef CPU_SI1030
+	// Initialise Encryption
+	if (! aes_init(param_s_get(PARAM_ENCRYPTION))) {
+		panic("failed to initialise aes");
+	}
+#endif
+
 	tdm_serial_loop();
 }
 
@@ -160,7 +171,7 @@ panic(char *fmt, ...)
 static void
 hardware_init(void)
 {
-	__pdata uint16_t	i;
+	__xdata uint16_t	i;
 
 	// Disable the watchdog timer
 	PCA0MD	&= ~0x40;
@@ -273,9 +284,9 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	__pdata uint32_t freq_min, freq_max;
-	__pdata uint32_t channel_spacing;
-	__pdata uint8_t txpower;
+	__xdata uint32_t freq_min, freq_max;
+	__xdata uint32_t channel_spacing;
+	__xdata uint8_t txpower;
 
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
@@ -435,3 +446,19 @@ radio_init(void)
 	tdm_init();
 }
 
+#ifdef CPU_SI1030
+//-----------------------------------------------------------------------------
+// DMA_ISR
+// description:
+//
+// This ISR is needed to support the DMA Idle mode wake up, which is used
+// in the AES functions. Bit 5 of EIE2 should be enabled before going into
+// idle mode. This ISR will disable further interrupts. EA must also be
+// enabled.
+//
+//-----------------------------------------------------------------------------
+INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
+{
+	EIE2 &= ~0x20;                       // disable further interrupts
+}
+#endif

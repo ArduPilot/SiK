@@ -50,7 +50,7 @@
 #endif
 
 #define PINS_ABS_MAX 10
-#define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
+#define PIN_MAX 0 //(PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
 
 enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
 				 PIN_HIGH=true,   PIN_LOW=false,
