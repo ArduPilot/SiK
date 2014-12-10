@@ -484,6 +484,7 @@ radio_receiver_on(void)
 
 	packet_received = 0;
 	receive_packet_length = 0;
+    partial_packet_length = 0;
 
 	// enable receive interrupts
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
