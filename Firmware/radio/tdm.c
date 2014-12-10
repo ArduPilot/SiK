@@ -563,11 +563,6 @@ __at(0xFF) uint8_t __idata _canary;
 void
 tdm_serial_loop(void)
 {
-  __pdata uint16_t last_t = timer2_tick();
-  __pdata uint16_t last_link_update = last_t;
-  
-  _canary = 42;
-  
 #ifdef RADIO_SPLAT_TESTING_MODE
     for (;;) {
         radio_set_channel(0);
@@ -575,11 +570,16 @@ tdm_serial_loop(void)
         //radio_receiver_on();
     }
 #else
+  __pdata uint8_t	len;
+  __pdata uint16_t tnow, tdelta;
+  __pdata uint8_t max_xmit;
+  
+  __pdata uint16_t last_t = timer2_tick();
+  __pdata uint16_t last_link_update = last_t;
+  
+  _canary = 42;
+  
   for (;;) {
-    __pdata uint8_t	len;
-    __pdata uint16_t tnow, tdelta;
-    __pdata uint8_t max_xmit;
-    
     if (_canary != 42) {
       panic("stack blown\n");
     }

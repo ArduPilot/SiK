@@ -52,10 +52,12 @@
 
 /// In-ROM parameter info table.
 ///
-__code const struct parameter_s_info {
-	const char	*name;
-	param_t		default_value;
-} parameter_s_info[PARAM_S_MAX] = {
+typedef struct parameter_info {
+  const char    *name;
+  param_t       default_value;
+} parameter_info_t;
+
+__code const parameter_info_t parameter_s_info[PARAM_S_MAX] = {
 	{"FORMAT",         PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",   57}, // match APM default of 57600
 	{"AIR_SPEED",      64}, // relies on MAVLink flow control
@@ -74,10 +76,7 @@ __code const struct parameter_s_info {
 	{"MAX_WINDOW",    131},
 };
 
-__code const struct parameter_r_info {
-	const char	*name;
-	param_t		default_value;
-} parameter_r_info[PARAM_R_MAX] = {
+__code const parameter_info_t parameter_r_info[PARAM_R_MAX] = {
 	{"TARGET_RSSI",     255},
 	{"HYSTERESIS_RSSI", 50},
 	{"ENCRYPTION",		0}
@@ -329,7 +328,7 @@ read_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
 	
 	for (i = start; i < start+size; i ++){
 		input[i-start] = flash_read_scratch(i);
-		printf("%d-%d\n",i,input[i-start]);
+		//debug("%d-%d\n",i,input[i-start]);
 	}
 	
 	// verify checksum
@@ -687,17 +686,18 @@ param_set_encryption_key(__xdata unsigned char *key)
 {
 	__pdata uint8_t len, key_length, encryption_level;
 
-	
 	// Get the encryption level, so we know # of bits
 	encryption_level = aes_get_encryption_level();
 
 	// Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
 	key_length = AES_KEY_LENGTH(encryption_level);
 	len = strlen(key);
-
 	// If not enough characters (2 char per byte), then set default
 	if (len < 2 * key_length ) {
 		param_set_default_encryption_key(key_length);
+    //printf("%s\n",key);
+    printf("ERROR - Key length:%u, Required %u\n",len, 2 * key_length);
+    return true;
 	} else {
 		// We have sufficient characters for the encryption key.
 		// If too many characters, then it will just ignore extra ones

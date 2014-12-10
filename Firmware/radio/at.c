@@ -67,7 +67,6 @@ static void	at_r(void);
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
-static void	at_e(void);
 
 #pragma save
 #pragma nooverlay
@@ -257,9 +256,6 @@ at_command(void)
 			case 'R':
 				at_r();
 				break;
-			case 'E':
-				at_e();
-				break;
 			case 'Z':
 				// generate a software reset
 				RSTSRC |= (1 << 4);
@@ -388,48 +384,6 @@ at_i(void)
 }
 
 static void
-at_e(void)
-{
-#ifdef CPU_SI1030
-	__pdata uint8_t 	key_length, encryption_level;
-	__pdata uint8_t		sreg;
-	__xdata unsigned char   *val;
-	
-	// get the register number first
-	idx = 3;
-	at_parse_number();
-	sreg = at_num;
-	// validate the selected sreg
-	if (sreg >= PARAM_R_MAX) {
-		at_error();
-		return;
-	}
-	
-	switch (at_cmd[idx]) {
-		case '?':
-			// Get the encryption level, so we know # of bits
-			encryption_level = aes_get_encryption_level();
-			
-			// Deduce key length (bytes) from level: 1 -> 16, 2 -> 24, 3 -> 32
-			key_length = AES_KEY_LENGTH(encryption_level);
-			
-			// Get the encryption key
-			val = param_get_encryption_key();
-			print_hex_codes(val, key_length);
-			return;
-			
-		case '=':
-			if (param_set_encryption_key((__xdata unsigned char *)&at_cmd[4])) {
-				at_ok();
-				return;
-			}
-			break;
-	}
-#endif // CPU_SI1030
-	at_error();
-}
-
-static void
 at_s(void)
 {
 	__pdata uint8_t		sreg;
@@ -547,7 +501,22 @@ at_ampersand(void)
 			at_error();
 		}
 		break;
-		
+#ifdef CPU_SI1030
+  case 'E':
+    switch (at_cmd[4]) {
+      case '?':
+        // Get the encryption key
+        print_hex_codes(param_get_encryption_key(), AES_KEY_LENGTH(aes_get_encryption_level()));
+        return;
+        
+      case '=':
+        if (param_set_encryption_key((__xdata unsigned char *)&at_cmd[5])) {
+          at_ok();
+          return;
+        }
+        break;
+    }
+#endif // CPU_SI1030
 	default:
 		at_error();
 		break;
@@ -622,12 +591,10 @@ static void
 at_plus(void)
 {
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-  __pdata uint8_t		creg;
   
   // get the register number first
   idx = 4;
   at_parse_number();
-  creg = at_num;
   
   switch (at_cmd[3])
   {
@@ -647,13 +614,13 @@ at_plus(void)
     switch (at_cmd[idx])
     {
     case '?':
-      at_num = calibration_get(creg);
+      at_num = calibration_get(at_num);
       printf("%lu\n",at_num);
       return;
     case '=':
       idx++;
       at_parse_number();
-      if (calibration_set(creg, at_num&0xFF))
+      if (calibration_set(at_num, at_num&0xFF))
       {
         at_ok();
       } else {
