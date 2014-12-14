@@ -238,15 +238,15 @@ class ATCommandSet(object):
             self.port.xonxoff = False
             for i in range(3):
                 time.sleep(0.001)
-                self.port.write(str(0x30))
-                self.port.write(str(0x20))
+                self.port.write(str(0x30).encode())
+                self.port.write(str(0x20).encode())
             time.sleep(1)  # Let the radio reset
             self.port.baudrate = old_baudrate
             self.port.rtscts = old_rtscts
             self.port.dsrdtr = old_dsrdtr
             self.port.xonxoff = old_xonxoff
         except Exception as ex:
-            print "Unsticking error: " + ex.args[0]
+            print("Unsticking error: ", ex)
             return False
         return True
 
@@ -295,12 +295,12 @@ if __name__ == '__main__':
     # If no get/set was requested, then bail
     if not (args.list_local or args.list_remote or \
             args.set_local or args.set_remote or args.set_both):
-        print "Please specify a --list-* or --set-* operation (try -h if unsure)"
+        print("Please specify a --list-* or --set-* operation (try -h if unsure)")
         sys.exit(0)
     # Also bail if attempting to get and set (we could, but we don't)
     if (args.list_local or args.list_remote) and \
        (args.set_local or args.set_remote or args.set_both):
-        print "We don't support listing and setting in the same command"
+        print("We don't support listing and setting in the same command")
         sys.exit(0)
     
     # Parse any --set-* args and build dictionaries of parameters to set
@@ -310,12 +310,12 @@ if __name__ == '__main__':
         for pair in params:
             prm, val = pair
             if prm not in param_map:
-                print "Parameter not valid: %s" % prm
+                print("Parameter not valid: %s" % prm)
                 sys.exit(-1)
             try:
                 myset[prm] = int(val)
             except:
-                print "Param '%s' value must be an integer: %s" % (prm, val)
+                print("Param '%s' value must be an integer: %s" % (prm, val))
                 sys.exit(-1)
         return myset
     local_set = {}
@@ -336,38 +336,38 @@ if __name__ == '__main__':
     # (Could just not "enter" command mode, but this seems safer somehow)
     # 08/06/2014 - Added "unstick" from bootloader mode
     if args.force:
-        print "Forcing out of command mode first..."
+        print("Forcing out of command mode first...")
         at.leave_command_mode_force()
-        print "Unsticking from bootloader mode..."
+        print("Unsticking from bootloader mode...")
         at.unstick()
     
     # Try to enter command mode, bail if radio doesn't give expected response
-    print "Entering command mode..."
+    print("Entering command mode...")
     if not at.enter_command_mode():
-        print "Could not enter command mode; try --force"
+        print("Could not enter command mode; try --force")
         sys.exit(-1)
     
     # If --list-* was requested, do that and exit (don't set any parameters)
     def _list_info():
         r_ver = at.get_radio_version()
         if not r_ver:
-            print "** Could not access radio **"
+            print("** Could not access radio **")
         else:
-            print "radio version: %g  board type: %d  board version: %d" % \
+            print("radio version: %g  board type: %d  board version: %d" % \
                   (r_ver,
                    at.get_board_type() or -1,
-                   at.get_board_version() or -1)
-            print "Parameters: \n%s" % at.get_params_text()
+                   at.get_board_version() or -1))
+            print("Parameters: \n%s" % at.get_params_text())
     if args.list_local:
-        print "Querying local radio..."
+        print("Querying local radio...")
         _list_info()
     if args.list_remote:
         at.set_remote_mode(True)
-        print "Querying remote radio..."
+        print("Querying remote radio...")
         _list_info()
         at.set_remote_mode(False)
     if args.list_local or args.list_remote:
-        print "Leaving command mode..."
+        print("Leaving command mode...")
         at.leave_command_mode()
         sys.exit(0)
     
@@ -376,40 +376,40 @@ if __name__ == '__main__':
     def _set_params(myset):
         for prm in myset:
             if at.set_param(param_map[prm], myset[prm]):
-                print "Set %s to %d" % (prm, myset[prm])
+                print("Set %s to %d" % (prm, myset[prm]))
             else:
-                print "Failed to set %s, aborting without saving changes." % prm
+                print("Failed to set %s, aborting without saving changes." % prm)
                 return False
         if at.write_params():
-            print "Wrote parameters to EEPROM."
+            print ("Wrote parameters to EEPROM.")
         else:
-            print "Failed to write parameters to EEPROM, aborting without saving changes."
+            print ("Failed to write parameters to EEPROM, aborting without saving changes.")
             return False
         if at.reboot():
-            print "Commanded reboot; changes should be in effect momentarily."
+            print("Commanded reboot; changes should be in effect momentarily.")
         else:
-            print "Failed to command reboot; please manually reboot the radio."
+            print("Failed to command reboot; please manually reboot the radio.")
         return True
     # Try remote radio first
     remote_failed = False
     if remote_set:
         at.set_remote_mode(True)
         if not at.get_radio_version:
-            print "Could not contact remote radio, aborting without saving changes."
+            print("Could not contact remote radio, aborting without saving changes.")
             remote_failed = True
         else:
-            print "Changing settings on remote radio..."
+            print("Changing settings on remote radio...")
             remote_failed = _set_params(remote_set)
         at.set_remote_mode(False)
     # Try local radio second (only if no remote failures)
     if local_set and not remote_failed:
         # Since we have to successfully be in command mode, don't need more checks
-        print "Changing settings on local radio..."
+        print("Changing settings on local radio...")
         _set_params(local_set)
     
     # Always leave command mode when finished
     # (If we rebooted the local radio at the very end, this will be ignored)
-    print "Leaving command mode..."
+    print("Leaving command mode...")
     at.leave_command_mode()
     sys.exit(0)
 
