@@ -138,6 +138,7 @@ enum RSSI_Hunt_ID {
 	RSSI_HUNT_IDLE = 0,
 	RSSI_HUNT_UP,
 	RSSI_HUNT_DOWN,
+  RSSI_HUNT_DISABLE,
 };
 
 // Varibles used to hunt for a target RSSI by changing the power levels
@@ -432,7 +433,9 @@ link_update(void)
 
 		// reset statistics when unlocked
 		statistics.receive_count = 0;
-		//radio_set_transmit_power(maxPower);
+    if (RSSI_HUNT_DISABLE != Hunt_RSSI) {
+      radio_set_transmit_power(maxPower);
+    }
 	}
 	
 	if (unlock_count > 5) {
@@ -448,6 +451,12 @@ link_update(void)
 		temperature_update();
 		temperature_count = 0;
 	}
+}
+
+void
+disable_rssi_hunt()
+{
+  Hunt_RSSI = RSSI_HUNT_DISABLE;
 }
 
 // Hunt for target RSSI using remote packet data
@@ -491,7 +500,10 @@ static void update_rssi_target(void)
 				Hunt_RSSI = RSSI_HUNT_IDLE;
 			}
 			break;
-			
+
+    case RSSI_HUNT_DISABLE:
+      break;
+
 		default:
 			Hunt_RSSI = RSSI_HUNT_IDLE;
 			break;

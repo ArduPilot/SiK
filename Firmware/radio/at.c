@@ -578,6 +578,7 @@ at_plus(void)
 		at_parse_number();
 		PCA0CPH0 = at_num & 0xFF;
 		radio_set_diversity(false);
+    disable_rssi_hunt();
 		at_ok();
 		return;
 	case 'C': // AT+Cx=y write calibration value

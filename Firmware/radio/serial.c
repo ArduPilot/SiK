@@ -44,8 +44,16 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-__xdata uint8_t rx_buf[1860] = {0};
-__xdata uint8_t tx_buf[650] = {0};
+#ifdef CPU_SI1030 // Potential for a increase in buffer size..
+#define RX_BUFF_MAX 2048
+#define TX_BUFF_MAX 1024
+#else
+#define RX_BUFF_MAX 1870 //2048
+#define TX_BUFF_MAX 650 //256 // 512
+#endif // CPU_SI1030
+
+__xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
+__xdata uint8_t tx_buf[TX_BUFF_MAX] = {0};
 
 // FIFO insert/remove pointers
 static volatile __pdata uint16_t				rx_insert, rx_remove;
