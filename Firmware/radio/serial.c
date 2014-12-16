@@ -48,7 +48,7 @@
 #define RX_BUFF_MAX 2048
 #define TX_BUFF_MAX 1024
 #else
-#define RX_BUFF_MAX 1870 //2048
+#define RX_BUFF_MAX 1860 //2048
 #define TX_BUFF_MAX 650 //256 // 512
 #endif // CPU_SI1030
 
