@@ -58,7 +58,7 @@ __code const struct parameter_s_info {
 	{"NETID",          25},
 	{"TXPOWER",        20},
 	{"ECC",             0},
-	{"MAVLINK",         1},
+	{"MAVLINK",         0},
 	{"OPPRESEND",       0},
 	{"MIN_FREQ",        0},
 	{"MAX_FREQ",        0},
@@ -66,7 +66,7 @@ __code const struct parameter_s_info {
 	{"DUTY_CYCLE",    100},
 	{"LBT_RSSI",        0},
 	{"MANCHESTER",      0},
-	{"RTSCTS",          0},
+	{"RTSCTS",          1},
 	{"MAX_WINDOW",    131},
 };
 
