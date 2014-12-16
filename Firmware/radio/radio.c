@@ -331,7 +331,10 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
-
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 |=  0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	// wait for transmit complete or timeout
 	tstart = timer2_tick();
 	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
@@ -376,6 +379,9 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 			if (errors.tx_errors != 0xFFFF) {
 				errors.tx_errors++;
 			}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+      P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
 			return false;
 		}
 
@@ -395,13 +401,22 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 				if (errors.tx_errors != 0xFFFF) {
 					errors.tx_errors++;
 				}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+        P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
 				return false;
 			}
-			return true;			
+#ifdef DEBUG_PINS_RADIO_TX_RX
+      P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+			return true;
 		}
 
 	}
-
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	// transmit timeout ... clear the FIFO
 	debug("TX timeout %u ts=%u tn=%u len=%u\n",
 		timeout_ticks,
@@ -1213,6 +1228,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
 	__data uint8_t status, status2;
 
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 |=  0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	status2 = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 
@@ -1259,6 +1278,9 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		// go into tune mode
 		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_PLLON);
 	}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
 	return;
 
 rxfail:
@@ -1266,5 +1288,8 @@ rxfail:
 		errors.rx_errors++;
 	}
 	radio_receiver_on();
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
 }
 

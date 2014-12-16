@@ -253,6 +253,13 @@ sync_tx_windows(__pdata uint8_t packet_length)
 	// in their transmit window then they are yielding some ticks to us.
 	bonus_transmit = (tdm_state == TDM_RECEIVE && packet_length==0);
 
+#ifdef DEBUG_PINS_YIELD
+  if(bonus_transmit)
+  {
+    P2 |= 0x40;
+  }
+#endif // DEBUG_PINS_YIELD
+  
 	// if we are not in transmit state then we can't be yielded
 	if (tdm_state != TDM_TRANSMIT) {
 		transmit_yield = 0;
@@ -323,6 +330,9 @@ tdm_state_update(__pdata uint16_t tdelta)
 
 		// we lose the bonus on all state changes
 		bonus_transmit = 0;
+#ifdef DEBUG_PINS_YIELD
+    P2 &= ~0x40;
+#endif // DEBUG_PINS_YIELD
 
 		// reset yield flag on all state changes
 		transmit_yield = 0;
@@ -1010,15 +1020,15 @@ tdm_init(void)
 		window_width = constrain(window_width, 3*lbt_min_time, window_width);
 	}
 
+  // user specified window is in milliseconds
+  if (window_width > param_s_get(PARAM_MAX_WINDOW)*(1000/16)) {
+    window_width = param_s_get(PARAM_MAX_WINDOW)*(1000/16);
+  }
+  
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
 	if (window_width >= REGULATORY_MAX_WINDOW && num_fh_channels > 1) {
 		window_width = REGULATORY_MAX_WINDOW;
-	}
-
-	// user specified window is in milliseconds
-	if (window_width > param_s_get(PARAM_MAX_WINDOW)*(1000/16)) {
-		window_width = param_s_get(PARAM_MAX_WINDOW)*(1000/16);
 	}
 
 	// make sure it fits in the 13 bits of the trailer window

@@ -37,6 +37,7 @@
 
 // Sync Logic on Pin // P2.6
 //#define TDM_SYNC_LOGIC
+//#define DEBUG_PINS_YIELD // P2.6
 
 //#define RADIO_SPLAT_TESTING_MODE
 
