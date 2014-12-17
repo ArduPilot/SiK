@@ -133,7 +133,19 @@ pins_user_set_io(__pdata uint8_t pin, bool in_out)
 				else
 					P2DRV &= ~(1<<pins_user_map[pin].pin);
 				break;
-				
+#ifdef CPU_SI1030
+      case 3:
+        if(in_out)
+          P3MDOUT |= (1<<pins_user_map[pin].pin);
+        else
+          P3MDOUT &= ~(1<<pins_user_map[pin].pin);
+        SFRPAGE	= CONFIG_PAGE;
+        if(in_out)
+          P3DRV |= (1<<pins_user_map[pin].pin);
+        else
+          P3DRV &= ~(1<<pins_user_map[pin].pin);
+        break;
+#endif // CPU_SI1030
 			default:
 				SFRPAGE	= LEGACY_PAGE;
 				return false;
@@ -191,7 +203,18 @@ pins_user_set_value(__pdata uint8_t pin, bool high_low)
 					P2 &= ~(1<<pins_user_map[pin].pin);
 				}
 				break;
-				
+#ifdef CPU_SI1030
+      case 3:
+        if(high_low)
+        {
+          P3 |= (1<<pins_user_map[pin].pin);
+        }
+        else
+        {
+          P3 &= ~(1<<pins_user_map[pin].pin);
+        }
+        break;
+#endif // CPU_SI1030
 			default:
 				return false;
 		}
@@ -218,8 +241,12 @@ pins_user_get_adc(__pdata uint8_t pin)
 			case 1:
 				return P1 & (1<<pins_user_map[pin].pin);
 			case 2:
-				return P2 & (1<<pins_user_map[pin].pin);				
-			default:
+				return P2 & (1<<pins_user_map[pin].pin);
+#ifdef CPU_SI1030
+      case 3:
+        return P3 & (1<<pins_user_map[pin].pin);
+#endif // CPU_SI1030
+      default:
 				return PIN_ERROR;
 		}
 	}
