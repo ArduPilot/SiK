@@ -1,10 +1,16 @@
-# SiK - Firmware for SiLabs Si1000 - Si102x/3x ISM radios
+SiK
+=====
+Firmware for SiLabs Si1000 - Si102x/3x ISM radios
 
+SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
+
+## Branch Build Status
+[![Build Status](http://jenkins.hovo.id.au/buildStatus/icon?job=SiK)](http://jenkins.hovo.id.au/job/SiK/)
+
+## Documentation
 For user documentation please see this site:
 
  http://code.google.com/p/ardupilot-mega/wiki/3DRadio
-
-SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
 
 Currently, it supports the following boards:
 
@@ -12,6 +18,7 @@ Currently, it supports the following boards:
  - HopeRF RF50-DEMO
  - RFD900
  - RFD900u
+ - RFD900p
 
 Adding support for additional boards should not be difficult.
 
