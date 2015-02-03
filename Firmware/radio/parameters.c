@@ -684,13 +684,11 @@ void param_set_default_encryption_key(__pdata uint8_t key_length)
 bool
 param_set_encryption_key(__xdata unsigned char *key)
 {
-	__pdata uint8_t len, key_length, encryption_level;
+	__pdata uint8_t len, key_length;
 
-	// Get the encryption level, so we know # of bits
-	encryption_level = aes_get_encryption_level();
-
+  // Use the new encryption level to help with key changes before reboot
 	// Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
-	key_length = AES_KEY_LENGTH(encryption_level);
+	key_length = AES_KEY_LENGTH(param_r_get(PARAM_R_ENCRYPTION));
 	len = strlen(key);
 	// If not enough characters (2 char per byte), then set default
 	if (len < 2 * key_length ) {

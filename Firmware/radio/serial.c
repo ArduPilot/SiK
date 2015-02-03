@@ -44,12 +44,13 @@
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-#ifdef CPU_SI1030 // Potential for a increase in buffer size..
+
+#ifdef CPU_SI1030
 #define RX_BUFF_MAX 2048
 #define TX_BUFF_MAX 1024
 #else
-#define RX_BUFF_MAX 1860 //2048
-#define TX_BUFF_MAX 650 //256 // 512
+#define RX_BUFF_MAX 1860
+#define TX_BUFF_MAX 650
 #endif // CPU_SI1030
 
 __xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
