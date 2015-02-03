@@ -130,6 +130,7 @@ SBIT(PA_ENABLE,    SFR_P2, 5);         // Power Amplifier Enable
 #define ENABLE_RFD900_SWITCH 1        // Define RF switches on the module (V1.1 are V1.2 the same)
 #define RFD900_DIVERSITY 1            // Enable/Disable diversity on RFD900 (V1.1 are V1.2 the same)
 #define RFD900_INT_TX_POW 4           // TX power feeding into the amp
+#define TEMP_OFFSET 45                // Use the internal offset register with this extra cal offset
 SBIT(IRQ,  SFR_P0, 1);                // Connection within RFD900 module, P0.1 is connected to nIRQ
 SBIT(NSS1, SFR_P2, 3);                // SI1020 Internal Connection
 

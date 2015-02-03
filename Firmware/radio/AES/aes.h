@@ -1,6 +1,6 @@
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2013 Joe Turner, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -27,51 +27,26 @@
 //
 
 ///
-/// @file	tdm.h
+/// @file       aes.h
 ///
-/// Interface to the time division multiplexing code
+/// Definitions for the radio application AES
 ///
 
-#ifndef _TDM_H_
-#define _TDM_H_
 
-// Sync Logic on Pin // P2.6
-//#define TDM_SYNC_LOGIC
 
-//#define RADIO_SPLAT_TESTING_MODE
+//=============================================================================
+// Function Prototypes
+//-----------------------------------------------------------------------------
 
-#ifdef TDM_SYNC_LOGIC
-SBIT (TDM_SYNC_PIN, SFR_P2, 6);
-#endif // TDM_SYNC_LOGIC
+extern bool aes_init(uint8_t encryption_level);
 
-/// initialise tdm subsystem
-///
-extern void tdm_init(void);
+extern uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
 
-// tdm main loop
-///
-extern void tdm_serial_loop(void);
+extern uint8_t aes_decrypt(__xdata unsigned char *in_str,  uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
 
-/// report tdm timings
-///
-extern void tdm_report_timing(void);
+extern uint8_t aes_get_encryption_level();
 
-/// dispatch a remote AT command
-extern void tdm_remote_at(void);
+void aes_set_encryption_level(__pdata uint8_t encryption);
 
-/// change tdm phase (for testing recovery)
-extern void tdm_change_phase(void);
 
-/// show RSSI information
-extern void tdm_show_rssi(void);
-
-/// the long term duty cycle we are aiming for
-extern __pdata uint8_t duty_cycle;
-
-/// the LBT threshold
-extern __pdata uint8_t lbt_rssi;
-
-/// Disable the hunting of the rssi power levels
-extern void disable_rssi_hunt();
-
-#endif // _TDM_H_
+#define AES_KEY_LENGTH(_l)    8*(1 +(_l&0xf))

@@ -52,7 +52,7 @@ static __bit string_flag = 0;
 static __bit char_flag = 0;
 static __bit unsigned_flag = 0;
 static char * __data str;
-static __data long val;
+static __pdata long val;
 
 // allow printf() output to be captured to a buffer
 // for remote AT command control

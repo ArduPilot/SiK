@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include "radio.h"
 #include "freq_hopping.h"
+#include "crc.h"
 
 /// how many channels are we hopping over
 __pdata uint8_t num_fh_channels;
@@ -57,7 +58,7 @@ __pdata static volatile uint8_t receive_channel;
 /// map between hopping channel numbers and physical channel numbers
 __xdata static uint8_t channel_map[MAX_FREQ_CHANNELS];
 
-// a vary simple array shuffle
+// a very simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
 static inline void shuffle(__xdata uint8_t *array, uint8_t n)
@@ -71,9 +72,20 @@ static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 	}
 }
 
+void
+shuffleRand(void)
+{
+  srand(param_s_get(PARAM_NETID));
+#ifdef CPU_SI1030
+  if (param_r_get(PARAM_R_ENCRYPTION)) {
+    srand(crc16(32, param_get_encryption_key()));
+  }
+#endif
+}
+
 // initialise frequency hopping logic
 void 
-fhop_init(uint16_t netid)
+fhop_init(void)
 {
 	uint8_t i;
 	// create a random mapping between virtual and physical channel
@@ -81,7 +93,7 @@ fhop_init(uint16_t netid)
 	for (i = 0; i < num_fh_channels; i++) {
 		channel_map[i] = i;
 	}
-	srand(netid);
+	shuffleRand();
 	shuffle(channel_map, num_fh_channels);
 }
 
