@@ -63,13 +63,17 @@ extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
 /// Timer2 tick interrupt handler
 ///
-extern void    T2_ISR(void)            __interrupt(INTERRUPT_TIMER2);
+extern void    T2_ISR(void)     __interrupt(INTERRUPT_TIMER2);
 
 /// Timer3 tick interrupt handler
 ///
 /// @todo switch this and everything it calls to use another register bank?
 ///
-extern void    T3_ISR(void)            __interrupt(INTERRUPT_TIMER3);
+extern void    T3_ISR(void)     __interrupt(INTERRUPT_TIMER3);
+
+#ifdef CPU_SI1030
+extern void    DMA_ISR(void)    __interrupt(INTERRUPT_DMA0);
+#endif
 
 //@}
 

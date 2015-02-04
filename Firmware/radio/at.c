@@ -505,8 +505,7 @@ at_ampersand(void)
   case 'E':
     switch (at_cmd[4]) {
       case '?':
-        // Get the encryption key, Use the new encryption level to help with key changes before reboot
-        print_hex_codes(param_get_encryption_key(), AES_KEY_LENGTH(param_r_get(PARAM_R_ENCRYPTION)));
+        print_encryption_key();
         return;
         
       case '=':

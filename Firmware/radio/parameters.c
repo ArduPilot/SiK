@@ -119,7 +119,7 @@ typedef char r2pCheck[(PARAM_R_FLASH_END < PIN_FLASH_START) ? 0 : -1];
 // Place the start away from the other params to allow for expantion 2<<7 +128 = 384
 #ifdef CPU_SI1030
 // Holds the encrpytion string
-__xdata unsigned char encryption_key[32];
+__xdata uint8_t encryption_key[32];
 
 #define PARAM_E_FLASH_START   (2<<7) + 128
 #define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 2)
@@ -411,7 +411,7 @@ __critical {
 
 	// read and verify encryption params
 #ifdef CPU_SI1030
-	if(!read_params((__xdata unsigned char *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
+	if(!read_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
 		return false;
 #endif
 	return true;
@@ -444,7 +444,7 @@ __critical {
   // write encryption params
 #ifdef CPU_SI1030
 	flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
-	write_params((__xdata unsigned char *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
+	write_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
 #endif
 
 }
@@ -667,7 +667,7 @@ void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_ou
 void param_set_default_encryption_key(__pdata uint8_t key_length)
 {
 	__pdata uint8_t i;
-	__xdata unsigned char b[] = {0x62};
+	__xdata uint8_t b[] = {0x62};
 
 	for (i=0;i< key_length;i++) {
 		// Set default key to b's
@@ -708,19 +708,20 @@ param_set_encryption_key(__xdata unsigned char *key)
 /// Print hex codes for given string
 ///
 void
-print_hex_codes(__xdata unsigned char *in_str, __pdata uint8_t key_length)
+print_encryption_key()
 {
-	__pdata uint8_t i;
+  __pdata uint8_t i;
+  __pdata uint8_t key_length = AES_KEY_LENGTH(param_r_get(PARAM_R_ENCRYPTION));
 
 	for (i=0; i<key_length; i++) {
-		printf("%x",in_str[i]);
+		printf("%x",encryption_key[i]);
 	}
 	printf("\n");
 }
 
 /// get the encryption key
 ///
-__xdata unsigned char* param_get_encryption_key()
+__xdata uint8_t* param_get_encryption_key()
 {
 	return encryption_key;
 }

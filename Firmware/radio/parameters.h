@@ -149,7 +149,7 @@ extern bool calibration_lock() __reentrant;
 #ifdef CPU_SI1030
 /// get the encryption key
 ///
-extern __xdata unsigned char *param_get_encryption_key();
+extern __xdata uint8_t *param_get_encryption_key();
 
 /// set the encryption key
 ///
@@ -157,5 +157,5 @@ extern bool param_set_encryption_key(__xdata unsigned char *key);
 
 /// Print hex codes
 ///
-extern void print_hex_codes(__xdata unsigned char *in_str, __pdata uint8_t key_length);
+extern void print_encryption_key();
 #endif // CPU_SI1030

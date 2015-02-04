@@ -39,13 +39,6 @@
 
 #ifdef CPU_SI1030
 #include "AES/aes.h"
-
-//-----------------------------------------------------------------------------
-// Interrupt proto (for SDCC compatibility)
-//-----------------------------------------------------------------------------
-INTERRUPT_PROTO(DMA_ISR, INTERRUPT_DMA0);
-//=============================================================================
-
 #endif
 
 static __bit last_sent_is_resend;
@@ -217,15 +210,20 @@ __xdata uint8_t len_encrypted;
 
 uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t last_sent_len)
 {
-//#ifdef CPU_SI1030
+#ifdef CPU_SI1030
+//  printf("np\n");
+
 //  if (aes_get_encryption_level() > 0) {
-//    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0) {
-//      panic("error while trying to encrypt data");
+//    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0)
+//    {
+//      //panic("error while trying to encrypt data");
+//      printf(":(\n");
+//      return 0;
 //    }
-////    printf("en-%d\n",len_encrypted);
+//////    printf("en-%d\n",len_encrypted);
 //    return len_encrypted;
 //  }
-//#endif // CPU_SI1030
+#endif // CPU_SI1030
   
   // if no encryption or not supported fall back to copy
   memcpy(buf_out, buf_in, last_sent_len);
