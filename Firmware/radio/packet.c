@@ -37,6 +37,17 @@
 #include "packet.h"
 #include "timer.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+
+//-----------------------------------------------------------------------------
+// Interrupt proto (for SDCC compatibility)
+//-----------------------------------------------------------------------------
+INTERRUPT_PROTO(DMA_ISR, INTERRUPT_DMA0);
+//=============================================================================
+
+#endif
+
 static __bit last_sent_is_resend;
 static __bit last_sent_is_injected;
 static __bit last_recv_is_resend;
@@ -200,14 +211,43 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	return last_sent_len;
 }
 
+#ifdef CPU_SI1030
+__xdata uint8_t len_encrypted;
+#endif
+
+uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t last_sent_len)
+{
+//#ifdef CPU_SI1030
+//  if (aes_get_encryption_level() > 0) {
+//    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0) {
+//      panic("error while trying to encrypt data");
+//    }
+////    printf("en-%d\n",len_encrypted);
+//    return len_encrypted;
+//  }
+//#endif // CPU_SI1030
+  
+  // if no encryption or not supported fall back to copy
+  memcpy(buf_out, buf_in, last_sent_len);
+  return last_sent_len;
+}
 
 // return the next packet to be sent
 uint8_t
-packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
+packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 {
 	register uint16_t slen;
 
-
+#ifdef CPU_SI1030
+  // Encryption takes 1 byte and is in factors of 16.
+  // 16, 32, 48 etc, lets not send anything above 32 bits back
+  // If you change this increase the buffer in serial.c serial_write_buf()
+  if (aes_get_encryption_level() > 0) {
+   if(max_xmit < 16) return 0;
+   if (max_xmit > 31 ) max_xmit = 31;
+  }
+#endif // CPU_SI1030
+  
 	if (injected_packet) {
 		// send a previously injected packet
 		slen = last_sent_len;
@@ -220,17 +260,16 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 
 		if (max_xmit < slen) {
 			// send as much as we can
-			memcpy(buf, last_sent, max_xmit);
-			memcpy(last_sent, &last_sent[max_xmit], slen - max_xmit);
-			last_sent_len = slen - max_xmit;
+      last_sent_len = slen - max_xmit;
+      slen = encryptReturn(buf, last_sent, max_xmit);
+			memcpy(last_sent, &last_sent[max_xmit], last_sent_len);
 			last_sent_is_injected = true;
-			return max_xmit;
+			return slen;
 		}
 		// send the rest
-		memcpy(buf, last_sent, last_sent_len);
 		injected_packet = false;
 		last_sent_is_injected = true;
-		return last_sent_len;
+		return encryptReturn(buf, last_sent, last_sent_len);
 	}
 
 	last_sent_is_injected = false;
@@ -246,8 +285,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 		}
 		last_sent_is_resend = true;
 		force_resend = false;
-		memcpy(buf, last_sent, last_sent_len);
-		return last_sent_len;
+		return encryptReturn(buf, last_sent, last_sent_len);
 	}
 
 	last_sent_is_resend = false;
@@ -268,12 +306,11 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	if (!feature_mavlink_framing) {
 		// simple framing
 		if (slen > 0 && serial_read_buf(buf, slen)) {
-			memcpy(last_sent, buf, slen);
 			last_sent_len = slen;
+      return encryptReturn(last_sent, buf, slen);
 		} else {
-			last_sent_len = 0;
+			return 0;
 		}
-		return last_sent_len;
 	}
 
 	// try to align packet boundaries with MAVLink packets
@@ -284,9 +321,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			if ((uint16_t)(timer2_tick() - mav_pkt_start_time) > mav_pkt_max_time) {
 				// we didn't get the length byte in time
 				last_sent[last_sent_len++] = serial_read(); // Send the STX
-				memcpy(buf, last_sent, last_sent_len);				
 				mav_pkt_len = 0;
-				return last_sent_len;
+				return encryptReturn(buf, last_sent, last_sent_len);
 			}
 			// still waiting ....
 			return 0;
@@ -304,9 +340,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 				// it. Send what we have now.
 				serial_read_buf(last_sent, slen);
 				last_sent_len = slen;
-				memcpy(buf, last_sent, last_sent_len);
 				mav_pkt_len = 0;
-				return last_sent_len;
+				return encryptReturn(buf, last_sent, last_sent_len);
 			}
 			// leave it in the serial buffer till we have the
 			// whole MAVLink packet			
@@ -351,10 +386,9 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 				// send what we've got so far,
 				// and send the MAVLink payload
 				// in the next packet
-				memcpy(buf, last_sent, last_sent_len);
 				mav_pkt_start_time = timer2_tick();
 				mav_pkt_max_time = mav_pkt_len * serial_rate;
-				return last_sent_len;
+				return encryptReturn(buf, last_sent, last_sent_len);
 			} else if (mav_pkt_len > slen) {
 				// the whole MAVLink packet isn't in
 				// the serial buffer yet. 
@@ -362,6 +396,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 				mav_pkt_max_time = mav_pkt_len * serial_rate;
 				return 0;					
 			} else {
+// TODO FIX THIS FOR ENCRYPT
 				// the whole packet is there
 				// and ready to be read
 				return mavlink_frame(max_xmit, buf);
@@ -371,9 +406,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 			slen--;
 		}
 	}
-
-	memcpy(buf, last_sent, last_sent_len);
-	return last_sent_len;
+	return encryptReturn(buf, last_sent, last_sent_len);;
 }
 
 // return true if the packet currently being sent
@@ -416,7 +449,7 @@ packet_set_serial_speed(uint16_t speed)
 
 // determine if a received packet is a duplicate
 bool 
-packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
+packet_is_duplicate(uint8_t len, __xdata uint8_t *buf, bool is_resend)
 {
 	if (!is_resend) {
 		memcpy(last_received, buf, len);
@@ -444,7 +477,7 @@ packet_is_duplicate(uint8_t len, __xdata uint8_t * __pdata buf, bool is_resend)
 
 // inject a packet to send when possible
 void 
-packet_inject(__xdata uint8_t * __pdata buf, __pdata uint8_t len)
+packet_inject(__xdata uint8_t *buf, __pdata uint8_t len)
 {
 	if (len > sizeof(last_sent)) {
 		len = sizeof(last_sent);

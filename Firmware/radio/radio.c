@@ -104,22 +104,8 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	if (!feature_golay)
 #endif // INCLUDE_GOLAY
   {
-//// If on appropriate CPU and encryption configured, then attempt to decrypt it
-//#ifdef CPU_SI1030
-//    if (aes_get_encryption_level() > 0) {
-//      if (aes_decrypt(radio_buffer, receive_packet_length, pbuf_decrypted, &len_decrypted) != 0) {
-//        panic("error while trying to decrypt data");
-//      }
-//      *length = len_decrypted;
-//      memcpy(buf, pbuf_decrypted, len_decrypted);
-//    } else {
-//      *length = receive_packet_length;
-//      memcpy(buf, radio_buffer, receive_packet_length);
-//    }
-//#else
 	*length = receive_packet_length;
 	memcpy(buf, radio_buffer, receive_packet_length);
-//#endif
 
 		// simple unencoded packets
 		radio_receiver_on();

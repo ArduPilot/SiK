@@ -36,6 +36,10 @@
 #include "serial.h"
 #include "packet.h"
 
+#ifdef CPU_SI1030
+#include "AES/aes.h"
+#endif 
+
 // Serial rx/tx buffers.
 //
 // Note that the rx buffer is much larger than you might expect
@@ -65,6 +69,13 @@ static uint8_t rts_count;
 
 // flag indicating the transmitter is idle
 static volatile bool			tx_idle;
+
+#ifdef CPU_SI1030  
+// Encrypted packets arn't bigger than 32 bytes
+// Limited by packet.c packet_get_next()
+static __xdata uint8_t len_decrypted;
+static __xdata uint8_t decrypt_buf[32];
+#endif // CPU_SI1030
 
 // FIFO status
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
@@ -259,6 +270,17 @@ serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 		return;
 	}
 
+// If on appropriate CPU and encryption configured, then attempt to decrypt it
+#ifdef CPU_SI1030
+//    if (aes_get_encryption_level() > 0) {
+//      if (aes_decrypt(buf, count, decrypt_buf, &len_decrypted) != 0) {
+//        panic("error while trying to decrypt data");
+//      }
+//      memcpy(buf, decrypt_buf, len_decrypted);
+//      count = len_decrypted;
+//    }
+#endif // CPU_SI1030
+  
 	// discard any bytes that don't fit. We can't afford to
 	// wait for the buffer to drain as we could miss a frequency
 	// hopping transition
