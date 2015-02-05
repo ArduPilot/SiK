@@ -714,6 +714,9 @@ print_encryption_key()
   __pdata uint8_t key_length = AES_KEY_LENGTH(param_r_get(PARAM_R_ENCRYPTION));
 
 	for (i=0; i<key_length; i++) {
+    if (0xF >= encryption_key[i]) {
+      printf("0");
+    }
 		printf("%x",encryption_key[i]);
 	}
 	printf("\n");

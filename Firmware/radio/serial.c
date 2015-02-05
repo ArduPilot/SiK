@@ -54,7 +54,7 @@
 #define TX_BUFF_MAX 1024
 #else
 #define RX_BUFF_MAX 1860
-#define TX_BUFF_MAX 650
+#define TX_BUFF_MAX 645
 #endif // CPU_SI1030
 
 __xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};

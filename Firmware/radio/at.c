@@ -342,35 +342,10 @@ at_i(void)
   case '4':
     printf("%u\n", g_board_bl_version);
     return;
-  case '5': {
-//    register enum ParamID id;
-//		register uint8_t start = 0;
-//		register uint8_t end = PARAM_S_MAX-1;
-//
-//		if (at_cmd[4] == ':' && isdigit(at_cmd[5])) {
-//				idx = 5;
-//				at_parse_number();
-//				start = at_num;
-//			
-//				if (at_cmd[idx] == ':' && isdigit(at_cmd[idx+1])) {
-//						idx++;
-//						at_parse_number();
-//						end = at_num;
-//				}
-//		}
-//
-//    // convenient way of showing all parameters
-//    for (id = start; id <= end; id++) {
-//      printf("%s%u:%s=%lu\n",
-//             param,
-//             (unsigned)id,
-//             param_s_name(id),
-//             (unsigned long)param_s_get(id));
-//    }
+  case '5':
     print_ID_vals('S', PARAM_S_MAX, param_s_name, param_s_get);
     print_ID_vals('R', PARAM_R_MAX, param_r_name, param_r_get);
     return;
-  }
   case '6':
     tdm_report_timing();
     return;
