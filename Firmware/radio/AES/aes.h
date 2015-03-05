@@ -46,7 +46,7 @@ extern uint8_t aes_decrypt(__xdata unsigned char *in_str,  uint8_t in_len, __xda
 
 extern uint8_t aes_get_encryption_level();
 
-void aes_set_encryption_level(__pdata uint8_t encryption);
+void aes_set_encryption_level(uint8_t encryption);
 
 
 #define AES_KEY_LENGTH(_l)    8*(1 +(_l&0xf))

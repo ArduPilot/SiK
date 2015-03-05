@@ -32,7 +32,7 @@
 /// golay 23/12 error correction encoding and decoding
 ///
 
-#ifndef INCLUDE_GOLAY
+#ifdef INCLUDE_GOLAY
 /// encode n bytes of data into 2n coded bytes. n must be a multiple 3
 extern void golay_encode(__pdata uint8_t n, __xdata uint8_t * __pdata in, __xdata uint8_t * __pdata out);
 

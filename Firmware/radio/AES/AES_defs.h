@@ -29,24 +29,24 @@
 //-----------------------------------------------------------------------------
 enum KEY_SIZE_Enum
 {
-	KEY_SIZE_128_BITS = 0,             // 0x00
-	KEY_SIZE_192_BITS,                 // 0x01
-	KEY_SIZE_256_BITS,                 // 0x02
-	KEY_SIZE_UNDEFINED                 // 0x03
+   KEY_SIZE_128_BITS = 0,             // 0x00
+   KEY_SIZE_192_BITS,                 // 0x01
+   KEY_SIZE_256_BITS,                 // 0x02
+   KEY_SIZE_UNDEFINED                 // 0x03
 };
 //-----------------------------------------------------------------------------
 // enum used for ENCRYPT_DECRYPT_AND_SIZE
 //-----------------------------------------------------------------------------
 enum ENCRYPT_DECRYPT_AND_SIZE_Enum
 {
-	DECRYPTION_128_BITS = 0,            // 0x00
-	DECRYPTION_192_BITS,                // 0x01
-	DECRYPTION_256_BITS,                // 0x02
-	DECRYPTION_UNDEFINED,               // 0x03
-	ENCRYPTION_128_BITS,                // 0x04
-	ENCRYPTION_192_BITS,                // 0x05
-	ENCRYPTION_256_BITS,                // 0x06
-	ENCRYPTION_UNDEFINED                // 0x07
+   DECRYPTION_128_BITS = 0,            // 0x00
+   DECRYPTION_192_BITS,                // 0x01
+   DECRYPTION_256_BITS,                // 0x02
+   DECRYPTION_UNDEFINED,               // 0x03
+   ENCRYPTION_128_BITS,                // 0x04
+   ENCRYPTION_192_BITS,                // 0x05
+   ENCRYPTION_256_BITS,                // 0x06
+   ENCRYPTION_UNDEFINED                // 0x07
 };
 //-----------------------------------------------------------------------------
 // miscellaneous defines used for AES0BCF

@@ -211,18 +211,13 @@ __xdata uint8_t len_encrypted;
 uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t last_sent_len)
 {
 #ifdef CPU_SI1030
-//  printf("np\n");
-
-//  if (aes_get_encryption_level() > 0) {
-//    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0)
-//    {
-//      //panic("error while trying to encrypt data");
-//      printf(":(\n");
-//      return 0;
-//    }
-//////    printf("en-%d\n",len_encrypted);
-//    return len_encrypted;
-//  }
+  if (aes_get_encryption_level() > 0) {
+    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0)
+    {
+      panic("error while trying to encrypt data");
+    }
+    return len_encrypted;
+  }
 #endif // CPU_SI1030
   
   // if no encryption or not supported fall back to copy
@@ -241,8 +236,9 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
   // 16, 32, 48 etc, lets not send anything above 32 bits back
   // If you change this increase the buffer in serial.c serial_write_buf()
   if (aes_get_encryption_level() > 0) {
-   if(max_xmit < 16) return 0;
-   if (max_xmit > 31 ) max_xmit = 31;
+    if(max_xmit <= 16) return 0;
+    if(max_xmit <= 32) max_xmit = 15;
+    if(max_xmit > 31 ) max_xmit = 31;
   }
 #endif // CPU_SI1030
   
@@ -404,7 +400,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 			slen--;
 		}
 	}
-	return encryptReturn(buf, last_sent, last_sent_len);;
+//  printf("ret");
+	return encryptReturn(buf, last_sent, last_sent_len);
 }
 
 // return true if the packet currently being sent

@@ -263,8 +263,8 @@ hardware_init(void)
 	// global interrupt enable
 	EA = 1;
 	
-	// Turn on the 'radio running' LED and turn off the bootloader LED
-	LED_RADIO = LED_ON;
+	// Turn off the 'radio running' LED and turn off the bootloader LED
+	LED_RADIO = LED_OFF;
 	LED_BOOTLOADER = LED_OFF;
 
 	// ADC system initialise for temp sensor
@@ -450,20 +450,3 @@ radio_init(void)
 	// initialise TDM system
 	tdm_init();
 }
-
-#ifdef CPU_SI1030
-//-----------------------------------------------------------------------------
-// DMA_ISR
-// description:
-//
-// This ISR is needed to support the DMA Idle mode wake up, which is used
-// in the AES functions. Bit 5 of EIE2 should be enabled before going into
-// idle mode. This ISR will disable further interrupts. EA must also be
-// enabled.
-//
-//-----------------------------------------------------------------------------
-INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
-{
-	EIE2 &= ~0x20;                       // disable further interrupts
-}
-#endif

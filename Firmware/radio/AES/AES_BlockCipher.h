@@ -48,10 +48,10 @@ typedef U8 AES_BLOCK_CIPHER_STATUS;
 // Function Prototypes (API)
 //=============================================================================
 AES_BLOCK_CIPHER_STATUS AES_BlockCipher (AES_BLOCK_CIPHER_OPERATION operation,
-	VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
-	VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
-	VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
-	U16 blocks);
+   VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
+   VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
+   VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
+    U16 blocks);
 //=============================================================================
 // End of file
 //=============================================================================

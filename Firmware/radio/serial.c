@@ -50,7 +50,7 @@
 //
 
 #ifdef CPU_SI1030
-#define RX_BUFF_MAX 2048
+#define RX_BUFF_MAX 1024 //2048
 #define TX_BUFF_MAX 1024
 #else
 #define RX_BUFF_MAX 1860
@@ -69,13 +69,6 @@ static uint8_t rts_count;
 
 // flag indicating the transmitter is idle
 static volatile bool			tx_idle;
-
-#ifdef CPU_SI1030  
-// Encrypted packets arn't bigger than 32 bytes
-// Limited by packet.c packet_get_next()
-static __xdata uint8_t len_decrypted;
-static __xdata uint8_t decrypt_buf[32];
-#endif // CPU_SI1030
 
 // FIFO status
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
@@ -259,9 +252,18 @@ _serial_write(register uint8_t c) __reentrant
 	ES0_RESTORE;
 }
 
+#ifdef CPU_SI1030
+// Encrypted packets arn't bigger than 32 bytes
+// Limited by packet.c packet_get_next()
+static __xdata uint8_t len_decrypted;
+static __xdata uint8_t decrypt_buf[32];
+#endif // CPU_SI1030
+
 // write as many bytes as will fit into the serial transmit buffer
+// if encryption turned on, decrypt the packet.
 void
 serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
+//, bool encrypted)
 {
 	__pdata uint16_t space;
 	__pdata uint8_t n1;
@@ -272,13 +274,18 @@ serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count)
 
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
 #ifdef CPU_SI1030
-//    if (aes_get_encryption_level() > 0) {
-//      if (aes_decrypt(buf, count, decrypt_buf, &len_decrypted) != 0) {
-//        panic("error while trying to decrypt data");
-//      }
-//      memcpy(buf, decrypt_buf, len_decrypted);
+  TP10 = true;
+    if (aes_get_encryption_level() > 0) {
+      memcpy(decrypt_buf, buf, count);
+      if (aes_decrypt(buf, count, decrypt_buf, &len_decrypted) != 0) {
+        panic("error while trying to decrypt data");
+      }
+      TP10 = false;
+//      //memcpy(buf, decrypt_buf, len_decrypted);
+//      buf = decrypt_buf;
 //      count = len_decrypted;
-//    }
+      return;
+    }
 #endif // CPU_SI1030
   
 	// discard any bytes that don't fit. We can't afford to

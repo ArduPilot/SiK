@@ -88,142 +88,142 @@
 //
 //-----------------------------------------------------------------------------
 AES_BLOCK_CIPHER_STATUS AES_BlockCipher (AES_BLOCK_CIPHER_OPERATION operation,
-	VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
-	VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
-	VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
-	U16 blocks)
+   VARIABLE_SEGMENT_POINTER(plainText, U8, SEG_XDATA),
+   VARIABLE_SEGMENT_POINTER(cipherText, U8, SEG_XDATA),
+   VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
+    U16 blocks)
 {
-	// unions used for compiler independent endianness.
-	SEG_XDATA UU16 length;                        // Length in bytes for all blocks.
-	SEG_XDATA UU16 addr;                          // Union used to access pointer bytes.
+   // unions used for compiler independent endianness.
+   UU16 length;                        // Length in bytes for all blocks.
+   UU16 addr;                          // Union used to access pointer bytes.
 
-	SEG_XDATA U8 keyLength;                       // Used to calculate key length in bytes.
+   U8 keyLength;                       // Used to calculate key length in bytes.
 
-	// check first for valid key type
-	if((operation == DECRYPTION_UNDEFINED)||(operation >= ENCRYPTION_UNDEFINED))
-	{
-		return ERROR_INVALID_PARAMETER;
-	}
-	else
-	{
-		// Calculate key length in bytes based on operation parameter.
-		keyLength = (((operation & 0x03) + 2) << 3);
-	}
+   // check first for valid key type
+   if((operation == DECRYPTION_UNDEFINED)||(operation >= ENCRYPTION_UNDEFINED))
+   {
+      return ERROR_INVALID_PARAMETER;
+   }
+   else
+   {
+      // Calculate key length in bytes based on operation parameter.
+      keyLength = (((operation & 0x03) + 2) << 3);
+   }
 
-	// Calculate plaintext and ciphertext total length.
-	length.U16 = (blocks << 4);
+   // Calculate plaintext and ciphertext total length.
+   length.U16 = (blocks << 4);
 
-	SFRPAGE = DPPE_PAGE;
+   SFRPAGE = DPPE_PAGE;
 
-	AES0BCFG = 0x00;                    // Disable for now
-	AES0DCFG = 0x00;                    // Disable for now
+   AES0BCFG = 0x00;                    // Disable for now
+   AES0DCFG = 0x00;                    // Disable for now
 
-	// Disable AES0KIN, AES0BIN, & AES0YOUT channels.
-	DMA0EN &= ~AES0_KBY_MASK;
+   // Disable AES0KIN, AES0BIN, & AES0YOUT channels.
+   DMA0EN &= ~AES0_KBY_MASK;
 
-	// Configure AES key input channel using key pointer and calculated key
-	// length. Set DMA0NMD to enable Key wrapping. This permits multiple
-	// blocks to be encrypted using the same key.
+   // Configure AES key input channel using key pointer and calculated key
+   // length. Set DMA0NMD to enable Key wrapping. This permits multiple
+   // blocks to be encrypted using the same key.
 
-	DMA0SEL = AES0KIN_CHANNEL;
-	DMA0NCF = AES0KIN_PERIPHERAL_REQUEST;
-	DMA0NMD = WRAPPING;
-	addr.U16 = (U16)(key);
-	DMA0NBAL = addr.U8[LSB];
-	DMA0NBAH = addr.U8[MSB];
-	DMA0NSZH = 0;
-	DMA0NSZL = keyLength;
-	DMA0NAOL = 0;
-	DMA0NAOH = 0;
+   DMA0SEL = AES0KIN_CHANNEL;
+   DMA0NCF = AES0KIN_PERIPHERAL_REQUEST;
+   DMA0NMD = WRAPPING;
+   addr.U16 = (U16)(key);
+   DMA0NBAL = addr.U8[LSB];
+   DMA0NBAH = addr.U8[MSB];
+   DMA0NSZH = 0;
+   DMA0NSZL = keyLength;
+   DMA0NAOL = 0;
+   DMA0NAOH = 0;
 
-	// AES block input is plaintext for encryption operation or ciphertext
-	// for decyption operation.
+   // AES block input is plaintext for encryption operation or ciphertext
+   // for decyption operation.
 
-	if(operation & ENCRYPTION_MODE)
-		addr.U16 = (U16)(plainText);
-	else
-		addr.U16 = (U16)(cipherText);
+  if(operation & ENCRYPTION_MODE)
+      addr.U16 = (U16)(plainText);
+   else
+      addr.U16 = (U16)(cipherText);
 
-	// Configure AES block input channel using corresponding address
-	// and calculated total plaintext/ciphertext length.
-	// Clear DMA0NMD to disable wrapping. Each consecutive block
-	// will be encypted/decrypted using the same key.
+   // Configure AES block input channel using corresponding address
+   // and calculated total plaintext/ciphertext length.
+   // Clear DMA0NMD to disable wrapping. Each consecutive block
+   // will be encypted/decrypted using the same key.
 
-	DMA0SEL = AES0BIN_CHANNEL;
-	DMA0NCF = AES0BIN_PERIPHERAL_REQUEST;
-	DMA0NMD = NO_WRAPPING;
-	DMA0NBAL = addr.U8[LSB];
-	DMA0NBAH = addr.U8[MSB];
-	DMA0NSZL = length.U8[LSB];
-	DMA0NSZH = length.U8[MSB];
-	DMA0NAOL = 0;
-	DMA0NAOH = 0;
+   DMA0SEL = AES0BIN_CHANNEL;
+   DMA0NCF = AES0BIN_PERIPHERAL_REQUEST;
+   DMA0NMD = NO_WRAPPING;
+   DMA0NBAL = addr.U8[LSB];
+   DMA0NBAH = addr.U8[MSB];
+   DMA0NSZL = length.U8[LSB];
+   DMA0NSZH = length.U8[MSB];
+   DMA0NAOL = 0;
+   DMA0NAOH = 0;
 
-	// AES Y ouput is ciphertext  for encryption operation or
-	// plaintext for decyption operation.
+   // AES Y ouput is ciphertext  for encryption operation or
+   // plaintext for decyption operation.
 
-	if(operation & ENCRYPTION_MODE)
-		addr.U16 = (U16)(cipherText);
-	else
-		addr.U16 = (U16)(plainText);
+   if(operation & ENCRYPTION_MODE)
+      addr.U16 = (U16)(cipherText);
+   else
+      addr.U16 = (U16)(plainText);
 
-	// Configure AES Y output channel using corresponding address
-	// and calculated total plaintext/ciphertext length.
-	// Clear DMA0NMD to disable wrapping. Each consecutive block
-	// will be encypted/decrypted using the same key.
+   // Configure AES Y output channel using corresponding address
+   // and calculated total plaintext/ciphertext length.
+   // Clear DMA0NMD to disable wrapping. Each consecutive block
+   // will be encypted/decrypted using the same key.
 
-	DMA0SEL = AES0YOUT_CHANNEL;
-	DMA0NCF = AES0YOUT_PERIPHERAL_REQUEST|DMA_INT_EN;
-	DMA0NMD = NO_WRAPPING;
-	DMA0NBAL = addr.U8[LSB];
-	DMA0NBAH = addr.U8[MSB];
-	DMA0NSZL = length.U8[LSB];
-	DMA0NSZH = length.U8[MSB];
-	DMA0NAOH = 0;
-	DMA0NAOL = 0;
+   DMA0SEL = AES0YOUT_CHANNEL;
+   DMA0NCF = AES0YOUT_PERIPHERAL_REQUEST|DMA_INT_EN;
+   DMA0NMD = NO_WRAPPING;
+   DMA0NBAL = addr.U8[LSB];
+   DMA0NBAH = addr.U8[MSB];
+   DMA0NSZL = length.U8[LSB];
+   DMA0NSZH = length.U8[MSB];
+   DMA0NAOH = 0;
+   DMA0NAOL = 0;
 
-	// Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
-	DMA0INT &= ~AES0_KBY_MASK;
-	// Set KBY (Key, Block, and Y out) bits in DMA0EN sfr using mask.
-	// This enables the DMA. But the encyption/decryption operation
-	// won't start until the AES block is enabled.
-	DMA0EN  |= AES0_KBY_MASK;
+   // Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
+   DMA0INT &= ~AES0_KBY_MASK;
+   // Set KBY (Key, Block, and Y out) bits in DMA0EN sfr using mask.
+   // This enables the DMA. But the encyption/decryption operation
+   // won't start until the AES block is enabled.
+   DMA0EN  |= AES0_KBY_MASK;
 
-	// Configure AES0DCFG for normal AES Block cipher mode.
-	// AES0TOUT is the AES output from the AES core.
-	AES0DCFG = AES_OUTPUT;
+   // Configure AES0DCFG for normal AES Block cipher mode.
+   // AES0TOUT is the AES output from the AES core.
+   AES0DCFG = AES_OUTPUT;
 
-	// Configure AES0BCFG for encyption or decryption operation according
-	// to operation parameter.
-	AES0BCFG = operation;
+   // Configure AES0BCFG for encyption or decryption operation according
+   // to operation parameter.
+   AES0BCFG = operation;
 
-	// Enabled AES module to start encryption/decryption operation.
-	AES0BCFG |= AES_ENABLE;
+   // Enabled AES module to start encryption/decryption operation.
+   AES0BCFG |= AES_ENABLE;
 
-	// enable DMA interrupt to terminate Idle mode
-	EIE2 |= 0x20;
+   // enable DMA interrupt to terminate Idle mode
+   EIE2 |= 0x20;
 
-	// This do...while loop ensures that the CPU will remain in Idle mode
-	// until AES0YOUT DMA channel transfer is complete.
+   // This do...while loop ensures that the CPU will remain in Idle mode
+   // until AES0YOUT DMA channel transfer is complete.
 
-	do
-	{
-		#ifdef DMA_TRANSFERS_USE_IDLE
-		PCON |= 0x01;                    // go to Idle mode
-		#endif
+   do
+   {
+      #ifdef DMA_TRANSFERS_USE_IDLE
+      PCON |= 0x01;                    // go to Idle mode
+      #endif
 
-	} while((DMA0INT & AES0YOUT_MASK)==0);
+   }  while((DMA0INT & AES0YOUT_MASK)==0);
 
-	//Clear AES Block
-	AES0BCFG = 0x00;
-	AES0DCFG = 0x00;
+   //Clear AES Block
+   AES0BCFG = 0x00;
+   AES0DCFG = 0x00;
 
-	// Clear KBY (Key, Block, and Y out) bits in DMA0EN sfr using mask.
-	DMA0EN &= ~AES0_KBY_MASK;
-	// Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
-	DMA0INT &= ~AES0_KBY_MASK;
+   // Clear KBY (Key, Block, and Y out) bits in DMA0EN sfr using mask.
+   DMA0EN &= ~AES0_KBY_MASK;
+   // Clear KBY (Key, Block, and Y out) bits in DMA0INT sfr using mask.
+   DMA0INT &= ~AES0_KBY_MASK;
 
-	return SUCCESS;                     // Success!!
+   return SUCCESS;                     // Success!!
 }
 //=============================================================================
 // End of file
