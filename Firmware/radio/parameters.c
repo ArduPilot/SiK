@@ -79,7 +79,7 @@ __code const parameter_info_t parameter_s_info[PARAM_S_MAX] = {
 __code const parameter_info_t parameter_r_info[PARAM_R_MAX] = {
 	{"TARGET_RSSI",     255},
 	{"HYSTERESIS_RSSI", 50},
-	{"ENCRYPTION",		0}
+	{"ENCRYPTION_LEVEL", 0}
 };
 
 /// In-RAM parameter store.
@@ -275,14 +275,20 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 		case PARAM_R_ENCRYPTION:
 			// Make sure first nibble (key length) is valid: 0, 1, 2
 			if ((val & 0xf ) > 3)
+      {
 				return false;
+      }
 			// Make sure second nibble (crypto type) is valid: 0, 1
 			if (((val>>4) & 0xf) > 1)
+      {
 				return false;
+      }
 			// Make sure that if second nibble (crypto type) is > 0,
 			// the first nibble (key length) is not zero.
 			if (((val>>4) & 0xf) > 0 && (val & 0xf ) == 0)
+      {
 				return false;
+      }
 			break;
 #endif
 			
@@ -699,6 +705,7 @@ param_set_encryption_key(__xdata unsigned char *key)
 	} else {
 		// We have sufficient characters for the encryption key.
 		// If too many characters, then it will just ignore extra ones
+    printf("key len %d\n",key_length);
 		convert_to_hex(key, encryption_key, key_length);
 	}
 

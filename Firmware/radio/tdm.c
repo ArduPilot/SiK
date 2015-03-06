@@ -382,7 +382,7 @@ static void temperature_update(void)
 static void
 link_update(void)
 {
-  static uint8_t unlock_count, temperature_count;
+  static uint8_t unlock_count = 10, temperature_count;
   if (received_packet) {
     unlock_count = 0;
     received_packet = false;
@@ -393,7 +393,7 @@ link_update(void)
     unlock_count++;
   }
   
-  if (unlock_count < 6) {
+  if (unlock_count < 2) {
     LED_RADIO = LED_ON;
   } else {
 #ifdef TDM_SYNC_LOGIC
@@ -656,11 +656,9 @@ tdm_serial_loop(void)
               !at_mode_active) {
           // its user data - send it out
           // the serial port
-          //printf("rcv(%d,[", len);
           LED_ACTIVITY = LED_ON;
-          serial_write_buf(pbuf, len);
+          serial_decrypt_buf(pbuf, len);
           LED_ACTIVITY = LED_OFF;
-          //printf("]\n");
         }
       }
       continue;
@@ -673,6 +671,12 @@ tdm_serial_loop(void)
     tdelta = tnow - last_t;
     tdm_state_update(tdelta);
     last_t = tnow;
+    
+#ifdef CPU_SI1030
+    // If we have any packets that need decrypting lets do it now.
+    decryptPackets();
+    tnow = timer2_tick();
+#endif
     
     // update link status every 0.5s
     if (tnow - last_link_update > 32768) {

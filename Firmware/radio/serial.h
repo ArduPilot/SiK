@@ -66,7 +66,12 @@ extern bool	serial_write(register uint8_t c);
 /// @param	buf		Pointer to the data to write.
 /// @param	count		The number of bytes to write.
 ///
-extern void	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
+extern void	serial_write_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+extern void serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+
+/// Decrypt any packets in the buffer and push to the serial layer
+///
+extern void decryptPackets(void);
 
 /// Check for space in the write FIFO
 ///
@@ -118,7 +123,7 @@ extern uint8_t	serial_peekx(uint16_t offset);
 ///				to satisfy the request (no bytes are read
 ///				in this case).
 ///
-extern bool	serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
+extern bool	serial_read_buf(__xdata uint8_t * buf, __pdata uint8_t count);
 
 /// Check for bytes in the read FIFO
 ///
