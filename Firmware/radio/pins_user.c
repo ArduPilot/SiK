@@ -33,7 +33,6 @@
 ///
 
 #include "pins_user.h"
-#include "radio.h"
 #include "tdm.h"
 
 #if PIN_MAX > 0

@@ -37,6 +37,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "radio.h"
 
 // Pin rfd900a  Mapping
 #ifdef BOARD_rfd900a
@@ -50,7 +51,12 @@
 #endif
 
 #define PINS_ABS_MAX 10
+
+#ifdef CPU_SI1030
+#define PIN_MAX 0
+#else
 #define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
+#endif // CPU_SI1030
 
 enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
 				 PIN_HIGH=true,   PIN_LOW=false,
