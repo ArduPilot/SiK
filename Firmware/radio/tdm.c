@@ -657,7 +657,11 @@ tdm_serial_loop(void)
           // its user data - send it out
           // the serial port
           LED_ACTIVITY = LED_ON;
+#ifdef CPU_SI1030
           serial_decrypt_buf(pbuf, len);
+#else
+          serial_write_buf(pbuf, len);
+#endif
           LED_ACTIVITY = LED_OFF;
         }
       }
@@ -672,17 +676,19 @@ tdm_serial_loop(void)
     tdm_state_update(tdelta);
     last_t = tnow;
     
-#ifdef CPU_SI1030
-    // If we have any packets that need decrypting lets do it now.
-    decryptPackets();
-    tnow = timer2_tick();
-#endif
-    
     // update link status every 0.5s
     if (tnow - last_link_update > 32768) {
       link_update();
       last_link_update = tnow;
     }
+    
+#ifdef CPU_SI1030
+    // If we have any packets that need decrypting lets do it now.
+    if(decryptPackets())
+    {
+      continue;
+    }
+#endif
     
     if (lbt_rssi != 0) {
       // implement listen before talk

@@ -39,12 +39,10 @@
 /// with an 8-bit XOR checksum appended to the end of the flash range.
 ///
 
-
 #include "radio.h"
 #include "tdm.h"
 #include "crc.h"
 #include <flash_layout.h>
-#include "pins_user.h"
 
 #ifdef CPU_SI1030
 #include "AES/aes.h"

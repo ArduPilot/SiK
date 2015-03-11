@@ -264,7 +264,7 @@ _serial_write(register uint8_t c) __reentrant
 
 #ifdef CPU_SI1030
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
-void
+bool
 decryptPackets(void)
 {
   // Encrypted packets arn't bigger than 32 bytes
@@ -280,9 +280,9 @@ decryptPackets(void)
         encrypt_remove = 0;
       }
     }
-//    if (aes_decrypt(&encrypt_buf[encrypt_remove+1], encrypt_buf[encrypt_remove], decrypt_buf, &len_decrypted) != 0) {
-//      panic("error while trying to decrypt data");
-//    }
+    if (aes_decrypt(&encrypt_buf[encrypt_remove+1], encrypt_buf[encrypt_remove], decrypt_buf, &len_decrypted) != 0) {
+      panic("error while trying to decrypt data");
+    }
     // zero the packet as we have read it.
     len_decrypted = encrypt_buf[encrypt_remove];
     encrypt_buf[encrypt_remove] = 0;
@@ -295,7 +295,9 @@ decryptPackets(void)
       }
     }
     printf("%u\n",encrypt_remove);
+    return true;
   }
+  return false;
 }
 
 void

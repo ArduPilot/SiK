@@ -71,7 +71,7 @@ extern void serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count);
 
 /// Decrypt any packets in the buffer and push to the serial layer
 ///
-extern void decryptPackets(void);
+extern bool decryptPackets(void);
 
 /// Check for space in the write FIFO
 ///
