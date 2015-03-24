@@ -54,7 +54,7 @@
 #define TX_BUFF_MAX 1024
 #define ENCRYPT_BUFF_MAX 17*60 // 16 bit encrypted packets plus one for size
 #else
-#define RX_BUFF_MAX 1860
+#define RX_BUFF_MAX 1850
 #define TX_BUFF_MAX 645
 #endif // CPU_SI1030
 

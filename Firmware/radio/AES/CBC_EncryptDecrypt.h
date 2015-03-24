@@ -55,6 +55,7 @@ CBC_ENCRYPT_DECRYPT_STATUS
    VARIABLE_SEGMENT_POINTER(key, U8, SEG_XDATA),
    U16 blocks);
 
+SBIT (TP11, SFR_P1, 1);
 SBIT (TP13, SFR_P1, 3);
 SBIT (TP12, SFR_P1, 2);
 //=============================================================================

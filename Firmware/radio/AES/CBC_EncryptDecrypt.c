@@ -255,8 +255,8 @@ CBC_ENCRYPT_DECRYPT_STATUS
 
    EIE2 |= 0x20;                 // enable DMA interrupt to terminate Idle mode
 
-  TP13 = true;
-  TP11 = true;
+//  TP13 = true;
+//  TP11 = true;
    // This do...while loop ensures that the CPU will remain in Idle mode
    // until AES0YOUT DMA channel transfer is complete.
    do
@@ -265,7 +265,7 @@ CBC_ENCRYPT_DECRYPT_STATUS
       PCON |= 0x01;                    // go to Idle mode
       #endif
    }  while((DMA0INT & AES0YOUT_MASK)==0);
-  TP13 = false;
+//  TP13 = false;
 
    if(blocks)                          // if blocks remaining
    {
@@ -328,15 +328,15 @@ CBC_ENCRYPT_DECRYPT_STATUS
 
       // This do...while loop ensures that the CPU will remain in Idle mode
       // until AES0YOUT DMA channel transfer is complete.
-     TP12 = true;
-     TP11 = true;
+//     TP12 = true;
+//     TP11 = true;
       do
       {
          #ifdef DMA_TRANSFERS_USE_IDLE
          PCON |= 0x01;                    // go to Idle mode
          #endif
       }  while((DMA0INT & AES0YOUT_MASK)==0);
-     TP12 = false;
+//     TP12 = false;
    }
 
    //Clear AES Block

@@ -39,6 +39,9 @@
 #include <stdint.h>
 #include "radio.h"
 
+SBIT (TP10, SFR_P1, 0);
+SBIT (TP11, SFR_P1, 1);
+
 /// Initialise the serial port.
 ///
 /// @param	speed		The serial speed to configure, passed
