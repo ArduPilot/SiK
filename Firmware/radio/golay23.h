@@ -35,7 +35,7 @@
 #ifndef _GOLAY23_H_
 #define _GOLAY23_H_
 
-#ifndef CPU_SI1030
+#ifndef INCLUDE_AES
 #define INCLUDE_GOLAY
 #endif
 

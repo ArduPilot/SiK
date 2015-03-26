@@ -285,8 +285,8 @@ at_error(void)
 	printf("%s\n", "ERROR");
 }
 
-__pdata uint8_t		idx;
-__pdata uint32_t	at_num;
+__xdata uint8_t		idx;
+__xdata uint32_t	at_num;
 
 /*
   parse a number at idx putting the result in at_num
