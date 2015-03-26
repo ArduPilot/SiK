@@ -48,8 +48,8 @@ static __bit force_resend;
 
 static __xdata uint8_t last_received[MAX_PACKET_LENGTH];
 static __xdata uint8_t last_sent[MAX_PACKET_LENGTH];
-static __pdata uint8_t last_sent_len;
-static __pdata uint8_t last_recv_len;
+static __xdata uint8_t last_sent_len;
+static __xdata uint8_t last_recv_len;
 
 // serial speed in 16usecs/byte
 static __pdata uint16_t serial_rate;
