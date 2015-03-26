@@ -28,7 +28,7 @@
 #
 # Configuration options for the RFD900P board.
 #
-FREQUENCIES				 = 915
+FREQUENCIES				 = 915 868
 XRAM_SIZE					 = 8192
 HAVE_BANKING			 = 0
 CPU_CC1030				 = 1

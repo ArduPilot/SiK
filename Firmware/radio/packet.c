@@ -204,13 +204,13 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	return last_sent_len;
 }
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 __xdata uint8_t len_encrypted;
-#endif
+#endif // INCLUDE_AES
 
 uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t last_sent_len)
 {
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
   if (aes_get_encryption_level() > 0) {
     if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0)
     {
@@ -218,7 +218,7 @@ uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t
     }
     return len_encrypted;
   }
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
   
   // if no encryption or not supported fall back to copy
   memcpy(buf_out, buf_in, last_sent_len);
@@ -231,7 +231,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 {
 	register uint16_t slen;
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
   // Encryption takes 1 byte and is in factors of 16.
   // 16, 32, 48 etc, lets not send anything above 32 bits back
   // If you change this increase the buffer in serial.c serial_write_buf()
@@ -240,7 +240,7 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
     if(max_xmit <= 32) max_xmit = 15;
     if(max_xmit > 31 ) max_xmit = 31;
   }
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
   
 	if (injected_packet) {
 		// send a previously injected packet

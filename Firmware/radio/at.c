@@ -476,7 +476,7 @@ at_ampersand(void)
 			at_error();
 		}
 		break;
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
   case 'E':
     switch (at_cmd[4]) {
       case '?':
@@ -490,7 +490,7 @@ at_ampersand(void)
         }
         break;
     }
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
 	default:
 		at_error();
 		break;

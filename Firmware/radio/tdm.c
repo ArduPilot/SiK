@@ -657,11 +657,11 @@ tdm_serial_loop(void)
           // its user data - send it out
           // the serial port
           LED_ACTIVITY = LED_ON;
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
           serial_decrypt_buf(pbuf, len);
-#else
+#else // INCLUDE_AES
           serial_write_buf(pbuf, len);
-#endif
+#endif // INCLUDE_AES
           LED_ACTIVITY = LED_OFF;
         }
       }
@@ -682,13 +682,13 @@ tdm_serial_loop(void)
       last_link_update = tnow;
     }
     
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
     // If we have any packets that need decrypting lets do it now.
     if(decryptPackets())
     {
       continue;
     }
-#endif
+#endif // INCLUDE_AES
     
     if (lbt_rssi != 0) {
       // implement listen before talk
@@ -764,7 +764,7 @@ tdm_serial_loop(void)
     //max_xmit -= PACKET_OVERHEAD;
     max_xmit -= sizeof(trailer)+1;
     
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
     if (aes_get_encryption_level() > 0) {
       if (max_xmit < 16) {
         // With AES, the cipher is up to 16 bytes larger than the text
@@ -774,7 +774,7 @@ tdm_serial_loop(void)
       }
       max_xmit -= 16;
     }
-#endif
+#endif // INCLUDE_AES
     
     if (max_xmit > max_data_packet_length) {
       max_xmit = max_data_packet_length;
@@ -823,16 +823,16 @@ tdm_serial_loop(void)
       // 16usec ticks that will be left in this
       // tdm state after this packet is transmitted
       
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
       if (aes_get_encryption_level() > 0) {
         // Calculation here gives length of cipher text (= same length of padded block)
         trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(16 * (1 + (len+sizeof(trailer)>>4))));
       } else {
         trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));		
       }
-#else
+#else // INCLUDE_AES
       trailer.window = (uint16_t)(tdm_state_remaining - flight_time_estimate(len+sizeof(trailer)));
-#endif
+#endif // INCLUDE_AES
     }
     
     // set right transmit channel

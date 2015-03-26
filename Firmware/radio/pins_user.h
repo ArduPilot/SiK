@@ -52,7 +52,7 @@
 
 #define PINS_ABS_MAX 10
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #define PIN_MAX 0
 #else
 #define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)

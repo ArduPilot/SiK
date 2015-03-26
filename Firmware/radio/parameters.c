@@ -44,9 +44,9 @@
 #include "crc.h"
 #include <flash_layout.h>
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #include "AES/aes.h"
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
 
 /// In-ROM parameter info table.
 ///
@@ -77,7 +77,9 @@ __code const parameter_info_t parameter_s_info[PARAM_S_MAX] = {
 __code const parameter_info_t parameter_r_info[PARAM_R_MAX] = {
 	{"TARGET_RSSI",     255},
 	{"HYSTERESIS_RSSI", 50},
+#ifdef INCLUDE_AES
 	{"ENCRYPTION_LEVEL", 0}
+#endif // INCLUDE_AES
 };
 
 /// In-RAM parameter store.
@@ -269,7 +271,7 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 				return false;
 			break;
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 		case PARAM_R_ENCRYPTION:
 			// Make sure first nibble (key length) is valid: 0, 1, 2
 			if ((val & 0xf ) > 3)
@@ -288,7 +290,7 @@ param_r_check(__pdata enum Param_R_ID id, __data uint32_t val)
 				return false;
       }
 			break;
-#endif
+#endif // INCLUDE_AES
 			
 		default:
 			// no sanity check for this value
@@ -414,10 +416,10 @@ __critical {
 #endif
 
 	// read and verify encryption params
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 	if(!read_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
 		return false;
-#endif
+#endif // INCLUDE_AES
 	return true;
 }
 
@@ -446,10 +448,10 @@ __critical {
 #endif
 
   // write encryption params
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 	flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
 	write_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
-#endif
+#endif // INCLUDE_AES
 
 }
 
@@ -628,7 +630,7 @@ calibration_lock() __reentrant
 }
 #endif // BOARD_rfd900a/p
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 // Used to convert individial Hex digits into Integers
 //
 uint8_t read_hex_nibble(const uint8_t c) __reentrant
@@ -733,4 +735,4 @@ __xdata uint8_t* param_get_encryption_key()
 {
 	return encryption_key;
 }
-#endif // CPU_SI1030
+#endif // INCLUDE_AES

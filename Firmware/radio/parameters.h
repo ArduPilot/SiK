@@ -68,7 +68,9 @@ enum Param_S_ID {
 enum Param_R_ID {
 	PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
 	PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
+#ifdef INCLUDE_AES
 	PARAM_R_ENCRYPTION,			// AES Encryption on or off flag
+#endif
 	PARAM_R_MAX             // Must be last
 };
 
@@ -143,7 +145,7 @@ extern uint8_t calibration_get(uint8_t level) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 /// get the encryption key
 ///
 extern __xdata uint8_t *param_get_encryption_key();
@@ -155,4 +157,4 @@ extern bool param_set_encryption_key(__xdata unsigned char *key);
 /// Print hex codes
 ///
 extern void print_encryption_key();
-#endif // CPU_SI1030
+#endif // INCLUDE_AES

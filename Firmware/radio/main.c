@@ -71,9 +71,9 @@ extern void    T2_ISR(void)     __interrupt(INTERRUPT_TIMER2);
 ///
 extern void    T3_ISR(void)     __interrupt(INTERRUPT_TIMER3);
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 extern void    DMA_ISR(void)    __interrupt(INTERRUPT_DMA0);
-#endif
+#endif // INCLUDE_AES
 
 //@}
 
@@ -141,12 +141,12 @@ main(void)
 	pins_user_init();
 #endif
 	
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 	// Initialise Encryption
 	if (! aes_init(param_r_get(PARAM_R_ENCRYPTION))) {
 		panic("failed to initialise aes");
 	}
-#endif
+#endif // INCLUDE_AES
 
 	tdm_serial_loop();
 }

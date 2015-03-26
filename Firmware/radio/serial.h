@@ -39,9 +39,6 @@
 #include <stdint.h>
 #include "radio.h"
 
-SBIT (TP10, SFR_P1, 0);
-SBIT (TP11, SFR_P1, 1);
-
 /// Initialise the serial port.
 ///
 /// @param	speed		The serial speed to configure, passed
@@ -70,7 +67,9 @@ extern bool	serial_write(register uint8_t c);
 /// @param	count		The number of bytes to write.
 ///
 extern void	serial_write_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+#ifdef INCLUDE_AES
 extern void serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+#endif // INCLUDE_AES
 
 /// Decrypt any packets in the buffer and push to the serial layer
 ///

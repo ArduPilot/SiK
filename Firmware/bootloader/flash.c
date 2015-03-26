@@ -273,7 +273,7 @@ flash_read_byte(uint16_t address)
 #endif // FLASH_BANKS
 
 
-#if defined BOARD_rfd900a || BOARD_rfd900p
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 __at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
 __at(FLASH_CALIBRATION_CRC_HIGH)	uint8_t __code calibration_crc;
 

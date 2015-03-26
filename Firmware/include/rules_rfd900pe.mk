@@ -5,10 +5,10 @@
 # modification, are permitted provided that the following conditions
 # are met:
 #
-#  o Redistributions of source code must retain the above copyright 
+#  o Redistributions of source code must retain the above copyright
 #    notice, this list of conditions and the following disclaimer.
-#  o Redistributions in binary form must reproduce the above copyright 
-#    notice, this list of conditions and the following disclaimer in 
+#  o Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
 #    the documentation and/or other materials provided with the distribution.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -24,20 +24,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Makefile for the Si1000 radio application
+
 #
-
-VERSION_MAJOR	 =	1
-VERSION_MINOR	 =	12
-
-PRODUCT		 =	radio~$(BOARD)
-PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-
-CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
-CFLAGS		+=	$(CFLAG_MODEL) --opt-code-speed --Werror --std-sdcc99 --fomit-frame-pointer
-#CFLAGS		+=	--fverbose-asm 
-PRODUCT_SUPPORT_BANKING = 1
-INC_DIR_AES	 = AES
-
-include $(SRCROOT)/include/rules.mk
-# LDFLAGS		+=	-V
+# Configuration options for the RFD900P board.
+#
+FREQUENCIES				 = 915 868
+XRAM_SIZE					 = 8192
+HAVE_BANKING			 = 0
+CPU_CC1030				 = 1
+INCLUDE_AES        = 1
+#CFLAGS						+= --constseg CONSEG
+#LDFLAGS					+= -Wl-bCONSEG=0x28000
+CODE_OFFSET_HOME		 = 0x400
+CODE_OFFSET_BANK3		 = 0x800
+#--model-huge
+LDFLAGS				+= --model-large --out-fmt-ihx --iram-size 256 --xram-size $(XRAM_SIZE) --code-loc $(CODE_OFFSET_HOME) --code-size 0xF400 --stack-size 64
+BOOTLDFLAGS			 = --iram-size 256 --xram-size $(XRAM_SIZE) --stack-size 64 --nostdlib -Wl-r -Wl-bHIGHCSEG=0x0FC00
+# --code-size 0x1F400

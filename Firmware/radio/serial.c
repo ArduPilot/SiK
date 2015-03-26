@@ -60,7 +60,7 @@
 
 __xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
 __xdata uint8_t tx_buf[TX_BUFF_MAX] = {0};
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 __xdata uint8_t encrypt_buf[ENCRYPT_BUFF_MAX] = {0};
 #endif
 // FIFO insert/remove pointers
@@ -262,7 +262,7 @@ _serial_write(register uint8_t c) __reentrant
 	ES0_RESTORE;
 }
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
 bool
 decryptPackets(void)
@@ -326,7 +326,7 @@ serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
     serial_write_buf(buf, count);
   }
 }
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
 
 // write as many bytes as will fit into the serial transmit buffer
 // if encryption turned on, decrypt the packet.

@@ -76,11 +76,11 @@ void
 shuffleRand(void)
 {
   srand(param_s_get(PARAM_NETID));
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
   if (param_r_get(PARAM_R_ENCRYPTION)) {
     srand(crc16(32, param_get_encryption_key()));
   }
-#endif
+#endif // INCLUDE_AES
 }
 
 // initialise frequency hopping logic

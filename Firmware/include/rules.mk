@@ -83,8 +83,8 @@ INCLUDES	 =	$(SRCROOT)/include
 CFLAGS		+=	$(addprefix -I,$(INCLUDES))
 DEPFLAGS	 =	-MM $(CFLAGS)
 
-ifeq ($(CPU_CC1030),1)
-INC_DIR		+= $(INC_DIR_CC1030)
+ifeq ($(INCLUDE_AES),1)
+INC_DIR		+= $(INC_DIR_AES)
 endif
 
 #

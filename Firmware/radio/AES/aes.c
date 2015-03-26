@@ -70,7 +70,6 @@ uint8_t encryption_level;
 INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
 {
   EIE2 &= ~0x20;                       // disable further interrupts
-  TP11 = false;
 }
 
 // Indicate if encryption subsystem initialised and ready.
