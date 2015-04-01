@@ -303,6 +303,17 @@ extern int16_t radio_temperature(void);
 #define MAX_PA_TEMPERATURE 100
 #endif
 
-extern void radio_set_diversity(bool enable);
+//-----------------------------------------------------------------------------
+// enum used for KEY_SIZE
+//-----------------------------------------------------------------------------
+enum DIVERSITY_Enum
+{
+  DIVERSITY_ENABLED = 0,          // 0x00
+  DIVERSITY_DISABLED,             // 0x01
+  DIVERSITY_ANT1,                 // 0x02
+  DIVERSITY_ANT2                  // 0x03
+};
+
+extern void radio_set_diversity(enum DIVERSITY_Enum state);
 
 #endif // _RADIO_H_

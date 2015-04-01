@@ -758,9 +758,9 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
 #if RFD900_DIVERSITY
-	radio_set_diversity(true);
+	radio_set_diversity(DIVERSITY_ENABLED);
 #else
-	radio_set_diversity(false);
+	radio_set_diversity(DIVERSITY_DISABLED);
 #endif
 #else
 	//set GPIOx to GND
@@ -1226,22 +1226,33 @@ radio_temperature(void)
 /// Turn off radio diversity
 ///
 void
-radio_set_diversity(bool enable)
+radio_set_diversity(enum DIVERSITY_Enum state)
 {
-	if (enable)
-	{
-		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
-		// see table 23.8, page 279
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
-	}
-	else
-	{
-		// see table 23.8, page 279
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
-
-		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
-		register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
-	}
+  switch (state) {
+    case DIVERSITY_ENABLED:
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
+      break;
+      
+    case DIVERSITY_ANT2:
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x20);
+      
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
+      register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x00);	// GPIO2 output set low (fixed on ant 2)
+      break;
+      
+    case DIVERSITY_DISABLED:
+    case DIVERSITY_ANT1:
+    default:
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
+      
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
+      register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
+      break;
+  }
 }
 
 /// the receiver interrupt

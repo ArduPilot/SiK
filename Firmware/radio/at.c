@@ -580,7 +580,7 @@ at_plus(void)
     idx = 5;
     at_parse_number();
     PCA0CPH0 = at_num & 0xFF;
-    radio_set_diversity(false);
+    radio_set_diversity(DIVERSITY_DISABLED);
     disable_rssi_hunt();
     at_ok();
     return;
@@ -610,6 +610,22 @@ at_plus(void)
     } else {
       at_error();
     }
+    return;
+  case 'A':
+    if (at_cmd[4] != '=')
+    {
+      break;
+    }
+    idx = 5;
+    at_parse_number();
+    disable_rssi_hunt();
+    if (at_num == 1) {
+      radio_set_diversity(DIVERSITY_ANT1);
+    }
+    else {
+      radio_set_diversity(DIVERSITY_ANT2);
+    }
+    at_ok();
     return;
   }
 #endif //BOARD_rfd900a / BOARD_rfd900p
