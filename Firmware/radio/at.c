@@ -564,14 +564,13 @@ at_p (void)
 static void
 at_plus(void)
 {
-#if defined BOARD_rfd900a || defined BOARD_rfd900p
-  
   // get the register number first
   idx = 4;
   at_parse_number();
   
   switch (at_cmd[3])
   {
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
   case 'P': // AT+P=x set power level pwm to x immediately
     if (at_cmd[4] != '=')
     {
@@ -611,6 +610,7 @@ at_plus(void)
       at_error();
     }
     return;
+#endif //BOARD_rfd900a / BOARD_rfd900p
   case 'A':
     if (at_cmd[4] != '=')
     {
@@ -628,6 +628,5 @@ at_plus(void)
     at_ok();
     return;
   }
-#endif //BOARD_rfd900a / BOARD_rfd900p
   at_error();
 }
