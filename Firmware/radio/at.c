@@ -63,7 +63,6 @@ static void	at_ok(void);
 static void	at_error(void);
 static void	at_i(void);
 static void	at_s(void);
-static void	at_r(void);
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
@@ -253,9 +252,6 @@ at_command(void)
 			case 'S':
 				at_s();
 				break;
-			case 'R':
-				at_r();
-				break;
 			case 'Z':
 				// generate a software reset
 				RSTSRC |= (1 << 4);
@@ -307,9 +303,9 @@ at_parse_number() __reentrant
 }
 
 static void print_ID_vals(char param, uint8_t end,
-                          const char *__code (*param_name)(__data enum ParamID param),
-                          param_t (*param_get)(__data enum Param_S_ID param)
-                          )
+                          const char *__code (*name_param)(__data enum ParamID param),
+                          param_t (*get_param)(__data enum ParamID param)
+                         )
 {
   register enum ParamID id;
   // convenient way of showing all parameters
@@ -317,8 +313,8 @@ static void print_ID_vals(char param, uint8_t end,
     printf("%c%u:%s=%lu\n",
       param,
       (unsigned)id,
-      param_name(id),
-      (unsigned long)param_get(id));
+      name_param(id),
+      (unsigned long)get_param(id));
   }
 }
 
@@ -343,8 +339,7 @@ at_i(void)
     printf("%u\n", g_board_bl_version);
     return;
   case '5':
-    print_ID_vals('S', PARAM_S_MAX, param_s_name, param_s_get);
-    print_ID_vals('R', PARAM_R_MAX, param_r_name, param_r_get);
+    print_ID_vals(' ', PARAM_MAX, param_name, param_get);
     return;
   case '6':
     tdm_report_timing();
@@ -368,14 +363,14 @@ at_s(void)
 	at_parse_number();
 	sreg = at_num;
 	// validate the selected sreg
-	if (sreg >= PARAM_S_MAX) {
+	if (sreg >= PARAM_MAX) {
 		at_error();
 		return;
 	}
 
 	switch (at_cmd[idx]) {
 	case '?':
-		at_num = param_s_get(sreg);
+		at_num = param_get(sreg);
 		printf("%lu\n", at_num);
 		return;
 
@@ -383,45 +378,12 @@ at_s(void)
 		if (sreg > 0) {
 			idx++;
 			at_parse_number();
-			if (param_s_set(sreg, at_num)) {
+			if (param_set(sreg, at_num)) {
 				at_ok();
 				return;
 			}
 		}
 		break;
-	}
-	at_error();
-}
-
-static void
-at_r(void)
-{
-	__pdata uint8_t		sreg;
-	
-	// get the register number first
-	idx = 3;
-	at_parse_number();
-	sreg = at_num;
-	// validate the selected sreg
-	if (sreg >= PARAM_R_MAX) {
-		at_error();
-		return;
-	}
-	
-	switch (at_cmd[idx]) {
-		case '?':
-			at_num = param_r_get(sreg);
-			printf("%lu\n", at_num);
-			return;
-			
-		case '=':
-			idx++;
-			at_parse_number();
-			if (param_r_set(sreg, at_num)) {
-				at_ok();
-				return;
-			}
-			break;
 	}
 	at_error();
 }
@@ -564,9 +526,12 @@ at_p (void)
 static void
 at_plus(void)
 {
+  __pdata uint8_t		creg;
+  
   // get the register number first
   idx = 4;
   at_parse_number();
+  creg = at_num;
   
   switch (at_cmd[3])
   {
@@ -580,25 +545,33 @@ at_plus(void)
     at_parse_number();
     PCA0CPH0 = at_num & 0xFF;
     radio_set_diversity(DIVERSITY_DISABLED);
-    disable_rssi_hunt();
     at_ok();
     return;
   case 'C': // AT+Cx=y write calibration value
     switch (at_cmd[idx])
     {
     case '?':
-      at_num = calibration_get(at_num);
+      at_num = calibration_get(creg);
       printf("%lu\n",at_num);
       return;
     case '=':
       idx++;
       at_parse_number();
-      if (calibration_set(at_num, at_num&0xFF))
+      if (calibration_set(creg, at_num&0xFF))
       {
         at_ok();
       } else {
         at_error();
       }
+      return;
+    }
+    break;
+  case 'F': // AT+Fx? get calibration value
+    switch (at_cmd[idx])
+    {
+    case '?':
+      creg = calibration_force_get(creg);
+      printf("%lu\n",at_num);
       return;
     }
     break;
@@ -611,6 +584,7 @@ at_plus(void)
     }
     return;
 #endif //BOARD_rfd900a / BOARD_rfd900p
+#ifdef RFD900_DIVERSITY
   case 'A':
     if (at_cmd[4] != '=')
     {
@@ -618,7 +592,6 @@ at_plus(void)
     }
     idx = 5;
     at_parse_number();
-    disable_rssi_hunt();
     if (at_num == 1) {
       radio_set_diversity(DIVERSITY_ANT1);
     }
@@ -627,6 +600,7 @@ at_plus(void)
     }
     at_ok();
     return;
+#endif // RFD900_DIVERSITY
   }
   at_error();
 }

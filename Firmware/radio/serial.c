@@ -62,7 +62,7 @@ __xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
 __xdata uint8_t tx_buf[TX_BUFF_MAX] = {0};
 #ifdef INCLUDE_AES
 __xdata uint8_t encrypt_buf[ENCRYPT_BUFF_MAX] = {0};
-#endif
+#endif // INCLUDE_AES
 // FIFO insert/remove pointers
 static volatile __pdata uint16_t				rx_insert, rx_remove;
 static volatile __pdata uint16_t				tx_insert, tx_remove;
@@ -283,7 +283,7 @@ decryptPackets(void)
     if (aes_decrypt(&encrypt_buf[encrypt_remove+1], encrypt_buf[encrypt_remove], decrypt_buf, &len_decrypted) != 0) {
       panic("error while trying to decrypt data");
     }
-    // zero the packet as we have read it.
+    // zero the packet as we read it.
     len_decrypted = encrypt_buf[encrypt_remove];
     encrypt_buf[encrypt_remove] = 0;
     
@@ -332,7 +332,6 @@ serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
 // if encryption turned on, decrypt the packet.
 void
 serial_write_buf(__xdata uint8_t * buf, __pdata uint8_t count)
-//, bool encrypted)
 {
 	__pdata uint16_t space;
 	__pdata uint8_t n1;

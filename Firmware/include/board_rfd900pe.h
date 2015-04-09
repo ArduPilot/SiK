@@ -62,9 +62,9 @@
 #ifndef _BOARD_RFD900PE
 #define _BOARD_RFD900PE
 
-#include "board_rfd900p.h"
-
-#define BOARD_rfd900p
 #define INCLUDE_AES
+#define BOARD_rfd900p
+
+#include "board_rfd900p.h"
 
 #endif // _BOARD_RFD900PE

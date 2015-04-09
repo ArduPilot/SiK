@@ -254,15 +254,6 @@ extern uint8_t radio_air_rate(void);
 ///
 extern void radio_set_transmit_power(uint8_t power);
 
-/// set the radio transmit power (in dBm)
-///
-/// @param increment	change the radio power up (true) or down (false)
-/// @param maxPower		The maximum transmit power in dBm
-/// @return						The actual transmit power in dBm
-///
-///
-extern uint8_t radio_change_transmit_power(bool increment, uint8_t maxPower);
-
 /// get the currend transmit power (in dBm)
 ///
 /// @return			The actual transmit power in dBm

@@ -75,9 +75,9 @@ static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 void
 shuffleRand(void)
 {
-  srand(param_s_get(PARAM_NETID));
+  srand(param_get(PARAM_NETID));
 #ifdef INCLUDE_AES
-  if (param_r_get(PARAM_R_ENCRYPTION)) {
+  if (param_get(PARAM_ENCRYPTION)) {
     srand(crc16(32, param_get_encryption_key()));
   }
 #endif // INCLUDE_AES

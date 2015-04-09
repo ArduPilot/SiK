@@ -42,7 +42,7 @@
 #include "freq_hopping.h"
 #include "crc.h"
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #include "AES/aes.h"
 #endif
 
@@ -138,22 +138,11 @@ static __bit send_statistics;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
 
-enum RSSI_Hunt_ID {
-  RSSI_HUNT_IDLE = 0,
-  RSSI_HUNT_UP,
-  RSSI_HUNT_DOWN,
-  RSSI_HUNT_DISABLE,
-};
-
-// Varibles used to hunt for a target RSSI by changing the power levels
-__pdata uint8_t maxPower, presentPower, target_RSSI, powerHysteresis;
-__pdata enum RSSI_Hunt_ID Hunt_RSSI;
-
 struct tdm_trailer {
-  uint16_t window:13;
-  uint16_t command:1;
-  uint16_t bonus:1;
-  uint16_t resend:1;
+	uint16_t window:13;
+	uint16_t command:1;
+	uint16_t bonus:1;
+	uint16_t resend:1;
 };
 __pdata struct tdm_trailer trailer;
 
@@ -168,24 +157,22 @@ static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 void
 tdm_show_rssi(void)
 {
-  printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u ",
-    (unsigned)statistics.average_rssi,
-    (unsigned)remote_statistics.average_rssi,
-    (unsigned)statistics.average_noise,
-    (unsigned)remote_statistics.average_noise,
-    (unsigned)statistics.receive_count);
-  printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u",
-    (unsigned)errors.tx_errors,
-    (unsigned)errors.rx_errors,
-    (unsigned)errors.serial_tx_overflow,
-    (unsigned)errors.serial_rx_overflow,
-    (unsigned)errors.corrected_errors,
-    (unsigned)errors.corrected_packets);
-  printf(" temp=%d dco=%u pwr=%u\n",
-    (int)radio_temperature(),
-    (unsigned)duty_cycle_offset,
-    (unsigned)presentPower);
-  statistics.receive_count = 0;
+	printf("L/R RSSI: %u/%u  L/R noise: %u/%u pkts: %u ",
+	       (unsigned)statistics.average_rssi,
+	       (unsigned)remote_statistics.average_rssi,
+	       (unsigned)statistics.average_noise,
+	       (unsigned)remote_statistics.average_noise,
+	       (unsigned)statistics.receive_count);
+	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%d dco=%u\n",
+	       (unsigned)errors.tx_errors,
+	       (unsigned)errors.rx_errors,
+	       (unsigned)errors.serial_tx_overflow,
+	       (unsigned)errors.serial_rx_overflow,
+	       (unsigned)errors.corrected_errors,
+	       (unsigned)errors.corrected_packets,
+	       (int)radio_temperature(),
+	       (unsigned)duty_cycle_offset);
+	statistics.receive_count = 0;
 }
 
 /// display test output
@@ -222,7 +209,7 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 static void
 sync_tx_windows(__pdata uint8_t packet_length)
 {
-  __pdata enum tdm_state old_state = tdm_state;
+  __data enum tdm_state old_state = tdm_state;
   __pdata uint16_t old_remaining = tdm_state_remaining;
   
   if (trailer.bonus) {
@@ -437,9 +424,6 @@ link_update(void)
     
     // reset statistics when unlocked
     statistics.receive_count = 0;
-    if (RSSI_HUNT_DISABLE != Hunt_RSSI) {
-      radio_set_transmit_power(maxPower);
-    }
   }
   
   if (unlock_count > 5) {
@@ -454,63 +438,6 @@ link_update(void)
     // check every 2 seconds
     temperature_update();
     temperature_count = 0;
-  }
-}
-
-void
-disable_rssi_hunt()
-{
-  Hunt_RSSI = RSSI_HUNT_DISABLE;
-}
-
-// Hunt for target RSSI using remote packet data
-static void update_rssi_target(void)
-{
-  switch (Hunt_RSSI) {
-    case RSSI_HUNT_IDLE:
-      if((target_RSSI > powerHysteresis) &&
-         (remote_statistics.average_rssi < target_RSSI - powerHysteresis) &&
-         (presentPower != maxPower))
-      {
-        presentPower = radio_change_transmit_power(true, maxPower);
-        Hunt_RSSI = RSSI_HUNT_UP;
-      }
-      else if(((uint16_t)target_RSSI + (uint16_t)powerHysteresis > 255) &&
-              (remote_statistics.average_rssi > target_RSSI + powerHysteresis) &&
-              (presentPower != 0)) {
-        presentPower = radio_change_transmit_power(false, maxPower);
-        Hunt_RSSI = RSSI_HUNT_DOWN;
-      }
-      break;
-    
-    case RSSI_HUNT_UP:
-      if((remote_statistics.average_rssi < target_RSSI) && (presentPower != maxPower))
-      {
-        presentPower = radio_change_transmit_power(true, maxPower);
-      }
-      else
-      {
-        Hunt_RSSI = RSSI_HUNT_IDLE;
-      }
-      break;
-      
-    case RSSI_HUNT_DOWN:
-      if((remote_statistics.average_rssi > target_RSSI) && (presentPower != 0))
-      {
-        presentPower = radio_change_transmit_power(false, maxPower);
-      }
-      else
-      {
-        Hunt_RSSI = RSSI_HUNT_IDLE;
-      }
-      break;
-      
-    case RSSI_HUNT_DISABLE:
-      break;
-      
-    default:
-      Hunt_RSSI = RSSI_HUNT_IDLE;
-      break;
   }
 }
 
@@ -639,8 +566,6 @@ tdm_serial_loop(void)
           memcpy(&remote_statistics, pbuf, len);
         }
         
-        update_rssi_target();
-        
         // don't count control packets in the stats
         statistics.receive_count--;
       } else if (trailer.window != 0) {
@@ -683,9 +608,11 @@ tdm_serial_loop(void)
     }
     
 #ifdef INCLUDE_AES
+    // Ensure we arn't needing to hop
     // If we have any packets that need decrypting lets do it now.
-    if(decryptPackets())
+    if(tdm_state_remaining > tx_window_width/2)
     {
+      decryptPackets();
       continue;
     }
 #endif // INCLUDE_AES
@@ -1055,8 +982,8 @@ tdm_init(void)
   }
   
   // user specified window is in milliseconds
-  if (window_width > param_s_get(PARAM_MAX_WINDOW)*(1000/16)) {
-    window_width = param_s_get(PARAM_MAX_WINDOW)*(1000/16);
+  if (window_width > param_get(PARAM_MAX_WINDOW)*(1000/16)) {
+    window_width = param_get(PARAM_MAX_WINDOW)*(1000/16);
   }
   
   // make sure it fits in the 13 bits of the trailer window
@@ -1082,19 +1009,12 @@ tdm_init(void)
 #ifdef TDM_SYNC_LOGIC
   TDM_SYNC_PIN = false;
 #endif // TDM_SYNC_LOGIC
-  
-  // Set the max and target RSSI for hunting mode..
-  maxPower = param_s_get(PARAM_TXPOWER);
-  presentPower = maxPower;
-  target_RSSI = param_r_get(PARAM_R_TARGET_RSSI);
-  powerHysteresis = param_r_get(PARAM_R_HYSTERESIS_RSSI);
-  Hunt_RSSI = RSSI_HUNT_IDLE;
-  
-  // crc_test();
-  
-  // tdm_test_timing();
-  
-  // golay_test();
+
+	// crc_test();
+
+	// tdm_test_timing();
+	
+	// golay_test();
 }
 
 /// report tdm timings

@@ -45,36 +45,28 @@
 ///   parameters.c:parameter_names[]
 ///   parameters.c:param_check()
 ///
-enum Param_S_ID {
-	PARAM_FORMAT = 0,       // Must always be parameter 0
-	PARAM_SERIAL_SPEED,     // BAUD_RATE_* constant
-	PARAM_AIR_SPEED,        // over the air baud rate
-	PARAM_NETID,            // network ID
-	PARAM_TXPOWER,          // transmit power (dBm)
-	PARAM_ECC,              // ECC using golay encoding
-	PARAM_MAVLINK,          // MAVLink framing, 0=ignore, 1=use, 2=rc-override
-	PARAM_OPPRESEND,        // opportunistic resend
-	PARAM_MIN_FREQ,         // min frequency in MHz
-	PARAM_MAX_FREQ,         // max frequency in MHz
-	PARAM_NUM_CHANNELS,     // number of hopping channels
-	PARAM_DUTY_CYCLE,       // duty cycle (percentage)
-	PARAM_LBT_RSSI,         // listen before talk threshold
-	PARAM_MANCHESTER,       // enable manchester encoding
-	PARAM_RTSCTS,           // enable hardware flow control
-	PARAM_MAX_WINDOW,       // The maximum window size allowed
-	PARAM_S_MAX             // must be last
+enum ParamID {
+	PARAM_FORMAT = 0,		// Must always be parameter 0
+	PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
+	PARAM_AIR_SPEED,		// over the air baud rate
+	PARAM_NETID,			// network ID
+	PARAM_TXPOWER,			// transmit power (dBm)
+	PARAM_ECC,				// ECC using golay encoding
+	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
+	PARAM_OPPRESEND,		// opportunistic resend
+	PARAM_MIN_FREQ,			// min frequency in MHz
+	PARAM_MAX_FREQ,			// max frequency in MHz
+	PARAM_NUM_CHANNELS,		// number of hopping channels
+	PARAM_DUTY_CYCLE,		// duty cycle (percentage)
+	PARAM_LBT_RSSI,			// listen before talk threshold
+	PARAM_MANCHESTER,		// enable manchester encoding
+	PARAM_RTSCTS,			// enable hardware flow control
+	PARAM_MAX_WINDOW,		// The maximum window size allowed
+  PARAM_ENCRYPTION,
+	PARAM_MAX				// must be last
 };
 
-enum Param_R_ID {
-	PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
-	PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
-#ifdef INCLUDE_AES
-	PARAM_R_ENCRYPTION,			// AES Encryption on or off flag
-#endif
-	PARAM_R_MAX             // Must be last
-};
-
-#define PARAM_FORMAT_CURRENT  0x1BUL  //< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x1aUL				///< current parameter format ID
 
 /// Parameter type.
 ///
@@ -90,8 +82,7 @@ typedef uint32_t	param_t;
 /// @param	value		The value to assign to the parameter.
 /// @return			True if the parameter's value is valid.
 ///
-extern bool param_s_set(__data enum Param_S_ID param, __pdata param_t value);
-extern bool param_r_set(__data enum Param_R_ID param, __pdata param_t value);
+extern bool param_set(__data enum ParamID param, __pdata param_t value);
 
 /// Get a parameter
 ///
@@ -99,8 +90,7 @@ extern bool param_r_set(__data enum Param_R_ID param, __pdata param_t value);
 /// @return			The parameter value, or zero if the param
 ///				argument is invalid.
 ///
-extern param_t param_s_get(__data enum Param_S_ID param);
-extern param_t param_r_get(__data enum Param_R_ID param);
+extern param_t param_get(__data enum ParamID param);
 
 /// Look up a parameter by name
 ///
@@ -108,8 +98,7 @@ extern param_t param_r_get(__data enum Param_R_ID param);
 /// @return			The parameter ID, or PARAM_MAX if the
 ///				parameter is not known.
 ///
-extern enum ParamID param_s_id(__data char * __pdata name);
-extern enum ParamID param_r_id(__data char * __pdata name);
+extern enum ParamID param_id(__data char * __pdata name);
 
 /// Return the name of a parameter.
 ///
@@ -117,8 +106,7 @@ extern enum ParamID param_r_id(__data char * __pdata name);
 /// @return			A pointer to the name of the parameter,
 ///				or NULL if the parameter is not known.
 ///
-extern const char *__code param_s_name(__data enum ParamID param);
-extern const char *__code param_r_name(__data enum ParamID param);
+extern const char *__code param_name(__data enum ParamID param);
 
 /// Load parameters from the flash scratchpad.
 ///
@@ -142,6 +130,7 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 extern bool calibration_set(uint8_t idx, uint8_t value) __reentrant;
 extern uint8_t calibration_get(uint8_t level) __reentrant;
+extern uint8_t calibration_force_get(uint8_t level) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
 

@@ -37,7 +37,7 @@
 #include "packet.h"
 #include "timer.h"
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #include "AES/aes.h"
 #endif
 
@@ -302,9 +302,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 		if (slen > 0 && serial_read_buf(buf, slen)) {
 			last_sent_len = slen;
       return encryptReturn(last_sent, buf, slen);
-		} else {
-			return 0;
 		}
+    return 0;
 	}
 
 	// try to align packet boundaries with MAVLink packets

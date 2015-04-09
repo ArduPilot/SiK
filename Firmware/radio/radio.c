@@ -34,6 +34,7 @@
 #include "timer.h"
 #include "golay.h"
 #include "crc.h"
+#include "pins_user.h"
 
 __xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
 __pdata uint8_t receive_packet_length;
@@ -834,7 +835,7 @@ radio_configure(__pdata uint8_t air_rate)
 	} else {
 		control = 0x2D;
 	}
-	if (param_s_get(PARAM_MANCHESTER) && settings.air_data_rate <= 128) {
+	if (param_get(PARAM_MANCHESTER) && settings.air_data_rate <= 128) {
 		// manchester encoding is not possible at above 128kbps
 		control |= EZRADIOPRO_ENMANCH;
 	}
@@ -926,67 +927,6 @@ radio_set_transmit_power(uint8_t power)
 	settings.transmit_power = power_levels[i];
 	register_write(EZRADIOPRO_TX_POWER, i);
 #endif
-}
-
-// Set the power to the next level and return the new transmit power (in dBm)
-// increment, increment or decrement the power level
-// maxPower,  never go above this level when changing the power
-//
-uint8_t
-radio_change_transmit_power(bool increment, uint8_t maxPower)
-{
-	uint8_t i, power = settings.transmit_power;
-	
-#if defined BOARD_rfd900a || defined BOARD_rfd900p
-	register_write(EZRADIOPRO_TX_POWER, RFD900_INT_TX_POW); // Set output power of Si1002 to 6 = +10dBm as a nominal level
-	
-	if (increment) {
-		power += 2;
-		if(power > maxPower) {
-			return settings.transmit_power;
-		}
-	}
-	else if(power != 0)
-	{
-		power -= 2;
-	}
-	
-	i = calibration_get(power);
-	if (i != 0xFF)
-	{
-		PCA0CPH0 = i;     // Set PWM for PA to correct duty cycle
-		settings.transmit_power = power;
-	}
-	else
-	{
-		i = power / POWER_LEVEL_STEP;
-		PCA0CPH0 = power_levels[i];     // Set PWM for PA to correct duty cycle
-		settings.transmit_power = i * POWER_LEVEL_STEP;
-	}
-#else
-	for (i=0; i<NUM_POWER_LEVELS; i++) {
-		if (power <= power_levels[i]) break;
-	}
-	
-	if (increment) {
-		i++;
-	}
-	else if(i != 0)
-	{
-		i--;
-	}
-	
-	if (i >= NUM_POWER_LEVELS) {
-		i = NUM_POWER_LEVELS-1;
-	}
-	
-	if (maxPower <= power_levels[i]) {
-		settings.transmit_power = power_levels[i];
-		register_write(EZRADIOPRO_TX_POWER, i);
-	}
-#endif
-	
-	return settings.transmit_power;
 }
 
 // get the current transmit power (in dBm)
