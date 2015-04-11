@@ -38,7 +38,7 @@
 #include "at.h"
 #include "board.h"
 
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #include "AES/aes.h"
 #endif
 
