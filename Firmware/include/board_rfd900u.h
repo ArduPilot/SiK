@@ -96,8 +96,8 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 #define BUTTON_BOOTLOAD	PIN_CONFIG
 
 // Serial flow control
-//#define SERIAL_RTS	PIN_ENABLE	// always an input
-//#define SERIAL_CTS	PIN_CONFIG	// input in bootloader, output in app
+#define SERIAL_RTS	PIN_ENABLE	// always an input
+#define SERIAL_CTS	PIN_CONFIG	// input in bootloader, output in app
 
 // board-specific hardware config
 #define HW_INIT							\
