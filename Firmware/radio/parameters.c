@@ -70,7 +70,9 @@ __code const struct parameter_info {
 	{"MANCHESTER",      0},
 	{"RTSCTS",          0},
   {"MAX_WINDOW",    131},
-  {"ENCRYPTION_LEVEL", 0},
+#ifdef INCLUDE_AES
+  {"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
+#endif
 };
 
 /// In-RAM parameter store.
@@ -100,7 +102,7 @@ typedef char r2pCheck[(PARAM_FLASH_END < PIN_FLASH_START) ? 0 : -1];
 #endif // PIN_MAX
 
 // Place the start away from the other params to allow for expantion 2<<7 +128 = 384
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 // Holds the encrpytion string
 __xdata uint8_t encryption_key[32];
 
@@ -111,7 +113,7 @@ __xdata uint8_t encryption_key[32];
 typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
 #else
 #define PARAM_E_FLASH_END PIN_FLASH_END
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
 
 
 // Check to make sure we dont overflow off the page

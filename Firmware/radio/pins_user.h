@@ -53,7 +53,7 @@
 #define PIN_MAX 0
 #else
 #define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
-#endif // CPU_SI1030
+#endif // INCLUDE_AES
 
 enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
 				 PIN_HIGH=true,   PIN_LOW=false,

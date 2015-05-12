@@ -62,7 +62,9 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
-  PARAM_ENCRYPTION,
+#ifdef INCLUDE_AES
+  PARAM_ENCRYPTION,     // no Enycryption (0), 128 or 256 bit key
+#endif
 	PARAM_MAX				// must be last
 };
 

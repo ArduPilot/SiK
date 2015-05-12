@@ -295,7 +295,7 @@ extern int16_t radio_temperature(void);
 #endif
 
 //-----------------------------------------------------------------------------
-// enum used for KEY_SIZE
+// enum used for Antenna switching
 //-----------------------------------------------------------------------------
 enum DIVERSITY_Enum
 {
