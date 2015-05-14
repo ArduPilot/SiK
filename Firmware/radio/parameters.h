@@ -132,7 +132,7 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 extern bool calibration_set(uint8_t idx, uint8_t value) __reentrant;
 extern uint8_t calibration_get(uint8_t level) __reentrant;
-extern uint8_t calibration_force_get(uint8_t level) __reentrant;
+extern uint8_t calibration_force_get(uint8_t idx) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
 

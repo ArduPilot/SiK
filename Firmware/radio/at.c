@@ -570,7 +570,7 @@ at_plus(void)
     switch (at_cmd[idx])
     {
     case '?':
-      creg = calibration_force_get(creg);
+      at_num = calibration_force_get(creg);
       printf("%lu\n",at_num);
       return;
     }
