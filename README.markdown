@@ -4,6 +4,10 @@ For user documentation please see this site:
 
  http://planner.ardupilot.com/wiki/other-project-and-common-topics/common-optional-hardware/common-telemetry-landingpage/common-3dr-radio-version-2/
 
+Additional advanced configuration information located at:
+
+http://copter.ardupilot.com/wiki/common-optional-hardware/common-telemetry-landingpage/common-3dr-radio-advanced-configuration-and-technical-information/
+
 SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
 
 Currently, it supports the following boards:
