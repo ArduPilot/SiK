@@ -10,7 +10,11 @@ SiK is a collection of firmware and tools for radios based on the cheap, versati
 ## Documentation
 For user documentation please see this site:
 
- http://code.google.com/p/ardupilot-mega/wiki/3DRadio
+http://planner.ardupilot.com/wiki/other-project-and-common-topics/common-optional-hardware/common-telemetry-landingpage/common-3dr-radio-version-2/
+
+Addition configuration guide can also be found here:
+
+http://copter.ardupilot.com/wiki/common-optional-hardware/common-telemetry-landingpage/common-3dr-radio-advanced-configuration-and-technical-information/
 
 Currently, it supports the following boards:
 
