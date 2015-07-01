@@ -193,7 +193,7 @@ class ATCommandSet(object):
     def get_params_text(self):
         res = self.__query(ATCommandSet.AT_SHOW_PARAM, ['(S0:.*S14:.*)\r\n'])
         if res:
-            return res.group(0)
+            return res.group(0).decode('utf-8')
         else:
             return "** Could not access parameters **"
     
