@@ -96,7 +96,6 @@ __xdata pins_user_info_t pin_values[PIN_MAX];
 #define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 3)
 
 // Check to make sure the End of the r and the beginning of pins dont overlap
-// Not used and errors
 // typedef char r2pCheck[(PARAM_FLASH_END < PIN_FLASH_START) ? 0 : -1];
 #else // PIN_MAX
 #define PIN_FLASH_END PARAM_FLASH_END
@@ -111,7 +110,6 @@ __xdata uint8_t encryption_key[32];
 #define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 3)
 
 // Check to make sure the End of the pins and the beginning of encryption dont overlap
-// Not used and errors
 // typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
 #else
 #define PARAM_E_FLASH_END PIN_FLASH_END
@@ -119,7 +117,6 @@ __xdata uint8_t encryption_key[32];
 
 
 // Check to make sure we dont overflow off the page
-// Not used and errors
 // typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
 
 static bool
