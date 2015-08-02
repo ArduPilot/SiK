@@ -274,6 +274,7 @@ decryptPackets(void)
   
   if(BUF_NOT_EMPTY(encrypt) && aes_get_encryption_level() > 0)
   {
+/*
     if (encrypt_buf[encrypt_remove] == 0)
     {
       __critical {
@@ -295,6 +296,7 @@ decryptPackets(void)
       }
     }
     printf("%u\n",encrypt_remove);
+*/
     return true;
   }
   return false;
