@@ -607,15 +607,6 @@ tdm_serial_loop(void)
       last_link_update = tnow;
     }
     
-#ifdef INCLUDE_AES
-    // Ensure we arn't needing to hop
-    // If we have any packets that need decrypting lets do it now.
-    if(tdm_state_remaining > tx_window_width/2)
-    {
-      decryptPackets();
-      continue;
-    }
-#endif // INCLUDE_AES
     
     if (lbt_rssi != 0) {
       // implement listen before talk
@@ -802,6 +793,16 @@ tdm_serial_loop(void)
       lbt_rand = 0;
     }
     
+#ifdef INCLUDE_AES
+    // Ensure we arn't needing to hop
+    // If we have any packets that need decrypting lets do it now.
+    if(tdm_state_remaining > tx_window_width/2)
+    {
+      decryptPackets();
+//       continue;
+    }
+#endif // INCLUDE_AES
+
     // set right receive channel
     radio_set_channel(fhop_receive_channel());
     

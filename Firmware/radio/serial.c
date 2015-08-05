@@ -274,7 +274,6 @@ decryptPackets(void)
   
   if(BUF_NOT_EMPTY(encrypt) && aes_get_encryption_level() > 0)
   {
-/*
     if (encrypt_buf[encrypt_remove] == 0)
     {
       __critical {
@@ -284,19 +283,22 @@ decryptPackets(void)
     if (aes_decrypt(&encrypt_buf[encrypt_remove+1], encrypt_buf[encrypt_remove], decrypt_buf, &len_decrypted) != 0) {
       panic("error while trying to decrypt data");
     }
+   
+    // Now send decrypted output to serial buffer
+    serial_write_buf(decrypt_buf, len_decrypted);
+
     // zero the packet as we read it.
     len_decrypted = encrypt_buf[encrypt_remove];
     encrypt_buf[encrypt_remove] = 0;
     
-    printf("eb %u:%u!%u - ea ",encrypt_remove, encrypt_insert, len_decrypted);
+    // printf("eb %u:%u!%u - ea ",encrypt_remove, encrypt_insert, len_decrypted);
     __critical {
       encrypt_remove += len_decrypted + 1;
       if (encrypt_remove >= sizeof(encrypt_buf)) {
         encrypt_remove = 0;
       }
     }
-    printf("%u\n",encrypt_remove);
-*/
+   // printf("%u\n",encrypt_remove);
     return true;
   }
   return false;
