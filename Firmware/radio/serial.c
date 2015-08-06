@@ -53,6 +53,8 @@
 #define RX_BUFF_MAX 1024 //2048
 #define TX_BUFF_MAX 1024
 #define ENCRYPT_BUFF_MAX 17*60 // 16 bit encrypted packets plus one for size
+static __pdata uint16_t encrypt_buff_start = 400; // Start decrypting more to clear buffer
+static __pdata uint16_t encrypt_buff_end = 500; // End our quick buffer clear
 #else
 #define RX_BUFF_MAX 1850
 #define TX_BUFF_MAX 645
@@ -264,6 +266,7 @@ _serial_write(register uint8_t c) __reentrant
 
 #ifdef INCLUDE_AES
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
+//joe
 bool
 decryptPackets(void)
 {
@@ -304,14 +307,30 @@ decryptPackets(void)
   return false;
 }
 
+//joe
 void
 serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
 {
+  __pdata uint16_t space;
+
   if (aes_get_encryption_level() > 0) {
     // write to the end of the ring buffer or front if we dont have space
     if (count > sizeof(encrypt_buf) - (encrypt_insert + 1)) {
       encrypt_insert = 0;
     }
+
+    // If we don't have enough space at all then exit
+    space = encrypt_buffer_write_space();
+    if (count > space) {
+            if (errors.serial_tx_overflow != 0xFFFF) {
+                    errors.serial_tx_overflow++;
+            }
+            // Have to return, it is ALL or NOTHING. Can't decrypt part of a packet
+            return;
+    }
+
+
+
     // Insert the length of the packet
     encrypt_buf[encrypt_insert] = count;
     //printf("ic %u \n",count, encrypt_insert);
@@ -332,6 +351,7 @@ serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
 }
 #endif // INCLUDE_AES
 
+// joe
 // write as many bytes as will fit into the serial transmit buffer
 // if encryption turned on, decrypt the packet.
 void
@@ -604,3 +624,45 @@ void serial_device_set_speed(register uint8_t speed)
 	packet_set_serial_speed(speed*125UL);	
 }
 
+
+#ifdef INCLUDE_AES
+bool encrypt_buffer_getting_full()
+{
+	if (BUF_FREE(encrypt) < encrypt_buff_start) {
+           return true;
+        }
+
+ return false;
+}
+
+
+bool encrypt_buffer_getting_empty()
+{
+	if (BUF_FREE(encrypt) > encrypt_buff_end) {
+           return true;
+        }
+ return false;
+}
+
+
+bool encrypt_buffer_has_data()
+{
+
+        if (encrypt_remove != encrypt_insert) {
+           return true;
+	}
+
+ return false;
+}
+
+
+uint16_t
+encrypt_buffer_write_space()
+{
+	register uint16_t ret;
+        ret = BUF_FREE(encrypt);
+        return ret;
+}
+
+
+#endif // INCLUDE_AES

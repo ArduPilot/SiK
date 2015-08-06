@@ -41,6 +41,7 @@
 #include "golay.h"
 #include "freq_hopping.h"
 #include "crc.h"
+#include "serial.h"
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
@@ -607,6 +608,23 @@ tdm_serial_loop(void)
       last_link_update = tnow;
     }
     
+
+// joe
+#ifdef INCLUDE_AES
+    // Ensure we arn't needing to hop
+    // If we have any packets that need decrypting lets do it now.
+//    if(tdm_state_remaining < tx_window_width/2
+//       && encrypt_buffer_has_data()
+//       && tdm_state == TDM_RECEIVE)
+//    {
+// printf("getting full\n");
+//       while (! encrypt_buffer_getting_empty()) {
+//        decryptPackets();
+//       }
+// printf("getting empty\n");
+//    }
+#endif // INCLUDE_AES
+
     
     if (lbt_rssi != 0) {
       // implement listen before talk
@@ -793,15 +811,28 @@ tdm_serial_loop(void)
       lbt_rand = 0;
     }
     
+    if (len != 0 && trailer.window != 0) {
+      LED_ACTIVITY = LED_OFF;
+    }
+
+//joe
 #ifdef INCLUDE_AES
     // Ensure we arn't needing to hop
     // If we have any packets that need decrypting lets do it now.
     if(tdm_state_remaining > tx_window_width/2)
     {
-      decryptPackets();
-//       continue;
+       // If it is starting to get really full, we want to try decrypting
+       // not just one, but a few packets.
+       if (encrypt_buffer_getting_full()) {
+          while (!encrypt_buffer_getting_empty()) {
+            decryptPackets();
+          }
+       } else {
+         decryptPackets();
+       }
     }
 #endif // INCLUDE_AES
+
 
     // set right receive channel
     radio_set_channel(fhop_receive_channel());
@@ -809,9 +840,6 @@ tdm_serial_loop(void)
     // re-enable the receiver
     radio_receiver_on();
     
-    if (len != 0 && trailer.window != 0) {
-      LED_ACTIVITY = LED_OFF;
-    }
   }
 #endif // RADIO_SPLAT_TESTING_MODE
 }
