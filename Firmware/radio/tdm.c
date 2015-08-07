@@ -144,6 +144,7 @@ struct tdm_trailer {
 	uint16_t command:1;
 	uint16_t bonus:1;
 	uint16_t resend:1;
+	uint16_t crc;
 };
 __pdata struct tdm_trailer trailer;
 
@@ -501,10 +502,12 @@ tdm_serial_loop(void)
   __pdata uint8_t	len;
   __pdata uint16_t tnow, tdelta;
   __pdata uint8_t max_xmit;
+  __pdata uint16_t crc;
   
   __pdata uint16_t last_t = timer2_tick();
   __pdata uint16_t last_link_update = last_t;
   
+
   _canary = 42;
   
   for (;;) {
@@ -580,15 +583,21 @@ tdm_serial_loop(void)
         } else if (len != 0 && 
               !packet_is_duplicate(len, pbuf, trailer.resend) &&
               !at_mode_active) {
-          // its user data - send it out
-          // the serial port
-          LED_ACTIVITY = LED_ON;
+             // its user data - send it out
+             // the serial port
 #ifdef INCLUDE_AES
-          serial_decrypt_buf(pbuf, len);
+             crc = crc16(len, pbuf);
+             if (crc == trailer.crc) {
+                LED_ACTIVITY = LED_ON;
+                serial_decrypt_buf(pbuf, len);
+                LED_ACTIVITY = LED_OFF;
+             }
 #else // INCLUDE_AES
-          serial_write_buf(pbuf, len);
+             LED_ACTIVITY = LED_ON;
+             serial_write_buf(pbuf, len);
+             LED_ACTIVITY = LED_OFF;
 #endif // INCLUDE_AES
-          LED_ACTIVITY = LED_OFF;
+          
         }
       }
       continue;
@@ -733,6 +742,7 @@ tdm_serial_loop(void)
       // get a packet from the serial port
       len = packet_get_next(max_xmit, pbuf);
       trailer.command = packet_is_injected();
+      trailer.crc = crc16(len, pbuf);
     }
     
     if (len > max_data_packet_length) {
