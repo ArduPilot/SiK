@@ -646,19 +646,8 @@ bool encrypt_buffer_getting_empty()
 }
 
 
-/// Indicate if there is any data in the encrypt buffer
+/// Return amount of space left in buffer
 //
-bool encrypt_buffer_has_data()
-{
-
-        if (encrypt_remove != encrypt_insert) {
-           return true;
-	}
-
- return false;
-}
-
-
 uint16_t
 encrypt_buffer_write_space()
 {

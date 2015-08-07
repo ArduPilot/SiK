@@ -146,10 +146,6 @@ extern bool encrypt_buffer_getting_full();
 //
 extern bool encrypt_buffer_getting_empty();
 
-/// Is there data to decrypt?
-//
-extern bool encrypt_buffer_has_data();
-
 /// Get space left in encrypt buffer
 //
 extern uint16_t encrypt_buffer_write_space();
