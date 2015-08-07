@@ -45,7 +45,7 @@
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
-#endif
+#endif // INCLUDE_AES
 
 #define USE_TICK_YIELD 1
 
@@ -144,7 +144,9 @@ struct tdm_trailer {
 	uint16_t command:1;
 	uint16_t bonus:1;
 	uint16_t resend:1;
+#ifdef INCLUDE_AES
 	uint16_t crc;
+#endif
 };
 __pdata struct tdm_trailer trailer;
 
@@ -165,13 +167,14 @@ tdm_show_rssi(void)
 	       (unsigned)statistics.average_noise,
 	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
-	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%d dco=%u\n",
+	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u crce=%u temp=%d dco=%u\n",
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
 	       (unsigned)errors.serial_tx_overflow,
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets,
+	       (unsigned)errors.crc_errors,
 	       (int)radio_temperature(),
 	       (unsigned)duty_cycle_offset);
 	statistics.receive_count = 0;
@@ -502,8 +505,9 @@ tdm_serial_loop(void)
   __pdata uint8_t	len;
   __pdata uint16_t tnow, tdelta;
   __pdata uint8_t max_xmit;
+#ifdef INCLUDE_AES
   __pdata uint16_t crc;
-  
+#endif // INCLUDE_AES  
   __pdata uint16_t last_t = timer2_tick();
   __pdata uint16_t last_link_update = last_t;
   
@@ -587,10 +591,16 @@ tdm_serial_loop(void)
              // the serial port
 #ifdef INCLUDE_AES
              crc = crc16(len, pbuf);
+             // Only of CRC's agree do we process the pbuf
+             // (We can't decrypt a packet that is corrupt)
              if (crc == trailer.crc) {
                 LED_ACTIVITY = LED_ON;
                 serial_decrypt_buf(pbuf, len);
                 LED_ACTIVITY = LED_OFF;
+             } else {
+		if (errors.crc_errors != 0xFFFF) {
+		   errors.crc_errors++; 
+		}
              }
 #else // INCLUDE_AES
              LED_ACTIVITY = LED_ON;
@@ -725,7 +735,9 @@ tdm_serial_loop(void)
       // get a packet from the serial port
       len = packet_get_next(max_xmit, pbuf);
       trailer.command = packet_is_injected();
+#ifdef INCLUDE_AES
       trailer.crc = crc16(len, pbuf);
+#endif
     }
     
     if (len > max_data_packet_length) {
