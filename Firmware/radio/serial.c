@@ -266,7 +266,6 @@ _serial_write(register uint8_t c) __reentrant
 
 #ifdef INCLUDE_AES
 // If on appropriate CPU and encryption configured, then attempt to decrypt it
-//joe
 bool
 decryptPackets(void)
 {
@@ -307,7 +306,6 @@ decryptPackets(void)
   return false;
 }
 
-//joe
 void
 serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
 {
@@ -351,7 +349,6 @@ serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count)
 }
 #endif // INCLUDE_AES
 
-// joe
 // write as many bytes as will fit into the serial transmit buffer
 // if encryption turned on, decrypt the packet.
 void
@@ -626,6 +623,8 @@ void serial_device_set_speed(register uint8_t speed)
 
 
 #ifdef INCLUDE_AES
+/// Indicate if encrypt buffer is starting to get too full
+//
 bool encrypt_buffer_getting_full()
 {
 	if (BUF_FREE(encrypt) < encrypt_buff_start) {
@@ -636,6 +635,8 @@ bool encrypt_buffer_getting_full()
 }
 
 
+/// Indicate if encrypt before is getting back to a more comfortable lower state
+//
 bool encrypt_buffer_getting_empty()
 {
 	if (BUF_FREE(encrypt) > encrypt_buff_end) {
@@ -645,6 +646,8 @@ bool encrypt_buffer_getting_empty()
 }
 
 
+/// Indicate if there is any data in the encrypt buffer
+//
 bool encrypt_buffer_has_data()
 {
 

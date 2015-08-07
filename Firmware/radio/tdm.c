@@ -618,23 +618,6 @@ tdm_serial_loop(void)
     }
     
 
-// joe
-#ifdef INCLUDE_AES
-    // Ensure we arn't needing to hop
-    // If we have any packets that need decrypting lets do it now.
-//    if(tdm_state_remaining < tx_window_width/2
-//       && encrypt_buffer_has_data()
-//       && tdm_state == TDM_RECEIVE)
-//    {
-// printf("getting full\n");
-//       while (! encrypt_buffer_getting_empty()) {
-//        decryptPackets();
-//       }
-// printf("getting empty\n");
-//    }
-#endif // INCLUDE_AES
-
-    
     if (lbt_rssi != 0) {
       // implement listen before talk
       if (radio_current_rssi() < lbt_rssi) {
@@ -825,7 +808,6 @@ tdm_serial_loop(void)
       LED_ACTIVITY = LED_OFF;
     }
 
-//joe
 #ifdef INCLUDE_AES
     // Ensure we arn't needing to hop
     // If we have any packets that need decrypting lets do it now.
