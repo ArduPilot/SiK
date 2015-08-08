@@ -834,7 +834,6 @@ tdm_serial_loop(void)
     }
 
 #ifdef INCLUDE_AES
-    // Ensure we arn't needing to hop
     // If we have any packets that need decrypting lets do it now.
     if(tdm_state_remaining > tx_window_width/2)
     {
