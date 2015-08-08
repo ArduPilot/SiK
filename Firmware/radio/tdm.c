@@ -455,18 +455,16 @@ tdm_remote_at(void)
 }
 
 // handle an incoming at command from the remote radio
-static void
+// 
+// Return true if returning a pbuf that needs to be sent to output
+//        false if data is going out to the other modem
+static bool 
 handle_at_command(__pdata uint8_t len)
 {
   if (len < 2 || len > AT_CMD_MAXLEN ||
       pbuf[0] != (uint8_t)'R' ||
       pbuf[1] != (uint8_t)'T') {
-    // assume its an AT command reply
-    register uint8_t i;
-    for (i=0; i<len; i++) {
-      putchar(pbuf[i]);
-    }
-    return;
+    return true;
   }
   
   // setup the command in the at_cmd buffer
@@ -485,6 +483,7 @@ handle_at_command(__pdata uint8_t len)
   if (len > 0) {
     packet_inject(pbuf, len);
   }
+ return false;
 }
 
 // a stack carary to detect a stack overflow
@@ -582,11 +581,20 @@ tdm_serial_loop(void)
         sync_tx_windows(len);
         last_t = tnow;
         
-        if (trailer.command == 1) {
-          handle_at_command(len);
-        } else if (len != 0 && 
-              !packet_is_duplicate(len, pbuf, trailer.resend) &&
-              !at_mode_active) {
+
+	// Send data to console (serial buffers) if following conditions met
+	// If is a command and data is destined to THIS modem
+	// OR
+	// data is present, not a command, not a dup and not in AT Mode
+	//
+	// Question: Are we happy to blink Activity lights for RT command results?
+        if ((trailer.command == 1 && handle_at_command(len)) 
+            ||
+            (len != 0 && trailer.command == 0 &&
+             !packet_is_duplicate(len, pbuf, trailer.resend) &&
+             !at_mode_active
+            )) 
+        {
              // its user data - send it out
              // the serial port
 #ifdef INCLUDE_AES
@@ -734,7 +742,12 @@ tdm_serial_loop(void)
     } else {
       // get a packet from the serial port
       len = packet_get_next(max_xmit, pbuf);
-      trailer.command = packet_is_injected();
+
+      if (len > 0) {
+         trailer.command = packet_is_injected();
+      } else {
+         trailer.command = 0;
+      }
 #ifdef INCLUDE_AES
       trailer.crc = crc16(len, pbuf);
 #endif
