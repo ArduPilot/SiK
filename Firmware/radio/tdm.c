@@ -167,14 +167,20 @@ tdm_show_rssi(void)
 	       (unsigned)statistics.average_noise,
 	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
+#ifdef INCLUDE_AES
 	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u crce=%u temp=%d dco=%u\n",
+#else
+  printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%d dco=%u\n",
+#endif
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
 	       (unsigned)errors.serial_tx_overflow,
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets,
+#ifdef INCLUDE_AES
 	       (unsigned)errors.crc_errors,
+#endif
 	       (int)radio_temperature(),
 	       (unsigned)duty_cycle_offset);
 	statistics.receive_count = 0;
