@@ -625,7 +625,8 @@ void serial_device_set_speed(register uint8_t speed)
 #ifdef INCLUDE_AES
 /// Indicate if encrypt buffer is starting to get too full
 //
-bool encrypt_buffer_getting_full()
+bool
+encrypt_buffer_getting_full()
 {
 	if (BUF_FREE(encrypt) < encrypt_buff_start) {
            return true;
@@ -637,7 +638,8 @@ bool encrypt_buffer_getting_full()
 
 /// Indicate if encrypt before is getting back to a more comfortable lower state
 //
-bool encrypt_buffer_getting_empty()
+bool
+encrypt_buffer_getting_empty()
 {
 	if (BUF_FREE(encrypt) > encrypt_buff_end) {
            return true;
