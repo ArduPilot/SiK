@@ -39,7 +39,7 @@
 #include <stdbool.h>
 
 // Pin rfd900a  Mapping
-#if defined BOARD_rfd900a || defined BOARD_rfd900p
+#if defined BOARD_rfd900a || defined BOARD_rfd900p 
 #define PINS_USER_MAX 6
 #elif defined BOARD_rfd900u
 #define PINS_USER_MAX 2

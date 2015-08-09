@@ -41,10 +41,11 @@
 #include "golay.h"
 #include "freq_hopping.h"
 #include "crc.h"
+#include "serial.h"
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
-#endif
+#endif // INCLUDE_AES
 
 #define USE_TICK_YIELD 1
 
@@ -143,6 +144,9 @@ struct tdm_trailer {
 	uint16_t command:1;
 	uint16_t bonus:1;
 	uint16_t resend:1;
+#ifdef INCLUDE_AES
+	uint16_t crc;
+#endif
 };
 __pdata struct tdm_trailer trailer;
 
@@ -163,13 +167,14 @@ tdm_show_rssi(void)
 	       (unsigned)statistics.average_noise,
 	       (unsigned)remote_statistics.average_noise,
 	       (unsigned)statistics.receive_count);
-	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u temp=%d dco=%u\n",
+	printf(" txe=%u rxe=%u stx=%u srx=%u ecc=%u/%u crce=%u temp=%d dco=%u\n",
 	       (unsigned)errors.tx_errors,
 	       (unsigned)errors.rx_errors,
 	       (unsigned)errors.serial_tx_overflow,
 	       (unsigned)errors.serial_rx_overflow,
 	       (unsigned)errors.corrected_errors,
 	       (unsigned)errors.corrected_packets,
+	       (unsigned)errors.crc_errors,
 	       (int)radio_temperature(),
 	       (unsigned)duty_cycle_offset);
 	statistics.receive_count = 0;
@@ -450,18 +455,16 @@ tdm_remote_at(void)
 }
 
 // handle an incoming at command from the remote radio
-static void
+// 
+// Return true if returning a pbuf that needs to be sent to output
+//        false if data is going out to the other modem
+static bool 
 handle_at_command(__pdata uint8_t len)
 {
   if (len < 2 || len > AT_CMD_MAXLEN ||
       pbuf[0] != (uint8_t)'R' ||
       pbuf[1] != (uint8_t)'T') {
-    // assume its an AT command reply
-    register uint8_t i;
-    for (i=0; i<len; i++) {
-      putchar(pbuf[i]);
-    }
-    return;
+    return true;
   }
   
   // setup the command in the at_cmd buffer
@@ -480,6 +483,7 @@ handle_at_command(__pdata uint8_t len)
   if (len > 0) {
     packet_inject(pbuf, len);
   }
+ return false;
 }
 
 // a stack carary to detect a stack overflow
@@ -500,10 +504,13 @@ tdm_serial_loop(void)
   __pdata uint8_t	len;
   __pdata uint16_t tnow, tdelta;
   __pdata uint8_t max_xmit;
-  
+#ifdef INCLUDE_AES
+  __pdata uint16_t crc;
+#endif // INCLUDE_AES  
   __pdata uint16_t last_t = timer2_tick();
   __pdata uint16_t last_link_update = last_t;
   
+
   _canary = 42;
   
   for (;;) {
@@ -574,20 +581,41 @@ tdm_serial_loop(void)
         sync_tx_windows(len);
         last_t = tnow;
         
-        if (trailer.command == 1) {
-          handle_at_command(len);
-        } else if (len != 0 && 
-              !packet_is_duplicate(len, pbuf, trailer.resend) &&
-              !at_mode_active) {
-          // its user data - send it out
-          // the serial port
-          LED_ACTIVITY = LED_ON;
+
+	// Send data to console (serial buffers) if following conditions met
+	// If is a command and data is destined to THIS modem
+	// OR
+	// data is present, not a command, not a dup and not in AT Mode
+	//
+	// Question: Are we happy to blink Activity lights for RT command results?
+        if ((trailer.command == 1 && handle_at_command(len)) 
+            ||
+            (len != 0 && trailer.command == 0 &&
+             !packet_is_duplicate(len, pbuf, trailer.resend) &&
+             !at_mode_active
+            )) 
+        {
+             // its user data - send it out
+             // the serial port
 #ifdef INCLUDE_AES
-          serial_decrypt_buf(pbuf, len);
+             crc = crc16(len, pbuf);
+             // Only of CRC's agree do we process the pbuf
+             // (We can't decrypt a packet that is corrupt)
+             if (crc == trailer.crc) {
+                LED_ACTIVITY = LED_ON;
+                serial_decrypt_buf(pbuf, len);
+                LED_ACTIVITY = LED_OFF;
+             } else {
+		if (errors.crc_errors != 0xFFFF) {
+		   errors.crc_errors++; 
+		}
+             }
 #else // INCLUDE_AES
-          serial_write_buf(pbuf, len);
+             LED_ACTIVITY = LED_ON;
+             serial_write_buf(pbuf, len);
+             LED_ACTIVITY = LED_OFF;
 #endif // INCLUDE_AES
-          LED_ACTIVITY = LED_OFF;
+          
         }
       }
       continue;
@@ -607,16 +635,7 @@ tdm_serial_loop(void)
       last_link_update = tnow;
     }
     
-#ifdef INCLUDE_AES
-    // Ensure we arn't needing to hop
-    // If we have any packets that need decrypting lets do it now.
-    if(tdm_state_remaining > tx_window_width/2)
-    {
-      decryptPackets();
-      continue;
-    }
-#endif // INCLUDE_AES
-    
+
     if (lbt_rssi != 0) {
       // implement listen before talk
       if (radio_current_rssi() < lbt_rssi) {
@@ -723,7 +742,15 @@ tdm_serial_loop(void)
     } else {
       // get a packet from the serial port
       len = packet_get_next(max_xmit, pbuf);
-      trailer.command = packet_is_injected();
+
+      if (len > 0) {
+         trailer.command = packet_is_injected();
+      } else {
+         trailer.command = 0;
+      }
+#ifdef INCLUDE_AES
+      trailer.crc = crc16(len, pbuf);
+#endif
     }
     
     if (len > max_data_packet_length) {
@@ -802,15 +829,33 @@ tdm_serial_loop(void)
       lbt_rand = 0;
     }
     
+    if (len != 0 && trailer.window != 0) {
+      LED_ACTIVITY = LED_OFF;
+    }
+
+#ifdef INCLUDE_AES
+    // If we have any packets that need decrypting lets do it now.
+    if(tdm_state_remaining > tx_window_width/2)
+    {
+       // If it is starting to get really full, we want to try decrypting
+       // not just one, but a few packets.
+       if (encrypt_buffer_getting_full()) {
+          while (!encrypt_buffer_getting_empty()) {
+            decryptPackets();
+          }
+       } else {
+         decryptPackets();
+       }
+    }
+#endif // INCLUDE_AES
+
+
     // set right receive channel
     radio_set_channel(fhop_receive_channel());
     
     // re-enable the receiver
     radio_receiver_on();
     
-    if (len != 0 && trailer.window != 0) {
-      LED_ACTIVITY = LED_OFF;
-    }
   }
 #endif // RADIO_SPLAT_TESTING_MODE
 }

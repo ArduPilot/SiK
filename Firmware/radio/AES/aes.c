@@ -35,6 +35,8 @@
 #include "CTR_EncryptDecrypt.h"
 #include <stdlib.h>
 
+#define MAX_ENCRYPT_PACKET_LENGTH 32
+
 /* SEGMENT_VARIABLE (EncryptionKey[32], U8, SEG_XDATA); */
 __xdata unsigned char *EncryptionKey;
 SEGMENT_VARIABLE (DecryptionKey[32], U8, SEG_XDATA);
@@ -46,6 +48,8 @@ SEGMENT_VARIABLE (Counter[16], U8, SEG_XDATA);
 const SEGMENT_VARIABLE (Nonce[16], U8, SEG_CODE) = {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff};
 const SEGMENT_VARIABLE (ReferenceInitialVector[16] , U8, SEG_CODE) = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
+// Used to hold data that we are going to encrypt
+static __xdata uint8_t encrypt_packet[MAX_ENCRYPT_PACKET_LENGTH];
 
 /* Helper definitions  */
 // First nibble = code for # of bits - 1 = 128, 2 = 192, 3 = 256 
@@ -167,13 +171,18 @@ __xdata unsigned char *aes_pad(__xdata unsigned char *in_str, uint8_t len)
 	volatile uint8_t  pad_length;
 	uint8_t i;
 
+        // Copy string to encrypt to temp area, because we will be padding out encrypted string
+        // and we don't want to affect any code that might be depending upon this string...or 
+	// any characters that the padding would overwrite. e.g. the injected packet code.
+        memcpy(encrypt_packet, in_str, len);
+
 	pad_length = 16 - (len%16);
 
 	for (i = 0; i < pad_length;i++) {
-		memcpy(&in_str[len+i], &pad_length, sizeof(pad_length));
+		memcpy(&encrypt_packet[len+i], &pad_length, sizeof(pad_length));
 	}
 
-	return in_str;
+	return encrypt_packet;
 }
 
 // encrypt the data pointed to by in_str with length len
@@ -219,7 +228,7 @@ uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsig
 	// 0 - CBC
 	// 1 - CTR
 	crypto_type = CRYPTO(encryption);
-	
+
 	// We always pad the blocks with up to max 16 bytes.
 	// If we don't find a pile of 10 10 10....10 in the last block
 	// then we know that the last block was incomplete

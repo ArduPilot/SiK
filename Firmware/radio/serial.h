@@ -138,4 +138,16 @@ extern uint16_t	serial_read_available(void);
 ///
 extern void serial_check_rts(void);
 
+/// Encryption ring buffer checks. Is it getting too full?
+//
+extern bool encrypt_buffer_getting_full();
+
+/// Encryption ring buffer checks. Is it getting empty now?
+//
+extern bool encrypt_buffer_getting_empty();
+
+/// Get space left in encrypt buffer
+//
+extern uint16_t encrypt_buffer_write_space();
+
 #endif // _SERIAL_H_

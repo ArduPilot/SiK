@@ -33,20 +33,18 @@
 ///
 
 
-
 //=============================================================================
 // Function Prototypes
 //-----------------------------------------------------------------------------
 
-extern bool aes_init(uint8_t encryption_level);
-
 extern uint8_t aes_encrypt(__xdata unsigned char *in_str, uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
+
+extern bool aes_init(uint8_t encryption_level);
 
 extern uint8_t aes_decrypt(__xdata unsigned char *in_str,  uint8_t in_len, __xdata unsigned char *out_str, uint8_t *out_len);
 
 extern uint8_t aes_get_encryption_level();
 
 void aes_set_encryption_level(uint8_t encryption);
-
 
 #define AES_KEY_LENGTH(_l)    8*(1 +(_l&0xf))

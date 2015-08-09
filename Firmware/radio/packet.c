@@ -208,11 +208,11 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 __xdata uint8_t len_encrypted;
 #endif // INCLUDE_AES
 
-uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t last_sent_len)
+uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t buf_in_len)
 {
 #ifdef INCLUDE_AES
   if (aes_get_encryption_level() > 0) {
-    if (aes_encrypt(buf_in, last_sent_len, buf_out, &len_encrypted) != 0)
+    if (aes_encrypt(buf_in, buf_in_len, buf_out, &len_encrypted) != 0)
     {
       panic("error while trying to encrypt data");
     }
@@ -221,8 +221,8 @@ uint8_t encryptReturn(__xdata uint8_t *buf_out, __xdata uint8_t *buf_in, uint8_t
 #endif // INCLUDE_AES
   
   // if no encryption or not supported fall back to copy
-  memcpy(buf_out, buf_in, last_sent_len);
-  return last_sent_len;
+  memcpy(buf_out, buf_in, buf_in_len);
+  return buf_in_len;
 }
 
 // return the next packet to be sent
@@ -232,8 +232,8 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 	register uint16_t slen;
 
 #ifdef INCLUDE_AES
-  // Encryption takes 1 byte and is in factors of 16.
-  // 16, 32, 48 etc, lets not send anything above 32 bits back
+  // Encryption takes 1 byte and is in multiples of 16.
+  // 16, 32, 48 etc, lets not send anything above 32 bytes back
   // If you change this increase the buffer in serial.c serial_write_buf()
   if (aes_get_encryption_level() > 0) {
     if(max_xmit <= 16) return 0;
@@ -249,13 +249,14 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 		// sending these injected packets at full size doesn't
 		// seem to work well ... though I don't really know why!
 		if (max_xmit > 32) {
-						max_xmit = 32;
+   		    max_xmit = 32;
 		}
 
 		if (max_xmit < slen) {
 			// send as much as we can
-      last_sent_len = slen - max_xmit;
-      slen = encryptReturn(buf, last_sent, max_xmit);
+ 		        last_sent_len = slen - max_xmit;
+   		        slen = encryptReturn(buf, last_sent, max_xmit);
+
 			memcpy(last_sent, &last_sent[max_xmit], last_sent_len);
 			last_sent_is_injected = true;
 			return slen;
@@ -399,7 +400,6 @@ packet_get_next(register uint8_t max_xmit, __xdata uint8_t *buf)
 			slen--;
 		}
 	}
-//  printf("ret");
 	return encryptReturn(buf, last_sent, last_sent_len);
 }
 

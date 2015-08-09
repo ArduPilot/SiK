@@ -143,6 +143,9 @@ struct error_counts {
 	uint16_t serial_rx_overflow;    ///< count of serial receive overflows
 	uint16_t corrected_errors;      ///< count of words corrected by golay code
 	uint16_t corrected_packets;     ///< count of packets corrected by golay code
+#ifdef INCLUDE_AES
+	uint16_t crc_errors;		///< count of crc errrors when AES in use>
+#endif // INCLUDE_AES
 };
 __pdata extern struct error_counts errors;
 
