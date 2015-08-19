@@ -312,7 +312,7 @@ radio_init(void)
 		break;
 	case FREQ_868:
 		freq_min = 868000000UL;
-		freq_max = 869000000UL;
+		freq_max = 870000000UL;
 		txpower = 10;
 		num_fh_channels = 10;
 		break;
