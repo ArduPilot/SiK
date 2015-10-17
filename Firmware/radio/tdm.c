@@ -905,10 +905,11 @@ tdm_init(void)
         // set the transmit window to allow for 3 full sized packets
 	window_width = 3*(packet_latency+(max_data_packet_length*(uint32_t)ticks_per_byte));
 
+        // min listen time is 5ms
+        lbt_min_time = LBT_MIN_TIME_USEC/16;
+        
 	// if LBT is enabled, we need at least 3*5ms of window width
 	if (lbt_rssi != 0) {
-		// min listen time is 5ms
-		lbt_min_time = LBT_MIN_TIME_USEC/16;
 		window_width = constrain(window_width, 3*lbt_min_time, window_width);
 	}
 
