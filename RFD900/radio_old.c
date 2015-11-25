@@ -32,7 +32,7 @@ static const uint8_t air_data_rates[NUM_DATA_RATES] = {
 radio_settings_t settings= {
 	918000000UL,//uint32_t frequency;
 	50000UL,//uint32_t hancnel_spacing;
-	128,//uint8_t air_data_rate;
+	10,//uint8_t air_data_rate;
 	0,//uint8_t current_channel;
 	0,//uint8_t transmit_power;
 	16//uint8_t preamble_length; // in nibbles

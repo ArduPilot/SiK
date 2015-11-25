@@ -42,6 +42,7 @@ typedef struct EZRADIODRV_PacketRxHandle
   EZRADIODRV_Callback_t userCallback;   ///< User callback.
   uint8_t channel;                      ///< Reception channel.
   uint8_t * pktBuf;                     ///< Pointer to the receive buffer.
+  uint8_t pktBufLen;										///< length of buffer supplied
 } EZRADIODRV_PacketRxHandle_t;
 
 

@@ -95,10 +95,12 @@
 #define ECODE_EMDRV_EZRADIODRV_DIRECT_TRANSMIT_PLUGIN_BASE      ( ECODE_EMDRV_EZRADIODRV_BASE | 0x00000700 )   ///< Transmit plugin base error code.
 #define ECODE_EMDRV_EZRADIODRV_DIRECT_RECEIVE_PLUGIN_BASE       ( ECODE_EMDRV_EZRADIODRV_BASE | 0x00000800 )   ///< Receive plugin base error code.
 
-#define ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT          ( ECODE_EMDRV_EZRADIODRV_RECEIVE_PLUGIN_BASE| 0x00000001 )
-#define ECODE_EMDRV_EZRADIODRV_CHIP_ERROR               ( ECODE_EMDRV_EZRADIODRV_TRANSMIT_PLUGIN_BASE| 0x00000001 )
-#define ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR              ( ECODE_EMDRV_EZRADIODRV_TRANSMIT_PLUGIN_BASE| 0x00000002 )
-#define ECODE_EMDRV_EZRADIODRV_STATE_CHANGE             ( ECODE_EMDRV_EZRADIODRV_TRANSMIT_PLUGIN_BASE| 0x00000004 )
+#define ECODE_EMDRV_EZRADIODRV_PACKET_RX            ( ECODE_EMDRV_EZRADIODRV_RECEIVE_PLUGIN_BASE | 0x00000001 )
+#define ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT      ( ECODE_EMDRV_EZRADIODRV_RECEIVE_PLUGIN_BASE | 0x00000002 )
+
+#define ECODE_EMDRV_EZRADIODRV_PACKET_SENT          ( ECODE_EMDRV_EZRADIODRV_TRANSMIT_PLUGIN_BASE | 0x00000001 )
+#define ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY        ( ECODE_EMDRV_EZRADIODRV_TRANSMIT_PLUGIN_BASE | 0x00000002 )
+
 
 
 #if (!defined RADIO_CONFIGURATION_DATA_RADIO_CHIP_FAMILY)
@@ -258,11 +260,11 @@ typedef void (*EZRADIODRV_Callback_t)( EZRADIODRV_Handle_t handle,
 #include "ezradio_transmit_plugin.h"
 #include "ezradio_receive_plugin.h"
 #include "ezradio_crcerror_plugin.h"
-#include "ezradio_auto_ack_plugin.h"
-#include "ezradio_unmod_carrier_plugin.h"
-#include "ezradio_pn9_plugin.h"
-#include "ezradio_direct_transmit_plugin.h"
-#include "ezradio_direct_receive_plugin.h"
+//#include "ezradio_auto_ack_plugin.h"
+//#include "ezradio_unmod_carrier_plugin.h"
+//#include "ezradio_pn9_plugin.h"
+//#include "ezradio_direct_transmit_plugin.h"
+//#include "ezradio_direct_receive_plugin.h"
 
 
 /// EzRadio driver instance initialization and handler structure.
@@ -286,7 +288,7 @@ typedef struct EZRADIODRV_HandleData
 #if ( defined EZRADIO_PLUGIN_CRC_ERROR )
   EZRADIODRV_PacketCrcErrorHandle_t  packetCrcError; ///< Packet reception with CRC error plug-in handler.
 #endif
-
+#if 0
 #if ( ( defined EZRADIO_PLUGIN_AUTO_ACK ) && ( defined EZRADIO_PLUGIN_TRANSMIT ) && ( defined EZRADIO_PLUGIN_RECEIVE ) )
   EZRADIODRV_AutoAckHandle_t         autoAck;        ///< Auto-acknowledge plug-in handler.
 #endif
@@ -306,7 +308,7 @@ typedef struct EZRADIODRV_HandleData
 #if ( defined EZRADIO_PLUGIN_DIRECT_RECEIVE )
   EZRADIODRV_DirectRxHandle_t        directRx;       ///< Direct reception plug-in handler.
 #endif
-
+#endif
 } EZRADIODRV_HandleData_t;
 
 
@@ -316,12 +318,15 @@ typedef struct EZRADIODRV_HandleData
   EZRADIODRV_TRANSMIT_PLUGIN_INIT_DEFAULT         /* Tx plugin init */        \
   EZRADIODRV_RECEIVE_PLUGIN_INIT_DEFAULT          /* Rx plugin init */        \
   EZRADIODRV_CRC_ERROR_PLUGIN_INIT_DEFAULT        /* CRC error plugin init */ \
-  EZRADIODRV_AUTO_ACK_PLUGIN_INIT_DEFAULT         /* Auto-ack plugin init */  \
-  EZRADIODRV_UNMOD_CARRIER_PLUGIN_INIT_DEFAULT    /* CW plugin init */        \
-  EZRADIODRV_PN9_PLUGIN_INIT_DEFAULT              /* PN9 plugin init */       \
-  EZRADIODRV_DIRECT_TRANSMIT_PLUGIN_INIT_DEFAULT  /* Direct Tx plugin init */ \
-  EZRADIODRV_DIRECT_RECEIVE_PLUGIN_INIT_DEFAULT   /* Direct Rx plugin init */ \
 }
+
+#if 0
+  EZRADIODRV_AUTO_ACK_PLUGIN_INIT_DEFAULT         /* Auto-ack plugin init */
+  EZRADIODRV_UNMOD_CARRIER_PLUGIN_INIT_DEFAULT    /* CW plugin init */
+  EZRADIODRV_PN9_PLUGIN_INIT_DEFAULT              /* PN9 plugin init */
+  EZRADIODRV_DIRECT_TRANSMIT_PLUGIN_INIT_DEFAULT  /* Direct Tx plugin init */
+  EZRADIODRV_DIRECT_RECEIVE_PLUGIN_INIT_DEFAULT   /* Direct Rx plugin init */
+#endif
 
 void ezradioInit( EZRADIODRV_Handle_t handle );
 Ecode_t ezradioPluginManager( EZRADIODRV_Handle_t handle );
