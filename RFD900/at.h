@@ -35,6 +35,8 @@
 #ifndef _AT_H_
 #define _AT_H_
 
+#include <stdbool.h>
+
 extern bool	at_mode_active;	///< if true, the AT interpreter is in command mode
 extern bool	at_cmd_ready;	///< if true, at_cmd / at_cmd_len contain valid data
 

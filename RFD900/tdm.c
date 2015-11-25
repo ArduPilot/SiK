@@ -42,6 +42,7 @@
 #include "parameters.h"
 #include "serial.h"
 #include "pins_user.h"
+#include "printfl.h"
 
 #define USE_TICK_YIELD 1
 

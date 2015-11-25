@@ -134,7 +134,7 @@
   0x01 /* GROUP: Int ctl                                                                  */,\
   0x01 /* NUM_PROPS                                                                       */,\
   0x00 /* START_PROP                                                                      */,\
-  0x05 /* INT_CTL_ENABLE,CHIP_INT_STATUS_EN[2],MODEM_INT_STATUS_EN[1],PH_INT_STATUS_EN[0] */\
+  0x07 /* INT_CTL_ENABLE,CHIP_INT_STATUS_EN[2],MODEM_INT_STATUS_EN[1],PH_INT_STATUS_EN[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_INT_CTL_ENABLE_LEN (5)
@@ -145,7 +145,7 @@
   0x01 /* GROUP: Int ctl                                                                                                                                                                    */,\
   0x01 /* NUM_PROPS                                                                                                                                                                         */,\
   0x01 /* START_PROP                                                                                                                                                                        */,\
-  0x38 /* INT_CTL_PH_ENABLE,FILTER_MATCH_EN[7],FILTER_MISS_EN[6],PACKET_SENT_EN[5],PACKET_RX_EN[4],CRC_ERROR_EN[3],ALT_CRC_ERROR_EN[2],TX_FIFO_ALMOST_EMPTY_EN[1],RX_FIFO_ALMOST_FULL_EN[0] */\
+  0x3B /* INT_CTL_PH_ENABLE,FILTER_MATCH_EN[7],FILTER_MISS_EN[6],PACKET_SENT_EN[5],PACKET_RX_EN[4],CRC_ERROR_EN[3],ALT_CRC_ERROR_EN[2],TX_FIFO_ALMOST_EMPTY_EN[1],RX_FIFO_ALMOST_FULL_EN[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_INT_CTL_PH_ENABLE_LEN (5)
@@ -156,7 +156,7 @@
   0x01 /* GROUP: Int ctl                                                                                                                                                            */,\
   0x01 /* NUM_PROPS                                                                                                                                                                 */,\
   0x02 /* START_PROP                                                                                                                                                                */,\
-  0x00 /* INT_CTL_MODEM_ENABLE,RSSI_LATCH_EN[7],POSTAMBLE_DETECT_EN[6],INVALID_SYNC_EN[5],RSSI_JUMP_EN[4],RSSI_EN[3],INVALID_PREAMBLE_EN[2],PREAMBLE_DETECT_EN[1],SYNC_DETECT_EN[0] */\
+  0x06 /* INT_CTL_MODEM_ENABLE,RSSI_LATCH_EN[7],POSTAMBLE_DETECT_EN[6],INVALID_SYNC_EN[5],RSSI_JUMP_EN[4],RSSI_EN[3],INVALID_PREAMBLE_EN[2],PREAMBLE_DETECT_EN[1],SYNC_DETECT_EN[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_INT_CTL_MODEM_ENABLE_LEN (5)

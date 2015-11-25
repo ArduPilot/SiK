@@ -7,6 +7,7 @@
 
 #ifndef PRINTFL_H_
 #define PRINTFL_H_
+#include <stdarg.h>
 
 void	vprintfl(const char * fmt, va_list ap);
 #define	vprintf(_fmt, _ap)	vprintfl(_fmt, _ap)		///< avoid fighting with the library vprintf() prototype
