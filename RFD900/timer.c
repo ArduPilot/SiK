@@ -1,5 +1,9 @@
-
-
+/*
+ * timer.c
+ *
+ *  Created on: 06/11/2015
+ *      Author: kentm
+ */
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -8,34 +12,22 @@
 #include "radio_old.h"
 #include "at.h"
 #include "serial.h"
-
-/// Counter used by delay_msec
-///
-static volatile uint8_t delay_counter;
-
-/// high 16 bits of timer2 SYSCLK/12 interrupt
-//static volatile uint16_t timer2_high;
+#include "timer_config.h"
 
 
-void delay_set(register uint16_t msec)
-{
-	if (msec >= 2550) {
-		delay_counter = 255;
-	} else {
-		delay_counter = (msec + 9) / 10;
-	}
-}
+// ******************** defines and typedefs *************************
+#define TDMSHIFT 0
+#define TDMFREQ (64250U*(1U<<TDMSHIFT))
 
-void delay_set_ticks(register uint8_t ticks)
-{
-	delay_counter = ticks;
-}
+// ******************** local variables ******************************
+static volatile uint8_t delay_counter;																					/// Counter used by delay_msec
+static uint32_t TdmTicks=0;
+// ******************** global variables *****************************
+// ******************** local function prototypes ********************
+static void delay_set(register uint16_t msec);
+static bool delay_expired(void);
 
-bool delay_expired(void)
-{
-	return delay_counter == 0;
-}
-
+// ********************* Implementation ******************************
 void delay_msec(register uint16_t msec)
 {
 	delay_set(msec);
@@ -43,38 +35,17 @@ void delay_msec(register uint16_t msec)
 		;
 }
 
-void TIMER3_IRQHandler(void)
-{
-  /* Clear flag for TIMER1 overflow interrupt */
-  TIMER_IntClear(TIMER3, TIMER_IF_OF);
-	// call the AT parser tick
-	at_timer();
-
-	// update the delay counter
-	if (delay_counter > 0)
-		delay_counter--;
-}
-#if 0
-void TIMER2_IRQHandler(void)
-{
-  /* Clear flag for TIMER2 overflow interrupt */
-  TIMER_IntClear(TIMER2, TIMER_IF_OF);
-	timer2_high++;
-	if (feature_rtscts) {
-		serial_check_rts();
-	}
-}
-#endif
 // return a 16 bit value that rolls over in approximately
 // one second intervals
 uint16_t timer2_tick(void)
 {
-	return(TIMER_CounterGet(TIMER2));
+	return(TdmTicks>>TDMSHIFT);
+	//return(TIMER_CounterGet(TDMTIMER));
 #if 0
 	register uint16_t low, high;
 	do {
 		high = timer2_high;
-		low = TIMER_CounterGet(TIMER2);
+		low = TIMER_CounterGet(TDMTIMER);
 	} while (high != timer2_high);
 	// take 11 high bits from the 2MHz counter, and 5 low bits
 	// from the rollover of that counter
@@ -93,12 +64,16 @@ void timer_init(void)
 
 	// timer 3 should be a 10 mS or 100hz freq
 	// timer 2 should be a free running counter rolling over 0xffff at 1S interval,T=15.2587uS, f =65536
+	// clock is 28Mhz /512 = 54687Hz , 0xffff roll over at ~ 1.2S
+	// original timer was based on 24500000 Clock /12 = 2.041666 Mhz / (1<<5=32) = 63.802 Khz rollover @ ~ 1.03S
+	// take 11 high bits from the counter, and 5 low bits from the rollover of that counter
+  // timer entropy was read from lower 16 bit of counter
 
   CMU_ClockDivSet(cmuClock_HFPER,cmuClkDiv_1); // set divide for phfper clk
-  CMU_ClockEnable(cmuClock_TIMER2, true);		/* Enable clock for TIMER2 module */
-  CMU_ClockEnable(cmuClock_TIMER3, true);		/* Enable clock for TIMER1 module */
+  CMU_ClockEnable(TDMTIMER_cmuClock, true);		 /* Enable clock for TDMTIMER module */
+  CMU_ClockEnable(MSTIMER_cmuClock, true);		 /* Enable clock for MSTIMER module */
 
-  TIMER_Init_TypeDef timerInit =						/* Select TIMER2 parameters */
+  TIMER_Init_TypeDef mStimerInit =							 /* Select MSTIMER parameters */
   {
     .enable     = true,
     .debugRun   = false,
@@ -113,11 +88,11 @@ void timer_init(void)
     .sync       = false,
   };
 
-  TIMER_Init_TypeDef timerInit2 =						/* Select TIMER1 parameters */
+  TIMER_Init_TypeDef tdmtimerInit =						   /* Select TDMTIMER parameters */
   {
     .enable     = true,
     .debugRun   = false,
-    .prescale   = timerPrescale512,
+    .prescale   = timerPrescale1,
     .clkSel     = timerClkSelHFPerClk,
     .fallAction = timerInputActionNone,
     .riseAction = timerInputActionNone,
@@ -130,33 +105,68 @@ void timer_init(void)
 
 	uint32_t Count = CMU_ClockFreqGet(cmuClock_HFPER);
 	Count = (Count/(100*16));
+  TIMER_TopSet(MSTIMER, Count);							  /* Set TIMER Top value */
+  TIMER_IntEnable(MSTIMER, TIMER_IF_OF); 		  /* Enable overflow interrupt */
+  NVIC_EnableIRQ(MSTIMER_IRQn);   						  /* Enable TIMER1 interrupt vector in NVIC */
+  TIMER_Init(MSTIMER, &mStimerInit);						/* Configure TIMER */
 
-  TIMER_TopSet(TIMER3, Count);							/* Set TIMER Top value */
-  TIMER_IntEnable(TIMER3, TIMER_IF_OF); 		/* Enable overflow interrupt */
-  NVIC_EnableIRQ(TIMER3_IRQn);   						/* Enable TIMER1 interrupt vector in NVIC */
-  TIMER_Init(TIMER3, &timerInit);						/* Configure TIMER */
 
-  TIMER_TopSet(TIMER2, 0xFFFF); 						/* Set TIMER Top value */
-  //TIMER_IntEnable(TIMER2, TIMER_IF_OF); 		/* Enable overflow interrupt */
-  //NVIC_EnableIRQ(TIMER2_IRQn);   						/* Enable TIMER2 interrupt vector in NVIC */
-  TIMER_Init(TIMER2, &timerInit2);						/* Configure TIMER */
-  #if 0
-	TMR3RLL	 = (65536/65536=UL - ((SYSCLK / 12) / 100)) & 0xff;
-	TMR3RLH	 = ((65536UL - ((SYSCLK / 12) / 100)) >> 8) & 0xff;
-	TMR3CN	 = 0x04;	// count at SYSCLK / 12 and start
-	EIE1	|= 0x80;
 
-	// setup TMR2 as a timer source at SYSCLK/12
-	TMR2RLL = 0;
-	TMR2RLH = 0;
-	TMR2CN  = 0x04; // start running, count at SYSCLK/12
-	ET2 = 1;
-#endif
+	Count = ((CMU_ClockFreqGet(cmuClock_HFPER)+TDMFREQ)/TDMFREQ)-1;
+  TIMER_TopSet(TDMTIMER, Count); 						/* Set TIMER Top value */
+  TIMER_IntEnable(TDMTIMER, TIMER_IF_OF); 		/* Enable overflow interrupt */
+  NVIC_EnableIRQ(TDMTIMER_IRQn);   						/* Enable TDMTIMER interrupt vector in NVIC */
+  TIMER_Init(TDMTIMER, &tdmtimerInit);						/* Configure TIMER */
 }
 
 // return some entropy
 uint8_t timer_entropy(void)
 {
 	// use the SYSCLK/12 timer
-	return((uint8_t)TIMER_CounterGet(TIMER2));
+	return((uint8_t)TdmTicks);
 }
+
+// ********************* Implementation local functions **************
+
+static void delay_set(register uint16_t msec)
+{
+	if (msec >= 2550) {
+		delay_counter = 255;
+	} else {
+		delay_counter = (msec + 9) / 10;
+	}
+}
+
+static bool delay_expired(void)
+{
+	return delay_counter == 0;
+}
+
+
+void TIMER2_IRQHandler(void)
+{
+  /* Clear flag for TIMER1 overflow interrupt */
+  TIMER_IntClear(TIMER2, TIMER_IF_OF);
+	// call the AT parser tick
+	at_timer();
+
+	// update the delay counter
+	if (delay_counter > 0)
+		delay_counter--;
+}
+void TIMER1_IRQHandler(void)
+{
+  /* Clear flag for TIMER2 overflow interrupt */
+  TIMER_IntClear(TIMER1, TIMER_IF_OF);
+  TdmTicks ++;
+/*
+  timer2_high++;
+	if (feature_rtscts) {
+		serial_check_rts();
+	}
+*/
+}
+
+
+
+// ********************* end of timer.c ******************************

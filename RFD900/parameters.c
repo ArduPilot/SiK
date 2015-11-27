@@ -42,17 +42,16 @@
 
 #include "radio_old.h"
 #include "tdm.h"
-//#include "crc.h"
-//#include "flash_layout.h"
+#include "flash_layout.h"
 #include "pins_user.h"
 #include "parameters.h"
 #include "serial.h"
 #include "board_rfd900e.h"
 #include "printfl.h"
-//#include "flash.h"
-//#include "crc.h"
+#include "flash.h"
+#include "crc.h"
 
-#define NO_FLASH_TEST 1
+//#define NO_FLASH_TEST 1
 #if NO_FLASH_TEST
 #define FLASH_CALIBRATION_AREA_SIZE   (31)
 #endif
@@ -64,7 +63,7 @@ const struct parameter_s_info {
 } parameter_s_info[PARAM_S_MAX] = {
 	{"FORMAT",         PARAM_FORMAT_CURRENT},
 	{"SERIAL_SPEED",   57}, // match APM default of 57600
-	{"AIR_SPEED",      64}, // relies on MAVLink flow control
+	{"AIR_SPEED",      10}, // relies on MAVLink flow control
 	{"NETID",          25},
 	{"TXPOWER",        20},
 	{"ECC",             0},
@@ -468,36 +467,7 @@ uint32_t constrain(uint32_t v, uint32_t min, uint32_t max)
 	return v;
 }
 
-// rfd900a calibration stuff
-// Change for next rfd900 revision
-//#if defined BOARD_rfd900a || defined BOARD_rfd900p
-static /*__at(FLASH_CALIBRATION_AREA)*/ uint8_t calibration[FLASH_CALIBRATION_AREA_SIZE];
-
-//#ifdef BOARD_rfd900p
-//static __at(FLASH_CALIBRATION_CRC) uint16_t calibration_crc;
-//       uint8_t calData[FLASH_CALIBRATION_AREA_SIZE];
-//#else
-static /*__at(FLASH_CALIBRATION_CRC)*/ uint8_t calibration_crc;
-//#endif
-
-#if 0
-static void flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
-{
-	PSCTL = 0x01;				// set PSWE, clear PSEE
-	FLKEY = 0xa5;
-	FLKEY = 0xf1;
-	*(uint8_t *)address = c;	// write the byte
-	PSCTL = 0x00;				// disable PSWE/PSEE
-}
-#endif
 #define flash_read_byte(addr) (*(uint8_t*)(addr))
-#if 0
-static uint8_t flash_read_byte(uint8_t *address)
-{
-	// will cause reset if the byte is in a locked page
-	return *address;
-}
-#endif
 
 bool calibration_set(uint8_t idx, uint8_t value)
 {
@@ -519,63 +489,12 @@ bool calibration_set(uint8_t idx, uint8_t value)
 #endif
 }
 
-//#ifdef BOARD_rfd900p
-//uint8_t
-//calibration_get(uint8_t level) __reentrant
-//{
-//	uint16_t crc = 0;
-//  
-//  // calculate checksum
-//  printf("val1 %d - val2 %d\n",calibration[0], calibration[1]);
-//  memcpy(calData, calibration, FLASH_CALIBRATION_AREA_SIZE);
-//  
-//  crc = crc16(FLASH_CALIBRATION_AREA_SIZE, calibration);
-//  
-//	if (calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER)
-//	{
-//    printf("crca %d - crcb %d - calret %d", calibration_crc, crc, calibration[level]);
-//		return calibration[level];
-//	}
-//  printf("Nope - crca %d - crcb %d - calret %d", calibration_crc, crc, calibration[level]);
-//	return 0xFF;
-//}
-//
-//bool
-//calibration_lock() __reentrant
-//{
-//	uint8_t idx;
-//	uint16_t crc = 0;
-//	
-//  
-//	// check that all entries are written
-//	if (flash_read_byte(FLASH_CALIBRATION_CRC_HIGH) == 0xFF)
-//	{
-//		for (idx=0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
-//		{
-//			if (flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx) == 0xFF)
-//			{
-//				printf("dBm level %u not calibrated\n",idx);
-//				return false;
-//			}
-//		}
-//		
-//    // write checksum
-//    crc = crc16(FLASH_CALIBRATION_AREA_SIZE, calibration);
-//		flash_write_byte(FLASH_CALIBRATION_CRC_HIGH, crc&0xFF);
-//    flash_write_byte(FLASH_CALIBRATION_CRC_HIGH+1, crc>>8);
-//    
-//		// lock the first and last pages
-//		// can only be reverted by reflashing the bootloader
-//		flash_write_byte(FLASH_LOCK_BYTE, 0xFE);
-//		return true;
-//	}
-//	return false;
-//}
-//#else
 uint8_t calibration_get(uint8_t level)
 {
 	uint8_t idx;
 	uint8_t crc = 0;
+	uint8_t *calibration = (uint8_t *)(FLASH_CALIBRATION_AREA);
+	uint8_t calibration_crc = flash_read_byte(FLASH_CALIBRATION_CRC);
 
 	// Change for next board revision
 	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
@@ -615,7 +534,6 @@ bool calibration_lock(void)
 		// lock the first and last pages
 		// can only be reverted by reflashing the bootloader
 		FlashLockBlock((uint8_t *)FLASH_CALIBRATION_AREA);
-		//flash_write_byte(FLASH_LOCK_BYTE, 0xFE);
 		return true;
 	}
 	return false;
@@ -624,5 +542,3 @@ bool calibration_lock(void)
 #endif
 
 }
-//#endif // BOARD_rfd900p
-//#endif // BOARD_rfd900a/p

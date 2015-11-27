@@ -10,7 +10,7 @@
 
 
 void InitPWM(void);
-void SetPwmDuty(uint16_t Dutyby10);
+void SetPwmDuty(uint8_t Duty8Bit);
 
 
 #endif /* PWM_H_ */

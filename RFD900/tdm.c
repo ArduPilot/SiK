@@ -989,6 +989,8 @@ tdm_init(void)
   disable_rssi_hunt();
   tdm_state_remaining = 100;
 
+	g_board_frequency = FREQ_915;	// TODO store this data into cal data
+	g_board_bl_version = 1;       // TODO find a way for the bootloader to tell us it's version
 
 	// Load parameters from flash or defaults
 	// this is done before hardware_init() to get the serial speed

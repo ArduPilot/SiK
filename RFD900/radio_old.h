@@ -253,8 +253,6 @@ extern uint8_t radio_change_transmit_power(bool increment, uint8_t maxPower);
 ///
 extern uint8_t radio_get_transmit_power(void);
 
-extern void SetTxPowerLevel(uint8_t PLevel);
-
 /// check if a packet is coming in
 ///
 /// @return			true if a packet is being received

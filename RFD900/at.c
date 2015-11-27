@@ -43,6 +43,8 @@
 #include "parameters.h"
 #include "serial.h"
 #include "printfl.h"
+#include "flash.h"
+#include "PWM.h"
 
 
 // AT command buffer
@@ -439,19 +441,9 @@ static void at_ampersand(void)
 	case 'U':
 		if (!strcmp(at_cmd + 4, "PDATE")) {
 			// Erase Flash signature forcing it into reprogram mode next reset
-			//EraseFlashSignature(); TODO add this back in later
-			//FLKEY = 0xa5;
-			//FLKEY = 0xf1;
-			//PSCTL = 0x03;				// set PSWE and PSEE
-			//*(uint8_t __xdata *)FLASH_SIGNATURE_BYTES = 0xff;	// do the page erase
-			//PSCTL = 0x00;				// disable PSWE/PSEE
-			
-			// Reset the device using sofware reset
-			//ForceReset(); TODO add this in later
-			//RSTSRC |= 0x10;
-			
-			for (;;)
-				;
+			EraseFlashSignature();
+			// let the watchdog reset it	 TODO enable watchdog
+			while(1);
 		}
 		at_error();
 		break;
@@ -565,8 +557,7 @@ at_plus(void)
 		}
 		idx = 5;
 		at_parse_number();
-		//PCA0CPH0 = at_num & 0xFF; // PCA0 Capture 0 High
-		SetTxPowerLevel(at_num & 0xFF);
+		SetPwmDuty(at_num & 0xFF);
 		radio_set_diversity(false);
     disable_rssi_hunt();
 		at_ok();
