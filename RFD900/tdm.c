@@ -68,7 +68,7 @@ static uint16_t tdm_state_remaining = 100;
 static uint16_t tx_window_width;
 
 /// the maximum data packet size we can fit
-static uint8_t max_data_packet_length;
+static uint16_t max_data_packet_length;
 
 /// the silence period between transmit windows
 /// This is calculated as the number of ticks it would take to transmit
@@ -108,13 +108,13 @@ static uint16_t ticks_per_byte;
 uint16_t transmit_wait;
 
 /// the long term duty cycle we are aiming for
-uint8_t duty_cycle;
+uint16_t duty_cycle;
 
 /// the average duty cycle we have been transmitting
 static float average_duty_cycle;
 
 /// duty cycle offset due to temperature
-uint8_t duty_cycle_offset;
+uint16_t duty_cycle_offset;
 
 /// set to true if we need to wait for our duty cycle average to drop
 static bool duty_cycle_wait;
@@ -123,7 +123,7 @@ static bool duty_cycle_wait;
 static uint16_t transmitted_ticks;
 
 /// the LDB (listen before talk) RSSI threshold
-uint8_t lbt_rssi;
+uint16_t lbt_rssi;
 
 /// how long we have listened for for LBT
 static uint16_t lbt_listen_time;
@@ -136,7 +136,7 @@ static uint16_t lbt_rand;
 
 /// test data to display in the main loop. Updated when the tick
 /// counter wraps, zeroed when display has happened
-uint8_t test_display;
+uint16_t test_display;
 
 /// set when we should send a statistics packet on the next round
 static bool send_statistics;
@@ -152,7 +152,7 @@ enum RSSI_Hunt_ID {
 };
 
 // Varibles used to hunt for a target RSSI by changing the power levels
-uint8_t maxPower, presentPower, target_RSSI, powerHysteresis;
+uint16_t maxPower, presentPower, target_RSSI, powerHysteresis;
 enum RSSI_Hunt_ID Hunt_RSSI;
 
 struct tdm_trailer {
@@ -209,7 +209,7 @@ static void display_test_output(void)
 /// @param packet_len		payload length in bytes
 ///
 /// @return			flight time in 16usec ticks
-static uint16_t flight_time_estimate(uint8_t packet_len)
+static uint16_t flight_time_estimate(uint16_t packet_len)
 {
 	return packet_latency + (packet_len * ticks_per_byte);
 }
@@ -224,7 +224,7 @@ static uint16_t flight_time_estimate(uint8_t packet_len)
 /// The job of this function is to adjust our own transmit window to
 /// match the other radio and thus bring the two radios into sync
 ///
-static void sync_tx_windows(uint8_t packet_length)
+static void sync_tx_windows(uint16_t packet_length)
 {
 	tdm_state_t old_state = tdm_state;
 	uint16_t old_remaining = tdm_state_remaining;
@@ -394,7 +394,7 @@ static void temperature_update(void)
 ///
 static void link_update(void)
 {
-	static uint8_t unlock_count, temperature_count;
+	static uint16_t unlock_count, temperature_count;
 	if (link_active) {
 		unlock_count = 0;
 		link_active = false;
@@ -591,11 +591,11 @@ void tdm_serial_loop(void)
 				//radio_receiver_on();
 		}
 #else
-		uint8_t i;
+		uint16_t i;
 	  for (i=0;i<1;i++) {																													// do a once loop so continue statements work
-		static uint8_t	len;
+		static uint16_t	len;
 		static uint16_t tnow, tdelta;
-		static uint8_t max_xmit;
+		static uint16_t max_xmit;
 
 
 		// give the AT command processor a chance to handle a command
@@ -983,7 +983,7 @@ void
 tdm_init(void)
 {
 	uint16_t i;
-	uint8_t air_rate;
+	uint16_t air_rate;
 	uint32_t window_width;
 	radio_set_diversity(false);
   disable_rssi_hunt();
@@ -997,16 +997,9 @@ tdm_init(void)
 	if (!param_load())
 		param_default();
 
-
-
-
-
-
-
 	uint32_t freq_min, freq_max;
 	uint32_t channel_spacing;
-	uint8_t txpower;
-
+	uint16_t txpower;
 
 	switch (g_board_frequency) {
 	case FREQ_433:
@@ -1107,7 +1100,7 @@ tdm_init(void)
 
 	// add half of the channel spacing, to ensure that we are well
 	// away from the edges of the allowed range
-	freq_min += channel_spacing/2;
+	freq_min += channel_spacing/2; // TODO ADD back in
 
 	// add another offset based on network ID. This means that
 	// with different network IDs we will have much lower
@@ -1119,7 +1112,6 @@ tdm_init(void)
 	debug("freq low=%lu high=%lu spacing=%lu\n",
 	       freq_min, freq_min+(num_fh_channels*channel_spacing),
 	       channel_spacing);
-
 	// set the frequency and channel spacing
 	// change base freq based on netid
 	radio_set_frequency(freq_min);
@@ -1127,9 +1119,21 @@ tdm_init(void)
 	// set channel spacing
 	radio_set_channel_spacing(channel_spacing);
 
+
 	// start on a channel chosen by network ID
 	radio_set_channel(param_s_get(PARAM_NETID) % num_fh_channels);
 
+
+
+
+
+
+	// And intilise the radio with them.
+	if (!radio_configure(param_s_get(PARAM_AIR_SPEED)) &&
+	    !radio_configure(param_s_get(PARAM_AIR_SPEED)) &&
+	    !radio_configure(param_s_get(PARAM_AIR_SPEED))) {
+		panic("radio_configure failed");
+	}
 
 	// report the real air data rate in parameters
 	param_s_set(PARAM_AIR_SPEED, radio_air_rate());
@@ -1145,22 +1149,6 @@ tdm_init(void)
 
 	// initialise frequency hopping system
 	fhop_init(param_s_get(PARAM_NETID));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	air_rate = radio_air_rate();
 

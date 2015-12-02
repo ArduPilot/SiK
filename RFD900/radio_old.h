@@ -156,7 +156,7 @@ extern uint8_t			g_board_bl_version;	///< bootloader version
 /// @param buf			Pointer to storage for the packet
 /// @return			True if a packet was received
 ///
-extern bool radio_receive_packet(uint8_t *length, uint8_t *  buf);
+extern bool radio_receive_packet(uint16_t *length, uint8_t *  buf);
 
 /// test whether the radio has detected a packet preamble
 /// @return			True if a preamble has been detected
@@ -202,7 +202,7 @@ extern uint8_t radio_get_channel(void);
 ///				the next supported value
 /// @return			True if the radio was successfully configured.
 ///
-extern bool radio_configure( uint8_t air_rate);
+extern bool radio_configure( uint16_t air_rate);
 
 /// configure the radio network ID
 /// The network ID is programmed as header bytes, so that packets for

@@ -85,6 +85,7 @@
 //#define APP_RTC_FREQ_HZ 9u																											/* RTC frequency */
 //#define APP_RTC_TIMEOUT_MS ( 1000u / APP_RTC_FREQ_HZ )													/* RTC timeout */
 #define TX_FIFO_TIMEOUT_MS	100L																									// max time to transmit a fifo buffer
+#define RX_FIFO_TIMEOUT_MS	100L																									// max time to transmit a fifo buffer
 // ******************** local variables ******************************
 static uint8_t radioTxPkt[MAX_PACKET_LENGTH+1];
 static uint8_t radioTxCount=0;
@@ -94,10 +95,12 @@ static bool     RxDataIncoming = false;
 static uint8_t radioRxPkt[MAX_PACKET_LENGTH+1];																					/* Rx packet data array */
 
 static RTCDRV_TimerID_t TxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
+static RTCDRV_TimerID_t RxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
 
-static EZRADIODRV_HandleData_t appRadioInitData = EZRADIODRV_INIT_DEFAULT;							/* EZRadio driver init data and handler */
-static EZRADIODRV_Handle_t appRadioHandle = &appRadioInitData;
-
+EZRADIODRV_HandleData_t appRadioInitData = EZRADIODRV_INIT_DEFAULT;							/* EZRadio driver init data and handler */
+EZRADIODRV_Handle_t appRadioHandle = &appRadioInitData;
+static bool TxTimedOut = false;
+static bool RxTimedOut = false;
 // ******************** local function prototypes ********************
 static void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
 static void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
@@ -165,10 +168,18 @@ static int RepeatCallbackRegister (void(*pFunction)(void*),
 static void TxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //TxFifoTimer handle tx fifo not complete interrupt failed
 {
 	(void) id;
-  if(true == appTxActive)
+  if((true == appTxActive)&&(false == TxTimedOut))
   {
-  	appTxActive = false;
-  	ezradioStartRx(RadioHandle);
+  	TxTimedOut = true;
+  }
+}
+
+static void RxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //RxFifoTimer handle rx fifo not complete interrupt failed
+{
+	(void) id;
+  if((true == RxDataIncoming)&&(false == RxTimedOut))
+  {
+  	RxTimedOut = true;
   }
 }
 
@@ -252,6 +263,11 @@ int main(void)
   {
     while (1);
   }
+  if (ECODE_EMDRV_RTCDRV_OK !=
+      RTCDRV_AllocateTimer( &RxFifoTimer) )
+  {
+    while (1);
+  }
 
   Init_debug();																																	// start debugging output
 	hardware_init();																															// Do hardware initialisation
@@ -267,7 +283,24 @@ int main(void)
   /* Enter infinite loop that will take care of ezradio plugin manager and packet transmission. */
   while (1)
   {
-    ezradioPluginManager( appRadioHandle );
+  	if(true == TxTimedOut)
+  	{
+			appTxActive = false;
+			TxTimedOut = false;
+			ezradioResetTRxFifo();
+		  ezradio_get_int_status(0u, 0u, 0u, NULL);
+			ezradioStartRx(appRadioHandle);
+  	}
+  	if(true == RxTimedOut)
+  	{
+  		RxDataIncoming = false;																											// clear incoming, packet arrived
+  		RxTimedOut = false;
+			ezradioResetTRxFifo();
+		  ezradio_get_int_status(0u, 0u, 0u, NULL);
+			ezradioStartRx(appRadioHandle);
+  	}
+
+  	ezradioPluginManager( appRadioHandle );
     tdm_serial_loop();
   }
 }
@@ -306,7 +339,7 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 /// @param len			Pointer to storage for the length of the packet
 /// @param buf			Pointer to storage for the packet
 /// @return			True if a packet was received
-bool radio_receive_packet(uint8_t *length, uint8_t *  buf)
+bool radio_receive_packet(uint16_t *length, uint8_t *  buf)
 {
   if(RxDataReady)
   {
@@ -404,12 +437,15 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
 {
   if ( ECODE_EMDRV_EZRADIODRV_PACKET_RX == status)
   {
+  	RTCDRV_StopTimer(RxFifoTimer);
     RxDataReady = true;
   	RxDataIncoming = false;																											// clear incoming, packet arrived
   }
   else if (ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT == status)
   {
   	RxDataIncoming = true;
+  	RTCDRV_StopTimer(RxFifoTimer);
+  	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);
   }
 }
 
