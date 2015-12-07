@@ -520,7 +520,7 @@
   0x12 /* GROUP: Pkt                                                                                                                                     */,\
   0x01 /* NUM_PROPS                                                                                                                                      */,\
   0x10 /* START_PROP                                                                                                                                     */,\
-  0x80 /* PKT_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],SEND_CRC[5],SEND_ALT_CRC[4],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
+  0x82 /* PKT_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],SEND_CRC[5],SEND_ALT_CRC[4],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_FIELD_1_CRC_CONFIG_LEN (5)
@@ -690,7 +690,7 @@
   0x12 /* GROUP: Pkt                                                                                                            */,\
   0x01 /* NUM_PROPS                                                                                                             */,\
   0x24 /* START_PROP                                                                                                            */,\
-  0x80 /* PKT_RX_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
+  0x82 /* PKT_RX_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_RX_FIELD_1_CRC_CONFIG_LEN (5)
@@ -724,7 +724,7 @@
   0x12 /* GROUP: Pkt                                                                              */,\
   0x01 /* NUM_PROPS                                                                               */,\
   0x28 /* START_PROP                                                                              */,\
-  0x00 /* PKT_RX_FIELD_2_CRC_CONFIG,CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
+  0x0A /* PKT_RX_FIELD_2_CRC_CONFIG,CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_RX_FIELD_2_CRC_CONFIG_LEN (5)
