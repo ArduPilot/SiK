@@ -208,6 +208,7 @@ bool radio_set_channel_spacing( uint32_t value)
 /// @param value		The channel number to select
 void radio_set_channel(uint8_t channel)
 {
+	return;
 	if((channel != appRadioHandle->packetRx.channel)||
 		 (channel !=  appRadioHandle->packetTx.channel))
 	{
