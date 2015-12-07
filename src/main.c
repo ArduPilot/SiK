@@ -87,12 +87,12 @@
 #define TX_FIFO_TIMEOUT_MS	100L																									// max time to transmit a fifo buffer
 #define RX_FIFO_TIMEOUT_MS	100L																									// max time to transmit a fifo buffer
 // ******************** local variables ******************************
-static uint8_t radioTxPkt[MAX_PACKET_LENGTH+1];
+static uint8_t radioTxPkt[MAX_PACKET_LENGTH+3];
 static uint8_t radioTxCount=0;
 static bool     appTxActive = false;																						/* Sign tx active state */
 static bool     RxDataReady = false;
 static bool     RxDataIncoming = false;
-static uint8_t radioRxPkt[MAX_PACKET_LENGTH+1];																					/* Rx packet data array */
+static uint8_t radioRxPkt[MAX_PACKET_LENGTH+3];																					/* Rx packet data array */
 
 static RTCDRV_TimerID_t TxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
 static RTCDRV_TimerID_t RxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
@@ -315,15 +315,17 @@ int main(void)
 bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 {
 	static EZRADIODRV_PacketLengthConfig_t pktLength =
-  {ezradiodrvTransmitLenghtCustomFieldLen,10,{1,9,0,0,0}} ;
+  {ezradiodrvTransmitLenghtCustomFieldLen,10,{2,1,9,0,0}} ;
 	bool Res = false;
 
-	if((!appTxActive)&&(length < sizeof(radioTxPkt)))
+	if((!appTxActive)&&(length <= (sizeof(radioTxPkt)-3)))
 	{
-		pktLength.fieldLen.f2  = length;
-		pktLength.pktLen = length+1;
-		radioTxPkt[0] = length;
-  	memcpy(&radioTxPkt[1],buf,length);
+		pktLength.fieldLen.f3  = length;
+		pktLength.pktLen = length+3;
+		radioTxPkt[0] = 0x55;
+		radioTxPkt[1] = 0xaa;
+		radioTxPkt[2] = length;
+  	memcpy(&radioTxPkt[3],buf,length);
   	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt)));
     if (appTxActive)
     {
@@ -343,12 +345,12 @@ bool radio_receive_packet(uint16_t *length, uint8_t *  buf)
 {
   if(RxDataReady)
   {
-  	*length = radioRxPkt[0];
+  	*length = radioRxPkt[2];
   	if(*length > MAX_PACKET_LENGTH)
   	{
   		*length = MAX_PACKET_LENGTH;
   	}
-  	memcpy(buf,&radioRxPkt[1],*length);
+  	memcpy(buf,&radioRxPkt[3],*length);
   	RxDataReady = false;
   	return(true);
   }
