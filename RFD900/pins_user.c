@@ -39,6 +39,9 @@ GPIO_Config_t gpioValues[GPIO_LAST] =
 		{LED_GREEN   ,gpioModePushPull,0},
 		{PIN_CONFIG	 ,gpioModeInputPull,1},
 		{PIN_ENABLE  ,gpioModePushPull,0},
+		{SERIAL_CTS  ,gpioModePushPull,0},
+		{SERIAL_RTS  ,gpioModeInputPull,0},
+
 };
 
 PINS_USER_Config_t pins_user_map[PINS_USER_LAST] =

@@ -1114,7 +1114,7 @@ tdm_init(void)
 	       channel_spacing);
 	// set the frequency and channel spacing
 	// change base freq based on netid
-	radio_set_frequency(freq_min);
+	radio_set_frequency(freq_min);																								// 915373412
 
 	// set channel spacing
 	radio_set_channel_spacing(channel_spacing);
@@ -1156,7 +1156,7 @@ tdm_init(void)
 	feature_mavlink_framing = param_s_get(PARAM_MAVLINK);
 	feature_opportunistic_resend = param_s_get(PARAM_OPPRESEND)?true:false;
 	feature_golay = param_s_get(PARAM_ECC)?true:false;
-	//feature_rtscts = param_s_get(PARAM_RTSCTS)?true:false;
+	feature_rtscts = param_s_get(PARAM_RTSCTS)?true:false;
 
 #define REGULATORY_MAX_WINDOW (((1000000UL/16)*4)/10)
 #define LBT_MIN_TIME_USEC 5000

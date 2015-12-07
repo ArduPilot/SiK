@@ -443,6 +443,10 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
   }
   else if (ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT == status)
   {
+  	static 	ezradio_cmd_reply_t ezradioReply;
+  	extern uint8_t lastRSSI;
+  	ezradio_get_modem_status(0x00,&ezradioReply);
+  	lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
   	RxDataIncoming = true;
   	RTCDRV_StopTimer(RxFifoTimer);
   	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);

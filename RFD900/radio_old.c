@@ -19,6 +19,8 @@
 #include "ezradio_api_lib.h"
 #include "ezradio_plugin_manager.h"
 #include "ezradio_prop.h"
+#include "ezradio_api_lib_add.h"
+#include "parameters.h"
 
 // ******************** defines and typedefs *************************
 #define NUM_DATA_RATES 13
@@ -33,7 +35,7 @@ typedef union{
 } longin_t;
 // ******************** local variables ******************************
 // the power_levels array define 8 bit PWM values for each respective power level starting at ??dBm TODO this default table must be filled with close values
-static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211, 206, 201, 196, 190, 184, 178, 171, 164, 150, 136, 80 };
+static const uint8_t power_levels[NUM_POWER_LEVELS] = {80,136,150,164,171,178,184,190,196,201,206,211,218,224,230,235};
 static 	ezradio_cmd_reply_t ezradioReply;
 static const uint32_t FCODIV[8] = {4,6,8,12,16,24,24,24};
 static const uint32_t NPRESC[2] = {4,2};
@@ -42,7 +44,7 @@ static const uint32_t NPRESC[2] = {4,2};
 bool feature_golay = false;
 bool feature_opportunistic_resend = false;
 uint8_t feature_mavlink_framing = false;
-bool feature_rtscts = false;
+bool feature_rtscts = true;
 statistics_t statistics, remote_statistics;
 error_counts_t errors={0};
 
@@ -52,9 +54,9 @@ const char 		g_banner_string[] ="yoyo";	///< printable startup banner string
 enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
 uint8_t			g_board_bl_version;	///< bootloader version
 
-static const uint8_t air_data_rates[NUM_DATA_RATES] = {
-	2,	4,	8,	16,	19,	24,	32,	48,	64,	96,	128,	192,	250
-};
+//static const uint8_t air_data_rates[NUM_DATA_RATES] = {
+//	2,	4,	8,	16,	19,	24,	32,	48,	64,	96,	128,	192,	250
+//};
 
 radio_settings_t settings= {
 	915000000UL,//uint32_t frequency;
@@ -62,11 +64,12 @@ radio_settings_t settings= {
 	64,//uint8_t air_data_rate;
 	0,//uint8_t current_channel;
 	0,//uint8_t transmit_power;
-	16//uint8_t preamble_length; // in nibbles
+	16,//uint8_t preamble_length; // in nibbles
+	0// networkID
 } ;
 
-extern EZRADIODRV_HandleData_t appRadioInitData;
 extern EZRADIODRV_Handle_t appRadioHandle;
+uint8_t lastRSSI=0;
 // ******************** local function prototypes ********************
 // ********************* Implementation ******************************
 /// Print a message and halt, largely for debug purposes
@@ -104,6 +107,7 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 /// @return			Always true.
 bool radio_receiver_on(void)
 {
+//TODO reset stuff when this called
 #if 0
 	packet_received = 0;
 	receive_packet_length = 0;
@@ -219,6 +223,7 @@ void radio_set_channel(uint8_t channel)
 	  	  ezradio_change_state(EZRADIO_CMD_CHANGE_STATE_ARG_NEXT_STATE1_NEW_STATE_ENUM_READY);
 				ezradioStartRx(appRadioHandle);
 				// TODO clear radio fifos and state variables
+				 // TODO might be better to use RX hop for this in case we interrupt a receive process
 	  	}
 	  }
 	}
@@ -264,6 +269,12 @@ bool radio_configure( uint16_t air_rate)
 			ModemRate.b[2],ModemRate.b[1],ModemRate.b[0]);
 
 	// TODO we will also need to set deviation and rx bandwidth and modulation type 2G or 4G
+	// modulation type MODEM_MOD_TYPEGroup: 0x20 Index: 0x00 MOD_TYPE
+	// deviation MODEM_FREQ_DEV Group: 0x20 Indexes: 0x0a ... 0x0c
+	// MODEM_FREQ_DEV = (2^19*outdiv*desired_Dev_Hz)/(NPRESC*freq_xo)
+	//For 2(G)FSK mode, the specified value is the peak deviation. For 4(G)FSK mode (if supported), the specified value is the inner deviation (i.e., between channel center frequency and the nearest symbol deviation level).
+	// rx bandwidth
+	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
 	return(true);
 }
 
@@ -273,9 +284,9 @@ bool radio_configure( uint16_t air_rate)
 /// @param id			The network ID to be sent, and to filter on reception
 void radio_set_network_id(uint16_t id)
 {
+	settings.networkID = id;
 	// TODO network Id needs to be part of the packet and I think use packet
 	// matching to reject packets with not your network ID
-
 }
 
 /// fetch the signal strength recorded for the most recent preamble
@@ -283,16 +294,16 @@ void radio_set_network_id(uint16_t id)
 ///				the last time a valid preamble was detected.
 uint8_t radio_last_rssi(void)
 {
-	//GET_MODEM_STATUS latch
-	return(0);
+	return(lastRSSI);
 }
 
 /// fetch the current signal strength for LBT
 /// @return			The RSSI register as reported by the radio
 uint8_t radio_current_rssi(void)
 {
-	//GET_MODEM_STATUS CURR
-	return(0);
+	ezradio_get_modem_status(0x00,&ezradioReply);
+	lastRSSI = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
+	return(lastRSSI);
 }
 
 /// return the air data rate
@@ -307,7 +318,7 @@ uint8_t radio_air_rate(void)
 /// @param power		The desired transmit power in dBm
 void radio_set_transmit_power(uint8_t power)
 {
-#if 0
+
 	uint8_t i;
 	ezradio_set_property(EZRADIO_PROP_GRP_ID_PA, 1u,
 			EZRADIO_PROP_GRP_INDEX_PA_PWR_LVL,RFD900_INT_TX_POW);
@@ -323,7 +334,6 @@ void radio_set_transmit_power(uint8_t power)
 		SetPwmDuty(power_levels[i]);
 		settings.transmit_power = i * POWER_LEVEL_STEP;
 	}
-#endif
 }
 
 /// set the radio transmit power (in dBm)

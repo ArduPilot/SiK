@@ -26,11 +26,6 @@ void InitPWM(void)
 {
 	CMU_ClockEnable(cmuClock_PWMTIMER, true);
 	GPIO_PinModeSet(PWM_PORT, PWM_PIN, gpioModePushPull, 0);
-	SetPwmDuty(0x00);
-}
-
-void SetPwmDuty(uint8_t Duty8Bit)
-{
 	uint32_t Top;
 	TIMER_InitCC_TypeDef timerCCInit =
 	{
@@ -68,8 +63,15 @@ void SetPwmDuty(uint8_t Duty8Bit)
 	Top = 0xff;
 	// Freq = (28000000UL/256) = 109375 := 100Khz
 	TIMER_TopSet(PWMTIMER,Top);
-	TIMER_CompareSet(PWMTIMER,PWMCCX,Duty8Bit);			// set on time
+	TIMER_CompareSet(PWMTIMER,PWMCCX,0x00);			// set on time
 	TIMER_Init(PWMTIMER, &timerInit);
+}
+
+
+
+void SetPwmDuty(uint8_t Duty8Bit)
+{
+	TIMER_CompareBufSet(PWMTIMER,PWMCCX,Duty8Bit);			// set on time, use buffered so no glitches
 }
 
 // ********************* PWM.c ***************************************

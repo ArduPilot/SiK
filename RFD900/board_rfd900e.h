@@ -81,6 +81,8 @@ typedef enum {
   GPIO_LED_GREEN	,
   GPIO_PIN_CONFIG ,
   GPIO_PIN_ENABLE ,
+  GPIO_PIN_CTS,
+  GPIO_PIN_RTS,
   GPIO_LAST
 } GPIO_SELECT_TypeDef;
 
@@ -93,6 +95,9 @@ typedef struct{
 #define LED_GREEN			{gpioPortF,10}
 #define PIN_CONFIG		{gpioPortC, 6}
 #define PIN_ENABLE		{gpioPortD, 8}
+
+#define SERIAL_CTS				{gpioPortC,6}
+#define SERIAL_RTS        {gpioPortD,8}
 
 #define P1_0				  {gpioPortD, 2}
 #define P1_1				  {gpioPortD, 3}

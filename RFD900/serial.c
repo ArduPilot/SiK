@@ -20,9 +20,7 @@
 #include "pins_user.h"
 #include "uart_config.h"
 
-
-static UART_Config_t UART_Config = UART_SETUP;
-
+// ******************** defines and typedefs *************************
 ///
 /// Table of supported serial speed settings.
 /// the table is looked up based on the 'one byte'
@@ -34,6 +32,14 @@ typedef struct {
 	uint32_t BAUD;
 } serial_rates_t;
 
+#define RX_BUFF_MAX 2048
+#define TX_BUFF_MAX 1024
+
+// threshold for considering the rx buffer full
+#define SERIAL_CTS_THRESHOLD_LOW  17
+#define SERIAL_CTS_THRESHOLD_HIGH 34
+// ******************** local variables ******************************
+static UART_Config_t UART_Config = UART_SETUP;
 static const 	serial_rates_t serial_rates[] = {
 	{1,   1200  }, // 1200
 	{2,   2400  }, // 2400
@@ -45,7 +51,6 @@ static const 	serial_rates_t serial_rates[] = {
 	{115, 115200}, // 115200
 	{230, 230400}, // 230400
 };
-
 // Serial rx/tx buffers.
 //
 // Note that the rx buffer is much larger than you might expect
@@ -54,11 +59,9 @@ static const 	serial_rates_t serial_rates[] = {
 // would be about 16x larger than the largest air packet if we have
 // 8 TDM time slots
 //
-#define RX_BUFF_MAX 2048
-#define TX_BUFF_MAX 1024
 
-uint8_t rx_buf[RX_BUFF_MAX] = {0};
-uint8_t tx_buf[TX_BUFF_MAX] = {0};
+static uint8_t rx_buf[RX_BUFF_MAX] = {0};
+static uint8_t tx_buf[TX_BUFF_MAX] = {0};
 
 // FIFO insert/remove pointers
 static volatile uint16_t				rx_insert, rx_remove;
@@ -67,6 +70,8 @@ static volatile uint16_t				tx_insert, tx_remove;
 // flag indicating the transmitter is idle
 static volatile bool			tx_idle;
 
+// ******************** global variables *****************************
+// ******************** local function prototypes ********************
 // FIFO status
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
 #define BUF_NEXT_REMOVE(_b)	((_b##_remove + 1) == sizeof(_b##_buf)?0:(_b##_remove + 1))
@@ -96,16 +101,8 @@ static void			_serial_write(register uint8_t c);
 static void			serial_restart(void);
 static uint8_t serial_device_set_speed(register uint8_t speed);
 
-// save and restore serial interrupt. We use this rather than
-// to ensure we don't disturb the timer interrupt at all.
-// minimal tick drift is critical for TDM
-//#define ES0_SAVE_DISABLE __bit ES_saved = ES0; ES0 = 0
-//#define ES0_RESTORE ES0 = ES_saved
-
-// threshold for considering the rx buffer full
-#define SERIAL_CTS_THRESHOLD_LOW  17
-#define SERIAL_CTS_THRESHOLD_HIGH 34
-
+__STATIC_INLINE void XUARTX_RX_IRQHandler(uint8_t c);
+// ********************* Implementation ******************************
 
 __STATIC_INLINE void XUARTX_RX_IRQHandler(uint8_t c)
 {
@@ -166,13 +163,6 @@ __STATIC_INLINE void XUARTX_TX_IRQHandler(LEUART_TypeDef* LEUARTX,USART_TypeDef*
 #endif
 		// fetch and send a byte
 		BUF_REMOVE(tx, c);
-/*
-		if(NULL != LEUARTX)
-		{
-			LEUART_Tx(LEUARTX, c);
-		}
-		else
-*/
 		{
 			USART_Tx(USARTX, c);
 		}
@@ -199,9 +189,6 @@ __STATIC_INLINE void USARTX_TX_IRQHandler(USART_TypeDef* USARTX)
 // remove any not needed, or leave them
 void USART1_RX_IRQHandler(void){	USARTX_RX_IRQHandler(USART1);}
 void USART1_TX_IRQHandler(void){	USARTX_TX_IRQHandler(USART1);}
-
-
-
 
 
 /// check if RTS allows us to send more data
@@ -380,7 +367,7 @@ uint16_t serial_write_space(void)
 static void serial_restart(void)
 {
 #ifdef SERIAL_RTS
-	if (feature_rtscts && SERIAL_RTS && !at_mode_active) {
+	if (feature_rtscts && GPIOGet(UART_Config.GPIORTS) && !at_mode_active) {
 		// the line is blocked by hardware flow control
 		return;
 	}
@@ -548,5 +535,4 @@ static uint8_t serial_device_set_speed(register uint8_t speed)
 }
 
 
-
-
+// **************************** end of seial.c *********************************

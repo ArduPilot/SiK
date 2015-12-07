@@ -145,26 +145,25 @@ static bool delay_expired(void)
 
 void TIMER2_IRQHandler(void)
 {
-  /* Clear flag for TIMER1 overflow interrupt */
+  static uint8_t rtscheck = 0;
+	/* Clear flag for TIMER1 overflow interrupt */
   TIMER_IntClear(TIMER2, TIMER_IF_OF);
 	// call the AT parser tick
 	at_timer();
-
+	if(++rtscheck == 3)	//call rts check approx every 30mS
+	{
+		if (feature_rtscts) {serial_check_rts();}
+		rtscheck = 0;
+	}
 	// update the delay counter
 	if (delay_counter > 0)
 		delay_counter--;
 }
 void TIMER1_IRQHandler(void)
 {
-  /* Clear flag for TIMER2 overflow interrupt */
+  /* Clear flag for TIMER1 overflow interrupt */
   TIMER_IntClear(TIMER1, TIMER_IF_OF);
   TdmTicks ++;
-/*
-  timer2_high++;
-	if (feature_rtscts) {
-		serial_check_rts();
-	}
-*/
 }
 
 

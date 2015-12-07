@@ -106,6 +106,7 @@ typedef struct{
 	uint8_t current_channel;
 	uint8_t transmit_power;
 	uint8_t preamble_length; // in nibbles
+	uint16_t networkID;
 } radio_settings_t;
 
 enum BoardFrequency {

@@ -12,7 +12,7 @@
 #include "em_cmu.h"
 #include "em_usart.h"
 #include "em_leuart.h"
-
+#include "board_rfd900e.h"
 
 // Please don't touch settings below :)
 
@@ -51,14 +51,15 @@ typedef struct {
     Parity_TypeDef      Parity;     // parity
     Stopbits_TypeDef    Stopbits;   // stopbits
     CMU_Clock_TypeDef   clock;      // le/Us art clock - eg cmuClock_USART1
+    GPIO_SELECT_TypeDef GPIOCTS;			// CTS pin
+    GPIO_SELECT_TypeDef GPIORTS;			// RTS pin
 } UART_Config_t;
-
 
 
 // set up serial port usart1 loc #2
 
 #define UART_SETUP  \
-{57600, USART1   , NULL, USART_ROUTE_LOCATION_LOC2, Databits8 , NoParity , Stopbits1 , cmuClock_USART1}
+{57600, USART1   , NULL, USART_ROUTE_LOCATION_LOC2, Databits8 , NoParity , Stopbits1 , cmuClock_USART1,GPIO_PIN_CTS,GPIO_PIN_RTS}
 
 
 #endif /* UART_CONFIG_H_ */
