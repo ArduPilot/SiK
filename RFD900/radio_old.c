@@ -285,9 +285,16 @@ bool radio_configure( uint16_t air_rate)
 /// @param id			The network ID to be sent, and to filter on reception
 void radio_set_network_id(uint16_t id)
 {
+	longin_t val;
+	val.L = id;
 	settings.networkID = id;
-	// TODO network Id needs to be part of the packet and I think use packet
-	// matching to reject packets with not your network ID
+	// packet format is [preamble(16)][sync(2)][id(2)][length(1)][data(N)][CRC]
+	//#define RF_SET_PROPERTY_MATCH_VALUE_3 0x11, 0x30, 0x01, 0x06, 0x55
+	//#define RF_SET_PROPERTY_MATCH_VALUE_4 0x11, 0x30, 0x01, 0x09, 0xAA
+	ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
+			EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_3,val.b[1]);
+	ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
+			EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_4,val.b[0]);
 }
 
 /// fetch the signal strength recorded for the most recent preamble

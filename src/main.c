@@ -322,8 +322,8 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 	{
 		pktLength.fieldLen.f3  = length;
 		pktLength.pktLen = length+3;
-		radioTxPkt[0] = 0x55;
-		radioTxPkt[1] = 0xaa;
+		radioTxPkt[0] = ((settings.networkID>>8)&0xFF);
+		radioTxPkt[1] = ((settings.networkID)&0xFF);
 		radioTxPkt[2] = length;
   	memcpy(&radioTxPkt[3],buf,length);
   	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt)));
