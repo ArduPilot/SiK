@@ -10,19 +10,17 @@
 
 #define USTIMER_TIMER USTIMER_TIMER0
 
-#define TDMTIMER 									 TIMER1
-#define TDMTIMER_cmuClock cmuClock_TIMER1
-#define TDMTIMER_IRQn								TIMER1_IRQn
-#define TDMTIMERLOC 			TIMER_ROUTE_LOCATION_LOC2
-#define TDMTIMER_CCX			1
-#define TDMTIMER_ROUTE_CC TIMER_ROUTE_CC1PEN
+#define TDMTIMER1									 TIMER1
+#define TDMTIMER1_cmuClock cmuClock_TIMER1
+#define TDMTIMER1_IRQn								TIMER1_IRQn
 
-#define MSTIMER 									TIMER2
-#define MSTIMER_cmuClock cmuClock_TIMER2
-#define MSTIMER_IRQn								TIMER2_IRQn
-#define MSTIMERLOC 			TIMER_ROUTE_LOCATION_LOC2
-#define MSTIMER_CCX			1
-#define MSTIMER_ROUTE_CC TIMER_ROUTE_CC1PEN
+#define TDMTIMER2									 TIMER2
+#define TDMTIMER2_cmuClock cmuClock_TIMER2
+#define TDMTIMER2_IRQn								TIMER2_IRQn
+
+#define MSTIMER 									LETIMER0
+#define MSTIMER_cmuClock 					cmuClock_LETIMER0
+#define MSTIMER_IRQn							LETIMER0_IRQn
 
 #define PWMTIMER TIMER3
 #define cmuClock_PWMTIMER  cmuClock_TIMER3

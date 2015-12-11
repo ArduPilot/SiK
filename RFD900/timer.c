@@ -13,6 +13,7 @@
 #include "at.h"
 #include "serial.h"
 #include "timer_config.h"
+#include "em_letimer.h"
 
 
 // ******************** defines and typedefs *************************
@@ -21,12 +22,11 @@
 
 // ******************** local variables ******************************
 static volatile uint8_t delay_counter;																					/// Counter used by delay_msec
-//static uint32_t TdmTicks=0;
 // ******************** global variables *****************************
 // ******************** local function prototypes ********************
 static void delay_set(register uint16_t msec);
 static bool delay_expired(void);
-
+static void mSTimer_Init(void);
 // ********************* Implementation ******************************
 void delay_msec(register uint16_t msec)
 {
@@ -39,50 +39,28 @@ void delay_msec(register uint16_t msec)
 // one second intervals
 uint16_t timer2_tick(void)
 {
-	return(TIMER_CounterGet(TDMTIMER));
-  //return(TdmTicks>>TDMSHIFT);
+	return(TIMER_CounterGet(TDMTIMER2));
 }
 
 // initialise timers
 void timer_init(void)
 {
-	// set up 100Hz timer interrupt at 100Hz
-	// and 2 041 667 Hz 16 bit timer, interrupt on overflow only (31Hz)
-	// system clock should be 32Mhz divides by 1-32768 in powers of  for hfper
-	// and  1-1024 for timer module
-  // divide by 16 to get 2Mhz
-
-	// timer 3 should be a 10 mS or 100hz freq
-	// timer 2 should be a free running counter rolling over 0xffff at 1S interval,T=15.2587uS, f =65536
-	// clock is 28Mhz /512 = 54687Hz , 0xffff roll over at ~ 1.2S
+	// set up 100Hz ms timer interrupt at 100Hz
+	// set up cascaded timers to generate 64250 Hz 16 bit free running timer
+	// similar to the old system
 	// original timer was based on 24500000 Clock /12 = 2.041666 Mhz / (1<<5=32) = 63.802 Khz rollover @ ~ 1.03S
-	// take 11 high bits from the counter, and 5 low bits from the rollover of that counter
-  // timer entropy was read from lower 16 bit of counter
+	// just use 1 bit of 16 bit timer for entropy, should be good enough
 
-  CMU_ClockDivSet(cmuClock_HFPER,cmuClkDiv_1); // set divide for phfper clk
-  CMU_ClockEnable(TDMTIMER_cmuClock, true);		 /* Enable clock for TDMTIMER module */
-  CMU_ClockEnable(MSTIMER_cmuClock, true);		 /* Enable clock for MSTIMER module */
-
-  TIMER_Init_TypeDef mStimerInit =							 /* Select MSTIMER parameters */
-  {
-    .enable     = true,
-    .debugRun   = false,
-    .prescale   = timerPrescale16,
-    .clkSel     = timerClkSelHFPerClk,
-    .fallAction = timerInputActionNone,
-    .riseAction = timerInputActionNone,
-    .mode       = timerModeUp,
-    .dmaClrAct  = false,
-    .quadModeX4 = false,
-    .oneShot    = false,
-    .sync       = false,
-  };
+  CMU_ClockDivSet(cmuClock_HFPER,cmuClkDiv_1); 																	// set divide for hfper clk
+  CMU_ClockEnable(TDMTIMER1_cmuClock, true);		 																/* Enable clock for TDMTIMER1 module */
+  CMU_ClockEnable(TDMTIMER2_cmuClock, true);		 																/* Enable clock for TDMTIMER2 module */
+  mSTimer_Init();
 
   TIMER_Init_TypeDef tdmtimerInit =						   /* Select TDMTIMER parameters */
   {
     .enable     = true,
     .debugRun   = false,
-    .prescale   = timerPrescale512,
+    .prescale   = timerPrescale1,
     .clkSel     = timerClkSelHFPerClk,
     .fallAction = timerInputActionNone,
     .riseAction = timerInputActionNone,
@@ -93,28 +71,34 @@ void timer_init(void)
     .sync       = false,
   };
 
-	uint32_t Count = CMU_ClockFreqGet(cmuClock_HFPER);
-	Count = (Count/(100*16));
-  TIMER_TopSet(MSTIMER, Count);							  /* Set TIMER Top value */
-  TIMER_IntEnable(MSTIMER, TIMER_IF_OF); 		  /* Enable overflow interrupt */
-  NVIC_EnableIRQ(MSTIMER_IRQn);   						  /* Enable TIMER1 interrupt vector in NVIC */
-  TIMER_Init(MSTIMER, &mStimerInit);						/* Configure TIMER */
+  uint32_t Count = ((CMU_ClockFreqGet(cmuClock_HFPER)+TDMFREQ)/TDMFREQ)-1;
+  TIMER_TopSet(TDMTIMER1, Count); 						/* Set TIMER Top value */
+  TIMER_Init(TDMTIMER1, &tdmtimerInit);						/* Configure TIMER */
 
+  TIMER_Init_TypeDef tdmtimerInit2 =						   /* Select TDMTIMER parameters */
+  {
+    .enable     = true,
+    .debugRun   = false,
+    .prescale   = timerPrescale1,
+    .clkSel     = timerClkSelCascade,
+    .fallAction = timerInputActionNone,
+    .riseAction = timerInputActionNone,
+    .mode       = timerModeUp,
+    .dmaClrAct  = false,
+    .quadModeX4 = false,
+    .oneShot    = false,
+    .sync       = false,
+  };
 
-	//Count = ((CMU_ClockFreqGet(cmuClock_HFPER)+TDMFREQ)/TDMFREQ)-1;
-	Count = 0XFFFF;
-  TIMER_TopSet(TDMTIMER, Count); 						/* Set TIMER Top value */
-  //TIMER_IntEnable(TDMTIMER, TIMER_IF_OF); 		/* Enable overflow interrupt */
-  //NVIC_EnableIRQ(TDMTIMER_IRQn);   						/* Enable TDMTIMER interrupt vector in NVIC */
-  TIMER_Init(TDMTIMER, &tdmtimerInit);						/* Configure TIMER */
+  TIMER_TopSet(TDMTIMER2, 0xffff); 						/* Set TIMER Top value */
+  TIMER_Init(TDMTIMER2, &tdmtimerInit2);						/* Configure TIMER */
 }
 
 // return some entropy
 uint8_t timer_entropy(void)
 {
 	// use the SYSCLK/12 timer
-	return(TIMER_CounterGet(TDMTIMER));
-	//return((uint8_t)TdmTicks);
+	return(TIMER_CounterGet(TDMTIMER2));
 }
 
 // ********************* Implementation local functions **************
@@ -133,12 +117,40 @@ static bool delay_expired(void)
 	return delay_counter == 0;
 }
 
-
-void TIMER2_IRQHandler(void)
+static void mSTimer_Init(void)
 {
+  CMU_ClockSelectSet( cmuClock_LFA, cmuSelect_LFRCO );													// note rtc timer already sets this
+	CMU_ClockEnable(cmuClock_CORELE, true);
+	CMU_ClockDivSet(MSTIMER_cmuClock, cmuClkDiv_1);
+	CMU_ClockEnable(MSTIMER_cmuClock, true);
+
+	uint32_t Count = CMU_ClockFreqGet(MSTIMER_cmuClock)/100;
+	LETIMER_CompareSet(LETIMER0, 0, Count);
+
+	const LETIMER_Init_TypeDef letimerInit =
+	{
+	.enable         = true,                   /* Start counting when init completed. */
+	.debugRun       = true,                  /* Counter shall not keep running during debug halt. */
+	.rtcComp0Enable = false,                  /* Don't start counting on RTC COMP0 match. */
+	.rtcComp1Enable = false,                  /* Don't start counting on RTC COMP1 match. */
+	.comp0Top       = true,                   /* Load COMP0 register into CNT when counter underflows. COMP0 is used as TOP */
+	.bufTop         = false,                  /* Don't load COMP1 into COMP0 when REP0 reaches 0. */
+	.out0Pol        = 0,                      /* Idle value for output 0. */
+	.out1Pol        = 0,                      /* Idle value for output 1. */
+	.ufoa0          = letimerUFOANone,         /* PWM output on output 0 */
+	.ufoa1          = letimerUFOANone,       /* Pulse output on output 1*/
+	.repMode        = letimerRepeatFree       /* Count until stopped */
+	};
+
+	LETIMER_IntEnable(MSTIMER,LETIMER_IF_UF);
+  NVIC_EnableIRQ(MSTIMER_IRQn);
+	LETIMER_Init(MSTIMER, &letimerInit);
+}
+
+void LETIMER0_IRQHandler(void)
+{
+  LETIMER_IntClear(LETIMER0, LETIMER_IF_UF);
   static uint8_t rtscheck = 0;
-	/* Clear flag for TIMER1 overflow interrupt */
-  TIMER_IntClear(TIMER2, TIMER_IF_OF);
 	// call the AT parser tick
 	at_timer();
 	if(++rtscheck == 3)	//call rts check approx every 30mS
@@ -150,14 +162,5 @@ void TIMER2_IRQHandler(void)
 	if (delay_counter > 0)
 		delay_counter--;
 }
-#if 0
-void TIMER1_IRQHandler(void)
-{
-  /* Clear flag for TIMER1 overflow interrupt */
-  TIMER_IntClear(TIMER1, TIMER_IF_OF);
-  TdmTicks ++;
-}
-#endif
-
 
 // ********************* end of timer.c ******************************
