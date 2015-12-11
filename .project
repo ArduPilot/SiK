@@ -19,101 +19,6 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Drivers/dmactrl.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/kits/common/drivers/dmactrl.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/dmadrv.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/dmadrv/src/dmadrv.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_api_lib.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/common/src/ezradio_api_lib.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_auto_ack_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_auto_ack_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_comm.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/common/src/ezradio_comm.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_crcerror_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_crcerror_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_direct_receive_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_direct_receive_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_direct_transmit_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_direct_transmit_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_hal.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/common/src/ezradio_hal.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_plugin_manager.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_plugin_manager.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_pn9_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_pn9_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_receive_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_receive_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_transmit_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_transmit_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ezradio_unmod_carrier_plugin.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/plugins/src/ezradio_unmod_carrier_plugin.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/gpiointerrupt.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/gpiointerrupt/src/gpiointerrupt.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/rtcdriver.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/rtcdrv/src/rtcdriver.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/spidrv.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/spidrv/src/spidrv.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/udelay.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/kits/common/drivers/udelay.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/ustimer.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ustimer/src/ustimer.c</locationURI>
-		</link>
-		<link>
 			<name>emlib/em_assert.c</name>
 			<type>1</type>
 			<locationURI>STUDIO_SDK_LOC/emlib/src/em_assert.c</locationURI>
@@ -182,11 +87,6 @@
 			<name>CMSIS/ezr32lg/system_ezr32lg.c</name>
 			<type>1</type>
 			<locationURI>STUDIO_SDK_LOC/Device/SiliconLabs/EZR32LG/Source/system_ezr32lg.c</locationURI>
-		</link>
-		<link>
-			<name>Drivers/si4x6x/ezradio_api_lib_add.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emdrv/ezradiodrv/common/src/si4x6x/ezradio_api_lib_add.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -66,6 +66,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib/dmd/ssd2119&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/common/bsp&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/DriversLocal/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/RadioConfig}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/SLWSTK6202A_EZR32LG/examples/ezradio_simple_trx/config&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/SLWSTK6202A_EZR32LG/examples/ezradio_simple_trx/config/RadioConfig&quot;"/>
@@ -106,6 +107,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib/dmd/ssd2119&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/common/bsp&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/DriversLocal/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/SLWSTK6202A_EZR32LG/examples/ezradio_simple_trx/config&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/SLWSTK6202A_EZR32LG/examples/ezradio_simple_trx/config/RadioConfig&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/kits/SLWSTK6202A_EZR32LG/examples/ezradio_simple_trx&quot;"/>
@@ -135,7 +137,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -268,7 +270,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -418,7 +420,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="CMSIS/ezr32lg/startup_gcc_ezr32lg.s|src/ATCmds.c|src/Serial.c|CMSIS/ezr32lg|emlib|Drivers/si4x6x|Drivers/dmadrv.c|Drivers/ezradio_api_lib.c|Drivers/ezradio_comm.c|Drivers/ezradio_hal.c|Drivers/ezradio_auto_ack_plugin.c|Drivers/ezradio_crcerror_plugin.c|Drivers/ezradio_direct_receive_plugin.c|Drivers/ezradio_direct_transmit_plugin.c|Drivers/ezradio_plugin_manager.c|Drivers/ezradio_pn9_plugin.c|Drivers/ezradio_receive_plugin.c|Drivers/ezradio_transmit_plugin.c|Drivers/ezradio_unmod_carrier_plugin.c|Drivers/gpiointerrupt.c|Drivers/rtcdriver.c|Drivers/spidrv.c|Drivers/ustimer.c|Drivers/display.c|Drivers/displayls013b7dh03.c|Drivers/displaypalemlib.c|Drivers/dmactrl.c|Drivers/retargetio.c|Drivers/retargettextdisplay.c|Drivers/textdisplay.c|Drivers/udelay.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Drivers|CMSIS/ezr32lg/startup_gcc_ezr32lg.s|src/ATCmds.c|src/Serial.c|CMSIS/ezr32lg|emlib|Drivers/si4x6x|Drivers/dmadrv.c|Drivers/ezradio_api_lib.c|Drivers/ezradio_comm.c|Drivers/ezradio_hal.c|Drivers/ezradio_auto_ack_plugin.c|Drivers/ezradio_crcerror_plugin.c|Drivers/ezradio_direct_receive_plugin.c|Drivers/ezradio_direct_transmit_plugin.c|Drivers/ezradio_plugin_manager.c|Drivers/ezradio_pn9_plugin.c|Drivers/ezradio_receive_plugin.c|Drivers/ezradio_transmit_plugin.c|Drivers/ezradio_unmod_carrier_plugin.c|Drivers/gpiointerrupt.c|Drivers/rtcdriver.c|Drivers/spidrv.c|Drivers/ustimer.c|Drivers/display.c|Drivers/displayls013b7dh03.c|Drivers/displaypalemlib.c|Drivers/dmactrl.c|Drivers/retargetio.c|Drivers/retargettextdisplay.c|Drivers/textdisplay.c|Drivers/udelay.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
