@@ -1001,6 +1001,10 @@ tdm_init(void)
 	uint32_t channel_spacing;
 	uint16_t txpower;
 
+	if (!radio_initialise()) {
+		panic("radio_initialise failed");
+	}
+
 	switch (g_board_frequency) {
 	case FREQ_433:
 		freq_min = 433050000UL;

@@ -21,7 +21,7 @@
 
 // ******************** local variables ******************************
 static volatile uint8_t delay_counter;																					/// Counter used by delay_msec
-static uint32_t TdmTicks=0;
+//static uint32_t TdmTicks=0;
 // ******************** global variables *****************************
 // ******************** local function prototypes ********************
 static void delay_set(register uint16_t msec);
@@ -39,18 +39,8 @@ void delay_msec(register uint16_t msec)
 // one second intervals
 uint16_t timer2_tick(void)
 {
-	return(TdmTicks>>TDMSHIFT);
-	//return(TIMER_CounterGet(TDMTIMER));
-#if 0
-	register uint16_t low, high;
-	do {
-		high = timer2_high;
-		low = TIMER_CounterGet(TDMTIMER);
-	} while (high != timer2_high);
-	// take 11 high bits from the 2MHz counter, and 5 low bits
-	// from the rollover of that counter
-	return (high<<11) | (low>>5);
-#endif
+	return(TIMER_CounterGet(TDMTIMER));
+  //return(TdmTicks>>TDMSHIFT);
 }
 
 // initialise timers
@@ -92,7 +82,7 @@ void timer_init(void)
   {
     .enable     = true,
     .debugRun   = false,
-    .prescale   = timerPrescale1,
+    .prescale   = timerPrescale512,
     .clkSel     = timerClkSelHFPerClk,
     .fallAction = timerInputActionNone,
     .riseAction = timerInputActionNone,
@@ -111,11 +101,11 @@ void timer_init(void)
   TIMER_Init(MSTIMER, &mStimerInit);						/* Configure TIMER */
 
 
-
-	Count = ((CMU_ClockFreqGet(cmuClock_HFPER)+TDMFREQ)/TDMFREQ)-1;
+	//Count = ((CMU_ClockFreqGet(cmuClock_HFPER)+TDMFREQ)/TDMFREQ)-1;
+	Count = 0XFFFF;
   TIMER_TopSet(TDMTIMER, Count); 						/* Set TIMER Top value */
-  TIMER_IntEnable(TDMTIMER, TIMER_IF_OF); 		/* Enable overflow interrupt */
-  NVIC_EnableIRQ(TDMTIMER_IRQn);   						/* Enable TDMTIMER interrupt vector in NVIC */
+  //TIMER_IntEnable(TDMTIMER, TIMER_IF_OF); 		/* Enable overflow interrupt */
+  //NVIC_EnableIRQ(TDMTIMER_IRQn);   						/* Enable TDMTIMER interrupt vector in NVIC */
   TIMER_Init(TDMTIMER, &tdmtimerInit);						/* Configure TIMER */
 }
 
@@ -123,7 +113,8 @@ void timer_init(void)
 uint8_t timer_entropy(void)
 {
 	// use the SYSCLK/12 timer
-	return((uint8_t)TdmTicks);
+	return(TIMER_CounterGet(TDMTIMER));
+	//return((uint8_t)TdmTicks);
 }
 
 // ********************* Implementation local functions **************
@@ -159,13 +150,14 @@ void TIMER2_IRQHandler(void)
 	if (delay_counter > 0)
 		delay_counter--;
 }
+#if 0
 void TIMER1_IRQHandler(void)
 {
   /* Clear flag for TIMER1 overflow interrupt */
   TIMER_IntClear(TIMER1, TIMER_IF_OF);
   TdmTicks ++;
 }
-
+#endif
 
 
 // ********************* end of timer.c ******************************

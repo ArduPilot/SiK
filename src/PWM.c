@@ -71,7 +71,7 @@ void InitPWM(void)
 
 void SetPwmDuty(uint8_t Duty8Bit)
 {
-	TIMER_CompareBufSet(PWMTIMER,PWMCCX,Duty8Bit);			// set on time, use buffered so no glitches
+	TIMER_CompareBufSet(PWMTIMER,PWMCCX,(~Duty8Bit)&0xFF);			// set on time, use buffered so no glitches
 }
 
 // ********************* PWM.c ***************************************

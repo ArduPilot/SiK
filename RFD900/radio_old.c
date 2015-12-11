@@ -21,10 +21,13 @@
 #include "ezradio_prop.h"
 #include "ezradio_api_lib_add.h"
 #include "parameters.h"
+#include "radio-config-4gfsk-500-300.h"
+#include "radio-config-2gfsk-64-96.h"
 
 // ******************** defines and typedefs *************************
-#define NUM_DATA_RATES 13
-#define RFD900_INT_TX_POW 64           // TX power level into amp (0-127)not linear, must set by testing)
+#define NUM_DATA_RATES 16
+#define RFD900_INT_TX_POW 26           // TX power level into amp (0-127)not linear, 10dbm out, 6.8 after atten
+// 2.250V @ 30dbm; 1.75V @ n = 127; 3.15V @n = 1 ; 90mV @n = 255
 #define NUM_POWER_LEVELS 16
 #define POWER_LEVEL_STEP 2
 
@@ -33,12 +36,52 @@ typedef union{
 	uint16_t w[2];
 	uint32_t L;
 } longin_t;
+
+typedef enum {
+	ModType_CW = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_CW,
+	ModType_OOK = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_OOK,
+	ModType_2FSK = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_2FSK,
+	ModType_2GFSK = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_2GFSK,
+	ModType_4FSK = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_4FSK,
+	ModType_4GFSK = EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_ENUM_4GFSK,
+} ModType_t;
+
+typedef struct {
+	uint32_t air_rate;
+		ModType_t Modulation; // TODO remove these unused fields, relys on config header files now
+	uint32_t Deviation;
+	const uint8_t *CfgList;
+//uint8_t  MdmDecCfg[3];
+//uint8_t  MdmFltCoe[36];
+} RFParams_t;
 // ******************** local variables ******************************
 // the power_levels array define 8 bit PWM values for each respective power level starting at ??dBm TODO this default table must be filled with close values
-static const uint8_t power_levels[NUM_POWER_LEVELS] = {80,136,150,164,171,178,184,190,196,201,206,211,218,224,230,235};
-static 	ezradio_cmd_reply_t ezradioReply;
-static const uint32_t FCODIV[8] = {4,6,8,12,16,24,24,24};
-static const uint32_t NPRESC[2] = {4,2};
+static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211, 206, 201, 196, 190, 184, 178, 171, 164, 150, 136, 80 };
+static ezradio_cmd_reply_t ezradioReply;
+static const uint32_t FCODIV[8] = { 4, 6, 8, 12, 16, 24, 24, 24 };
+static const uint32_t NPRESC[2] = { 4, 2 };
+static const uint8_t Radio_Configuration_Data_Array_4G500300[] = RADIO_4G500300_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_2G6496[] = RADIO_2G6496_CONFIGURATION_DATA_ARRAY;
+
+static const RFParams_t RFParams[NUM_DATA_RATES] =
+{
+	{	2  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
+	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
+	{	8  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
+	{	16 ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
+	{	19 ,ModType_2GFSK, 28500,Radio_Configuration_Data_Array_2G6496  },
+	{	24 ,ModType_2GFSK, 36000,Radio_Configuration_Data_Array_2G6496  },
+	{	32 ,ModType_2GFSK, 48000,Radio_Configuration_Data_Array_2G6496  },
+	{	48 ,ModType_2GFSK, 72000,Radio_Configuration_Data_Array_2G6496  },
+	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496  },
+	{	96 ,ModType_2GFSK,144000,Radio_Configuration_Data_Array_4G500300},
+	{	128,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+	{	192,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},// TODO check these later
+	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+	{	320,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+	{	416,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+};
 
 // ******************** global variables *****************************
 bool feature_golay = false;
@@ -53,10 +96,6 @@ const char 		g_version_string[]= "blah";	///< printable version string
 const char 		g_banner_string[] ="yoyo";	///< printable startup banner string
 enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
 uint8_t			g_board_bl_version;	///< bootloader version
-
-//static const uint8_t air_data_rates[NUM_DATA_RATES] = {
-//	2,	4,	8,	16,	19,	24,	32,	48,	64,	96,	128,	192,	250
-//};
 
 radio_settings_t settings= {
 	915000000UL,//uint32_t frequency;
@@ -139,7 +178,7 @@ bool radio_initialise(void)
 {
 	InitPWM();
 	// TODO , add radio startup code here
-	return(false);
+	return(true);
 }
 
 /// set the nominal radio transmit/receive frequencies
@@ -243,13 +282,22 @@ uint8_t radio_get_channel(void)
 /// @return			True if the radio was successfully configured.
 bool radio_configure( uint16_t air_rate)
 {
-	static const uint32_t TXOSR[3] = {10,40,20};
-	if(air_rate > 1024)return(false);
-	settings.air_data_rate = air_rate;
+	//static const uint32_t TXOSR[3] = { 10, 40, 20 };
+	uint8_t RateIdx = 0;
+	const RFParams_t *Params;
+	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
+	{
+		RateIdx++;
+	}
+	if (NUM_DATA_RATES <= RateIdx)
+		return (false);
+	Params = &RFParams[RateIdx];
+	settings.air_data_rate = Params->air_rate;
+	/*  TODO remove this code later, all config done from pre made headers
 	// TX_DATA_RATE = (NCO_CLK_FREQ/TXOSR)
 	// NCO_CLK_FREQ = (MODEM_DATA_RATE*FxtalHz/NCO_MODE)
-  // MODEM_DATA_RATE = (NCO_CLK_FREQ*NCO_MODE)/FxtalHz
-  // NCO_CLK_FREQ = TX_DATA_RATE*TXOSR
+	// MODEM_DATA_RATE = (NCO_CLK_FREQ*NCO_MODE)/FxtalHz
+	// NCO_CLK_FREQ = TX_DATA_RATE*TXOSR
 	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 7u,EZRADIO_PROP_GRP_INDEX_MODEM_DATA_RATE, &ezradioReply);
 	longin_t ModemRate = {{0}};
 	longin_t NOCMode = {{0}};
@@ -268,15 +316,29 @@ bool radio_configure( uint16_t air_rate)
 	ModemRate.L = temp;
 	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 3u,EZRADIO_PROP_GRP_INDEX_MODEM_DATA_RATE,
 			ModemRate.b[2],ModemRate.b[1],ModemRate.b[0]);
-
-	// TODO we will also need to set deviation and rx bandwidth and modulation type 2G or 4G
-	// modulation type MODEM_MOD_TYPEGroup: 0x20 Index: 0x00 MOD_TYPE
-	// deviation MODEM_FREQ_DEV Group: 0x20 Indexes: 0x0a ... 0x0c
-	// MODEM_FREQ_DEV = (2^19*outdiv*desired_Dev_Hz)/(NPRESC*freq_xo)
-	//For 2(G)FSK mode, the specified value is the peak deviation. For 4(G)FSK mode (if supported), the specified value is the inner deviation (i.e., between channel center frequency and the nearest symbol deviation level).
-	// rx bandwidth
+	// set modem modulation type
+	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_MOD_TYPE, &ezradioReply);
+	ezradioReply.GET_PROPERTY.DATA[0] &= ~EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_MASK;
+	ezradioReply.GET_PROPERTY.DATA[0] |= (Params->Modulation<< EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_LSB);
+	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_MOD_TYPE, ezradioReply.GET_PROPERTY.DATA[0]);
+	// set modem deviation MODEM_FREQ_DEV = (2^19*outdiv*desired_Dev_Hz)/(NPRESC*freq_xo)
+	// For 2(G)FSK mode, the specified value is the peak deviation.
+	// For 4(G)FSK mode (if supported), the specified value is the inner deviation
+	// (i.e., between channel center frequency and the nearest symbol deviation level).
+	longin_t FREQ_DEV = { { 0 } };
+	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_CLKGEN_BAND, &ezradioReply);
+	uint8_t SY_SEL = (EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_LSB;
+	uint8_t BAND = (EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_LSB;
+	uint32_t NPresc = NPRESC[SY_SEL];
+	uint32_t outdiv = FCODIV[BAND];
+	temp = ((uint64_t)outdiv*(uint64_t)Params->Deviation)<<19UL;
+	temp /=	((uint64_t)NPresc*(uint64_t)RADIO_CONFIGURATION_DATA_RADIO_XO_FREQ);
+	FREQ_DEV.L = temp;
+	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 3u,EZRADIO_PROP_GRP_INDEX_MODEM_FREQ_DEV, FREQ_DEV.b[2],FREQ_DEV.b[1],FREQ_DEV.b[0]);
+	// set modem rx bandwidth
 	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
-	return(true);
+	 */
+	return (EZRADIO_CONFIG_SUCCESS == ezradio_configuration_init(Params->CfgList));
 }
 
 /// configure the radio network ID
