@@ -145,12 +145,6 @@ extern radio_settings_t settings;
 void	panic(char *fmt, ...);
 
 
-// Board infop
-extern const char 		g_version_string[];	///< printable version string
-extern const char 		g_banner_string[];	///< printable startup banner string
-extern enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
-extern uint8_t			g_board_bl_version;	///< bootloader version
-
 /// receives a packet from the radio
 ///
 /// @param len			Pointer to storage for the length of the packet
@@ -274,5 +268,7 @@ extern int16_t radio_temperature(void);
 // we start limiting the duty cycle
 
 extern void radio_set_diversity(bool enable);
+
+void radio_daemon(void);
 
 #endif // _RADIO_H_

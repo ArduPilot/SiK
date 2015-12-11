@@ -583,6 +583,7 @@ void tdm_serial_loop(void)
 		last_link_update = last_t;
 		Init = true;
 	}
+	radio_daemon();
 
 #ifdef RADIO_SPLAT_TESTING_MODE
 		for (;;) {
@@ -985,17 +986,11 @@ tdm_init(void)
 	uint16_t i;
 	uint16_t air_rate;
 	uint32_t window_width;
-	radio_set_diversity(false);
-  disable_rssi_hunt();
   tdm_state_remaining = 100;
 
 	g_board_frequency = FREQ_915;	// TODO store this data into cal data
 	g_board_bl_version = 1;       // TODO find a way for the bootloader to tell us it's version
 
-	// Load parameters from flash or defaults
-	// this is done before hardware_init() to get the serial speed
-	if (!param_load())
-		param_default();
 
 	uint32_t freq_min, freq_max;
 	uint32_t channel_spacing;
@@ -1004,6 +999,8 @@ tdm_init(void)
 	if (!radio_initialise()) {
 		panic("radio_initialise failed");
 	}
+	radio_set_diversity(false);
+  disable_rssi_hunt();
 
 	switch (g_board_frequency) {
 	case FREQ_433:
