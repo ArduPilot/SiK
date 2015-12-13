@@ -170,8 +170,7 @@ void panic(char *fmt, ...)
 
 	delay_msec(1000);
 
-	// generate a software reset TODO
-	for (;;)
+	for (;;)																																			// watchdog will catch after 1 sec
 		;
 }
 

@@ -249,10 +249,7 @@ void at_command(void)
 				break;
 
 			case 'Z':
-				// generate a software reset
-				//ForceReset(); // TODO add reset
-				//RSTSRC |= (1 << 4);
-				for (;;)
+				for (;;)			//watchdog will reset in 1 second
 					;
 				break;
 			default:

@@ -19,6 +19,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>emlib/em_adc.c</name>
+			<type>1</type>
+			<locationURI>STUDIO_SDK_LOC/emlib/src/em_adc.c</locationURI>
+		</link>
+		<link>
 			<name>emlib/em_assert.c</name>
 			<type>1</type>
 			<locationURI>STUDIO_SDK_LOC/emlib/src/em_assert.c</locationURI>
@@ -77,6 +82,11 @@
 			<name>emlib/em_usart.c</name>
 			<type>1</type>
 			<locationURI>STUDIO_SDK_LOC/emlib/src/em_usart.c</locationURI>
+		</link>
+		<link>
+			<name>emlib/em_wdog.c</name>
+			<type>1</type>
+			<locationURI>PARENT-6-PROJECT_LOC/SiliconLabs/SimplicityStudio/v3/developer/sdks/efm32/v2/emlib/src/em_wdog.c</locationURI>
 		</link>
 		<link>
 			<name>CMSIS/ezr32lg/startup_gcc_ezr32lg.s</name>

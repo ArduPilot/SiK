@@ -51,6 +51,8 @@
 #include "timer.h"
 #include "serial.h"
 #include "parameters.h"
+#include "em_wdog.h"
+#include "RCOComp.h"
 // ******************** defines and typedefs *************************
 
 #ifdef printf
@@ -62,7 +64,7 @@
 #define GREENLED 10
 #define REDLED   11
 
-
+#define RCOCOMPUPDATEMS 5UL*60UL*1000UL								// update RCO for temperature drift this often i.e. 5Mins
 // ******************** local variables ******************************
 // ******************** local function prototypes ********************
 #if !defined(__CROSSWORKS_ARM) && defined(__GNUC__)
@@ -143,7 +145,7 @@ void Init_debug(void) // setup swo output, point xprintf to ITM_SendChar()
 static void hardware_init(void)
 {
 	timer_init();																																	// initialise timers
-	serial_init(param_s_get(PARAM_SERIAL_SPEED));	//TODO													// UART - set the configured speed
+	serial_init(param_s_get(PARAM_SERIAL_SPEED));																	// UART - set the configured speed
 }
 
 
@@ -156,6 +158,8 @@ int main(void)
   CHIP_Init();
 
   /* HFXO 48MHz, divided by 1, rco is only 28Mhz   TODO , calibrate RCO from radio XO??*/
+  // calibration tables exist in ROM , data sheet has temp comp curves
+  // use this info to calibrate on the fly
   CMU_OscillatorEnable(cmuOsc_HFRCO,true,true);
   CMU_HFRCOBandSet(cmuHFRCOBand_28MHz);
   CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFRCO);
@@ -171,9 +175,20 @@ int main(void)
 		param_default();
 	hardware_init();																															// Do hardware initialisation
   tdm_init();
+  WDOG_Init_TypeDef init=WDOG_INIT_DEFAULT;
+  init.perSel =   wdogPeriod_1k;																								// 1 second
+  WDOG_Init(&init);
+  InitRCOCalibration();
+
   /* Enter infinite loop that will take care of ezradio plugin manager and packet transmission. */
   while (1)
   {
+    WDOG_Feed();
     tdm_serial_loop();
+    if(delay_expired())
+    {
+    	delay_set(RCOCOMPUPDATEMS);
+      UpdateRCOCalibration();
+    }
   }
 }

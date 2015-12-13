@@ -30,16 +30,7 @@
 //
 
 #include <stdint.h>
-/// return the 16 bit timer2 counter
-///
-/// @return		timer counter, in 0.5usec units
-///
-extern uint16_t timer2_16(void);
 
-/// return microseconds since boot
-///
-/// @return		microseconds since boot
-extern uint32_t micros(void);
 
 /// return a 16 bit value that rolls over in approximately
 /// one second intervals
@@ -60,13 +51,8 @@ extern void timer_init(void);
 /// @param	msec		Minimum time before the timer expiers.  The actual time
 ///				may be greater.
 ///
-extern void	delay_set(register uint16_t msec);
+extern void	delay_set(register uint32_t msec);
 
-/// Set the delay timer in 100Hz ticks
-///
-/// @param ticks		Number of ticks before the timer expires.
-///
-extern void delay_set_ticks(register uint8_t ticks);
 
 /// Check the delay timer.
 ///

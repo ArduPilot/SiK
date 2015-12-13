@@ -14,6 +14,7 @@
 #include "serial.h"
 #include "timer_config.h"
 #include "em_letimer.h"
+#include "timer.h"
 
 
 // ******************** defines and typedefs *************************
@@ -21,11 +22,9 @@
 #define TDMFREQ (64250U*(1U<<TDMSHIFT))
 
 // ******************** local variables ******************************
-static volatile uint8_t delay_counter;																					/// Counter used by delay_msec
+static volatile uint32_t delay_counter=0;																					/// Counter used by delay_msec
 // ******************** global variables *****************************
 // ******************** local function prototypes ********************
-static void delay_set(register uint16_t msec);
-static bool delay_expired(void);
 static void mSTimer_Init(void);
 // ********************* Implementation ******************************
 void delay_msec(register uint16_t msec)
@@ -101,21 +100,18 @@ uint8_t timer_entropy(void)
 	return(TIMER_CounterGet(TDMTIMER2));
 }
 
-// ********************* Implementation local functions **************
-
-static void delay_set(register uint16_t msec)
+void delay_set(register uint32_t msec)
 {
-	if (msec >= 2550) {
-		delay_counter = 255;
-	} else {
-		delay_counter = (msec + 9) / 10;
-	}
+	delay_counter = (msec + 9) / 10;
 }
 
-static bool delay_expired(void)
+bool delay_expired(void)
 {
 	return delay_counter == 0;
 }
+
+// ********************* Implementation local functions **************
+
 
 static void mSTimer_Init(void)
 {
