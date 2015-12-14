@@ -86,7 +86,8 @@ void UpdateRCOCalibration(void)
   int8_t temperature;
   int8_t temperatureOffset;
   temperature = ReadThermometer();
-  temperatureOffset = ( temperature - HFRCO_MIN_TEMP );
+  // in case device was not calibrated at25 DegC shift table for that
+  temperatureOffset = ( temperature - HFRCO_MIN_TEMP - (thermCalTemp -HFRCO_NOMINAL_TEMP));
   LIMIT(temperatureOffset,0,HFRCO_TABLE_LENGTH);
   int16_t Val = DefTuningVal +RCOCompensationTable[temperatureOffset];
   LIMIT(Val,0,0xff);

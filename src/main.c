@@ -154,7 +154,8 @@ static void hardware_init(void)
  *****************************************************************************/
 int main(void)
 {
-  /* Chip errata */
+  SCB->VTOR = 0x2000;	// vectors moved as with origin of code
+	/* Chip errata */
   CHIP_Init();
 
   /* HFXO 48MHz, divided by 1, rco is only 28Mhz   TODO , calibrate RCO from radio XO??*/

@@ -22,7 +22,7 @@
 //    KEEP(*(.IDDATA)) /* keep my variable even if not referenced */
 //  } > FLASH
 
-static const uint8_t __attribute__((section (".IDDATA"))) app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
+//static const uint8_t __attribute__((section (".IDDATA"))) app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
 
 static void CheckInit(void)
 {
@@ -31,7 +31,7 @@ static void CheckInit(void)
 	{
 		MSC_Init();
 		Init = true;
-		(void)app_signature;
+		//(void)app_signature;
 	}
 }
 
@@ -58,14 +58,14 @@ void flash_write_scratch(uint16_t address, uint8_t c)
 	// only allows 4 byte writes, so must read other four bytes update required byte and write back
 	flash_write_byte(FLASH_SCRATCH | address,c);
 }
-
+#if 0
 void EraseFlashSignature(void)
 {
 	CheckInit();
 	MSC_ErasePage((uint32_t *)FLASH_SIGNATURE_ADDR);
 
 }
-
+#endif
 void flash_write_byte(uint32_t address, uint8_t c)
 {
 	CheckInit();

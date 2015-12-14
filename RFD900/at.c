@@ -437,9 +437,8 @@ static void at_ampersand(void)
 
 	case 'U':
 		if (!strcmp(at_cmd + 4, "PDATE")) {
-			// Erase Flash signature forcing it into reprogram mode next reset
-			EraseFlashSignature();
-			// let the watchdog reset it	 TODO enable watchdog
+			NVIC_SystemReset(); // we will read the reset cause on reset to determine this has been called
+			//EraseFlashSignature();
 			while(1);
 		}
 		at_error();

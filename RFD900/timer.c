@@ -115,6 +115,7 @@ bool delay_expired(void)
 
 static void mSTimer_Init(void)
 {
+  CMU_OscillatorEnable(cmuOsc_LFRCO,true,true);
   CMU_ClockSelectSet( cmuClock_LFA, cmuSelect_LFRCO );													// note rtc timer already sets this
 	CMU_ClockEnable(cmuClock_CORELE, true);
 	CMU_ClockDivSet(MSTIMER_cmuClock, cmuClkDiv_1);

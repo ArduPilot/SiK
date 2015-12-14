@@ -39,14 +39,8 @@
 #include "em_device.h" // need to know flash sizes
 
 // Flash memory map
-#define FLASH_APP_START		0x4000					// 2 pages reserved for bootloader
+#define FLASH_APP_START		0x2000					// 2 pages reserved for bootloader
 
-//#if defined BOARD_rfd900u || defined BOARD_rfd900p
-// WARNING You need to select Bank 3 for these address to work. (p125)
-//#define FLASH_INFO_PAGE   0xFC00    // 1 page reserved for bootloader (In Bank3)
-//#define FLASH_LOCK_BYTE   0xFFFF    // Bank3
-//#define FLASH_SCRATCH     0xF800    // We don't have a scratch page so lets define one in code space (bank3).
-//#define FLASH_BANKS            3    // 0-Home, 1-Bank1, 2-Bank2, 3-Bank3
 
 // pages are always 2048 bytes, size can be 64,128,or 256K
 // we will be using 128K/2 = 64 pages
@@ -59,12 +53,12 @@
 #define FLASH_SIG_PAGE      (FLASH_SCRATCH_PAGE-1)
 #define FLASH_SIG_START     (FLASH_SIG_PAGE*FLASH_PAGE_SIZE)
 #define FLASH_SIG_END       ((FLASH_SIG_PAGE+1)*FLASH_PAGE_SIZE)
-#define FLASH_SIGNATURE_ADDR (FLASH_SIG_END - 2) // Location of the flash signature
+//#define FLASH_SIGNATURE_ADDR (FLASH_SIG_END - 2) // Location of the flash signature
 
 
 // Anticipated flash signature bytes
-#define FLASH_SIG0	0x3d
-#define FLASH_SIG1	0xc2
+//#define FLASH_SIG0	0x3d
+//#define FLASH_SIG1	0xc2
 
 
 // locked and unlocked areas to store power calibration info
