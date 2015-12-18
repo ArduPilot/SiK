@@ -64,8 +64,8 @@
   0x13 /* CMD: Gpio pin cfg                */,\
   0x03 /* GPIO0,PULL_CTL[6],GPIO_MODE[5:0] */,\
   0x02 /* GPIO1,PULL_CTL[6],GPIO_MODE[5:0] */,\
-  0x20 /* GPIO2,PULL_CTL[6],GPIO_MODE[5:0] */,\
-  0x21 /* GPIO3,PULL_CTL[6],GPIO_MODE[5:0] */,\
+  0x21 /* GPIO2,PULL_CTL[6],GPIO_MODE[5:0] */,\
+  0x20 /* GPIO3,PULL_CTL[6],GPIO_MODE[5:0] */,\
   0x00 /* NIRQ,PULL_CTL[6],NIRQ_MODE[5:0]  */,\
   0x00 /* SDO,PULL_CTL[6],SDO_MODE[5:0]    */,\
   0x00 /* GEN_CONFIG,DRV_STRENGTH[6:5]     */\

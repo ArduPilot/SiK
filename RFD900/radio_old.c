@@ -24,6 +24,8 @@
 #include "radio-config-4gfsk-500-300.h"
 #include "radio-config-2gfsk-64-96.h"
 #include "rtcdriver.h"
+#include "golay.h"
+#include "crc.h"
 
 // ******************** defines and typedefs *************************
 #define TX_FIFO_TIMEOUT_MS	500L																									// max time to transmit a fifo buffer
@@ -103,6 +105,7 @@ static const RFParams_t RFParams[NUM_DATA_RATES] =
 };
 
 static uint8_t lastRSSI=0;
+static uint8_t netid[2];
 
 // ******************** global variables *****************************
 bool feature_golay = false;
@@ -115,7 +118,7 @@ error_counts_t errors={0};
 // Board infop
 const char 		g_version_string[]= "blah";	///< printable version string
 const char 		g_banner_string[] ="yoyo";	///< printable startup banner string
-enum BoardFrequency	g_board_frequency;	///< board RF frequency from the bootloader
+enum BoardFrequency	g_board_frequency;	///< board RF frequency from the cal table
 uint8_t			g_board_bl_version;	///< bootloader version
 
 radio_settings_t settings= {
@@ -133,6 +136,9 @@ static void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t s
 static void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
 static void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
 static void TxFifoTimeout(RTCDRV_TimerID_t id, void *user );
+static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks);
+static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks);
+
 // ********************* Implementation ******************************
 
 void radio_daemon(void)
@@ -202,6 +208,20 @@ static void RxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //
 ///
 bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 {
+	bool ret;
+	if (!feature_golay)
+	{
+		ret = radio_transmit_simple(length, buf, timeout_ticks);
+	}
+	else
+	{
+		ret = radio_transmit_golay(length, buf, timeout_ticks);
+	}
+	return(ret);
+}
+
+static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
+{
 	static EZRADIODRV_PacketLengthConfig_t pktLength =
   {ezradiodrvTransmitLenghtCustomFieldLen,10,{2,1,9,0,0}} ;
 	bool Res = false;
@@ -213,7 +233,10 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 		radioTxPkt[0] = ((settings.networkID>>8)&0xFF);
 		radioTxPkt[1] = ((settings.networkID)&0xFF);
 		radioTxPkt[2] = length;
-  	memcpy(&radioTxPkt[3],buf,length);
+		if(&radioTxPkt[3] != buf)
+		{
+			memcpy(&radioTxPkt[3],buf,length);
+		}
   	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt)));
     if (appTxActive)
     {
@@ -225,6 +248,34 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 	return(Res);
 }
 
+static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
+{
+	uint16_t crc;
+	uint8_t gin[3];
+	uint8_t elen, rlen;
+
+	if (length > (sizeof(radioTxPkt)/2)-9)
+	{
+		debug("golay packet size %u\n", (unsigned)length);
+		panic("oversized golay packet");
+	}
+
+	rlen = ((length+2)/3)*3;																											// rounded length
+	elen = (rlen+6)*2;																														// encoded length
+	gin[0] = netid[0];																														// start of packet is network ID and packet length
+	gin[1] = netid[1];
+	gin[2] = length;
+
+	golay_encode(3, gin, &radioTxPkt[3]);																						// golay encode the header
+	crc = crc16(length, buf);																											// next add a CRC, we round to 3 bytes for simplicity, adding
+	gin[0] = crc&0xFF;																														// another copy of the length in the spare byte
+	gin[1] = crc>>8;
+	gin[2] = length;
+	golay_encode(3, gin, &radioTxPkt[9]);																				// golay encode the CRC
+	golay_encode(rlen, buf, &radioTxPkt[15]);																		// encode the rest of the payload
+	return radio_transmit_simple(elen, &radioTxPkt[3], timeout_ticks);
+}
+
 /// receives a packet from the radio
 /// @param len			Pointer to storage for the length of the packet
 /// @param buf			Pointer to storage for the packet
@@ -233,14 +284,90 @@ bool radio_receive_packet(uint16_t *length, uint8_t *  buf)
 {
   if(RxDataReady)
   {
-  	*length = radioRxPkt[2];
-  	if(*length > MAX_PACKET_LENGTH)
+  	uint16_t receive_packet_length = radioRxPkt[2];
+		if(receive_packet_length > MAX_PACKET_LENGTH)
+		{
+			receive_packet_length = MAX_PACKET_LENGTH;
+		}
+		RxDataReady = false;
+  	if (!feature_golay)
   	{
-  		*length = MAX_PACKET_LENGTH;
+			*length = receive_packet_length;
+			memcpy(buf,&radioRxPkt[3],*length);
+			radio_receiver_on();
+			return(true);
   	}
-  	memcpy(buf,&radioRxPkt[3],*length);
-  	RxDataReady = false;
-  	return(true);
+  	else			// use golay en/decoding
+  	{
+    	uint8_t gout[3];
+    	uint8_t errcount = 0;
+    	uint16_t crc1, crc2;
+    	uint16_t elen;
+  		// decode it in the callers buffer. This relies on the
+  		// in-place decode properties of the golay code. Decoding in
+  		// this way allows us to overlap decoding with the next receive
+  		memcpy(buf, &radioRxPkt[3], receive_packet_length);
+  		// enable the receiver for the next packet. This also
+  		// enables the EX0 interrupt
+  		elen = receive_packet_length;
+  		radio_receiver_on();
+
+			if (elen < 12 || (elen%6) != 0)
+			{
+				// not a valid length
+				debug("rx len invalid %u\n", (unsigned)elen);
+				goto failed;
+			}
+
+			// decode the header
+			errcount = golay_decode(6, buf, gout);
+			if (gout[0] != netid[0] || gout[1] != netid[1])
+			{
+				// its not for our network ID
+				debug("netid %x %x\n",(unsigned)gout[0],(unsigned)gout[1]);
+				goto failed;
+			}
+			if (6*((gout[2]+2)/3+2) != elen)
+			{
+				debug("rx len mismatch1 %u %u\n",(unsigned)gout[2],(unsigned)elen);
+				goto failed;
+			}
+			// decode the CRC
+			errcount += golay_decode(6, &buf[6], gout);
+			crc1 = gout[0] | (((uint16_t)gout[1])<<8);
+			if (elen != 12)
+			{
+				errcount += golay_decode(elen-12, &buf[12], buf);
+			}
+			*length = gout[2];
+			crc2 = crc16(*length, buf);
+			if (crc1 != crc2)
+			{
+				debug("crc1=%x crc2=%x len=%u [%x %x]\n",(unsigned)crc1,(unsigned)crc2,
+  		       (unsigned)*length,(unsigned)buf[0],(unsigned)buf[1]);
+				goto failed;
+			}
+			if (errcount != 0)
+			{
+				if ((uint16_t)(0xFFFF - errcount) > errors.corrected_errors)
+				{
+					errors.corrected_errors += errcount;
+				} else
+				{
+					errors.corrected_errors = 0xFFFF;
+				}
+				if (errors.corrected_packets != 0xFFFF) {
+					errors.corrected_packets++;
+				}
+			}
+			return true;
+  	}
+  failed:
+  	if (errors.rx_errors != 0xFFFF)
+  	{
+  		errors.rx_errors++;
+  	}
+  	return false;
   }
 	return(false);
 }
@@ -420,7 +547,6 @@ bool radio_initialise(void)
     while (1);
   }
 
-	// TODO , add radio startup code here
   appRadioInitData.packetTx.userCallback = &appPacketTransmittedCallback;				// Configure packet transmitted callback.
   appRadioInitData.packetRx.userCallback = &appPacketReceivedCallback;					// Configure packet received buffer and callback.
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer
@@ -499,7 +625,7 @@ bool radio_set_channel_spacing( uint32_t value)
 /// @param value		The channel number to select
 void radio_set_channel(uint8_t channel)
 {
-	return;
+	//return;
 	if((channel != appRadioHandle->packetRx.channel)||
 		 (channel !=  appRadioHandle->packetTx.channel))
 	{
@@ -535,6 +661,7 @@ uint8_t radio_get_channel(void)
 bool radio_configure( uint16_t air_rate)
 {
 	//static const uint32_t TXOSR[3] = { 10, 40, 20 };
+	// sync word for si4430 default is  word3:00101101=0x2D word2:11010100=D4, same for this radio chip
 	uint8_t RateIdx = 0;
 	const RFParams_t *Params;
 	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
@@ -590,7 +717,17 @@ bool radio_configure( uint16_t air_rate)
 	// set modem rx bandwidth
 	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
 	 */
-	return (EZRADIO_CONFIG_SUCCESS == ezradio_configuration_init(Params->CfgList));
+
+	if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
+	{return false;}
+	if (feature_golay) 																														// if golay crc and network id done after packet rx
+	{
+		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH,															// turn all matching off value,mask,ctrl x 4
+				12u,EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_1,0,0,0,0,0,0,0,0,0,0,0,0);
+		ezradio_set_property(EZRADIO_PROP_GRP_ID_PKT, 1u,														// only turn on crc calc, don't enable checking
+				EZRADIO_PROP_GRP_INDEX_PKT_RX_FIELD_3_CRC_CONFIG,EZRADIO_PROP_PKT_RX_FIELD_3_CRC_CONFIG_CRC_ENABLE_BIT);
+	}
+	return(true);
 }
 
 /// configure the radio network ID
@@ -599,16 +736,21 @@ bool radio_configure( uint16_t air_rate)
 /// @param id			The network ID to be sent, and to filter on reception
 void radio_set_network_id(uint16_t id)
 {
-	longin_t val;
-	val.L = id;
-	settings.networkID = id;
-	// packet format is [preamble(16)][sync(2)][id(2)][length(1)][data(N)][CRC]
-	//#define RF_SET_PROPERTY_MATCH_VALUE_3 0x11, 0x30, 0x01, 0x06, 0x55
-	//#define RF_SET_PROPERTY_MATCH_VALUE_4 0x11, 0x30, 0x01, 0x09, 0xAA
-	ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
-			EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_3,val.b[1]);
-	ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
-			EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_4,val.b[0]);
+	netid[0] = id&0xFF;
+	netid[1] = id>>8;
+	if (!feature_golay)
+	{
+		longin_t val;
+		val.L = id;
+		settings.networkID = id;
+		// packet format is [preamble(16)][sync(2)][id(2)][length(1)][data(N)][CRC]
+		//#define RF_SET_PROPERTY_MATCH_VALUE_3 0x11, 0x30, 0x01, 0x06, 0x55
+		//#define RF_SET_PROPERTY_MATCH_VALUE_4 0x11, 0x30, 0x01, 0x09, 0xAA
+		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
+				EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_3,val.b[1]);
+		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH, 1u,
+				EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_4,val.b[0]);
+	}
 }
 
 /// fetch the signal strength recorded for the most recent preamble

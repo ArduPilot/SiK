@@ -986,15 +986,15 @@ tdm_init(void)
 	uint16_t i;
 	uint16_t air_rate;
 	uint32_t window_width;
-  tdm_state_remaining = 100;
-
-	g_board_frequency = FREQ_915;	// TODO store this data into cal data
-	g_board_bl_version = 1;       // TODO find a way for the bootloader to tell us it's version
-
-
 	uint32_t freq_min, freq_max;
 	uint32_t channel_spacing;
 	uint16_t txpower;
+
+	tdm_state_remaining = 100;
+
+	g_board_frequency = calibration_get(BOARD_MAXTXPOWER+1);
+	g_board_frequency = (BoardFrequencyValid(g_board_frequency))?(g_board_frequency):(FREQ_915);	// default to 915, set cal value 31 to change this
+	g_board_bl_version = 1;       // TODO find a way for the bootloader to tell us it's version
 
 	if (!radio_initialise()) {
 		panic("radio_initialise failed");
@@ -1003,18 +1003,6 @@ tdm_init(void)
   disable_rssi_hunt();
 
 	switch (g_board_frequency) {
-	case FREQ_433:
-		freq_min = 433050000UL;
-		freq_max = 434790000UL;
-		txpower = 10;
-		num_fh_channels = 10;
-		break;
-	case FREQ_470:
-		freq_min = 470000000UL;
-		freq_max = 471000000UL;
-		txpower = 10;
-		num_fh_channels = 10;
-		break;
 	case FREQ_868:
 		freq_min = 868000000UL;
 		freq_max = 869000000UL;
@@ -1054,14 +1042,6 @@ tdm_init(void)
 
 	// double check ranges the board can do
 	switch (g_board_frequency) {
-	case FREQ_433:
-		freq_min = constrain(freq_min, 414000000UL, 460000000UL);
-		freq_max = constrain(freq_max, 414000000UL, 460000000UL);
-		break;
-	case FREQ_470:
-		freq_min = constrain(freq_min, 450000000UL, 490000000UL);
-		freq_max = constrain(freq_max, 450000000UL, 490000000UL);
-		break;
 	case FREQ_868:
 		freq_min = constrain(freq_min, 849000000UL, 889000000UL);
 		freq_max = constrain(freq_max, 849000000UL, 889000000UL);

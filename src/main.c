@@ -154,7 +154,7 @@ static void hardware_init(void)
  *****************************************************************************/
 int main(void)
 {
-  SCB->VTOR = 0x2000;	// vectors moved as with origin of code
+  SCB->VTOR = 0x0000;	// vectors moved as with origin of code
 	/* Chip errata */
   CHIP_Init();
 
@@ -177,7 +177,7 @@ int main(void)
 	hardware_init();																															// Do hardware initialisation
   tdm_init();
   WDOG_Init_TypeDef init=WDOG_INIT_DEFAULT;
-  init.perSel =   wdogPeriod_1k;																								// 1 second
+  init.perSel =   wdogPeriod_2k;																								// 1 second
   WDOG_Init(&init);
   InitRCOCalibration();
 

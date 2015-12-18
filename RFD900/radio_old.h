@@ -110,13 +110,14 @@ typedef struct{
 } radio_settings_t;
 
 enum BoardFrequency {
-        FREQ_433	= 0x43,
-        FREQ_470	= 0x47,
+        //FREQ_433	= 0x43,
+        //FREQ_470	= 0x47,
         FREQ_868	= 0x86,
         FREQ_915	= 0x91,
         FREQ_NONE	= 0xf0,
 };
 
+#define BoardFrequencyValid(a) ((a==FREQ_868)||(a==FREQ_915))
 
 // ******************************** externs blurg ******************************
 

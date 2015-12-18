@@ -472,14 +472,15 @@ uint32_t constrain(uint32_t v, uint32_t min, uint32_t max)
 bool calibration_set(uint8_t idx, uint8_t value)
 {
 #if !NO_FLASH_TEST
+
 	// if level is valid
-	if (idx <= BOARD_MAXTXPOWER && value != 0xFF)
+	if(((idx <= BOARD_MAXTXPOWER) && (value != 0xFF))||
+	   ((idx == BOARD_MAXTXPOWER) && BoardFrequencyValid(value)) )
 	{
 		// if the target byte isn't yet written
 		if (flash_read_byte(FLASH_CALIBRATION_AREA + idx) == 0xFF)
 		{
 			flash_write_byte(FLASH_CALIBRATION_AREA + idx, value);
-      //flash_write_byte(FLASH_CALIBRATION_AREA + idx,      value);
 			return true;
 		}
 	}
@@ -502,7 +503,8 @@ uint8_t calibration_get(uint8_t level)
 		crc ^= calibration[idx];
 	}
 
-	if (calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER)
+	if(((calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER))||
+		 (level == (BOARD_MAXTXPOWER+1) ))																					// allow read of radio band before crc valid as needs to be set before cal finished
 	{
 		return calibration[level];
 	}
@@ -532,7 +534,7 @@ bool calibration_lock(void)
 		// write crc
 		flash_write_byte(FLASH_CALIBRATION_CRC, crc);
 		// lock the first and last pages
-		// can only be reverted by reflashing the bootloader
+		// can only be reverted by clearing block using bootloader
 		FlashLockBlock((uint8_t *)FLASH_CALIBRATION_AREA);
 		return true;
 	}

@@ -62,7 +62,7 @@
 
 
 // locked and unlocked areas to store power calibration info
-#define FLASH_CALIBRATION_AREA_SIZE   (31)
+#define FLASH_CALIBRATION_AREA_SIZE   (BOARD_MAXTXPOWER+1+1) //one extra for band setting
 #define FLASH_CALIBRATION_CRC         (FLASH_CAL_END - 1)
 #define FLASH_CALIBRATION_AREA        (FLASH_CALIBRATION_CRC - FLASH_CALIBRATION_AREA_SIZE)
 
