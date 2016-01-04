@@ -1,4 +1,4 @@
-// Copyright 2015 Silicon Laboratories, Inc.
+// Copyright 2016 Silicon Laboratories, Inc.
 //
 //
 

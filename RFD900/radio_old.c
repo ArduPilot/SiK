@@ -28,8 +28,8 @@
 #include "crc.h"
 
 // ******************** defines and typedefs *************************
-#define TX_FIFO_TIMEOUT_MS	500L																									// max time to transmit a fifo buffer
-#define RX_FIFO_TIMEOUT_MS	500L																									// max time to transmit a fifo buffer
+#define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
+#define RX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 
 #define NUM_DATA_RATES 16
 #define RFD900_INT_TX_POW 26           // TX power level into amp (0-127)not linear, 10dbm out, 6.8 after atten
@@ -401,11 +401,12 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
     appTxActive = false;
     ezradioStartRx( handle );
   }
+
   if((true == appTxActive)&&( ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY == (status&ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY)))
   {
-  	if(radioTxCount < radioTxPkt[0])
+  	if(radioTxCount < (radioTxPkt[2]+3))
   	{
-  		uint8_t len = radioTxPkt[0] - radioTxCount;
+  		uint8_t len = (radioTxPkt[2]+3) - radioTxCount;
   	  ezradio_cmd_reply_t radioReplyData;
       ezradio_fifo_info_fast_read(&radioReplyData);
   	  if (len > radioReplyData.FIFO_INFO.TX_FIFO_SPACE)
@@ -417,9 +418,10 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
   	}
   }
 
- #if 0
+#if 0
   if(ECODE_EMDRV_EZRADIODRV_CHIP_ERROR == (status&ECODE_EMDRV_EZRADIODRV_CHIP_ERROR))
   {
+  	RTCDRV_StopTimer(TxFifoTimer);
     if(appTxActive)
     {
     	appTxActive = false;
@@ -428,6 +430,7 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
   }
   if(ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR == (status&ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR))
   {
+  	RTCDRV_StopTimer(TxFifoTimer);
     if(appTxActive)
     {
 			appTxActive = false;
@@ -436,11 +439,21 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
   }
   if(ECODE_EMDRV_EZRADIODRV_STATE_CHANGE == (status&ECODE_EMDRV_EZRADIODRV_STATE_CHANGE))
   {
-    if(appTxActive)
-    {
-			appTxActive = false;
-//			ezradioStartRx( handle );
-    }
+  	static uint16_t count=0;
+  	if(appTxActive)
+  	{
+  		if(++count >= 2)
+  		{
+  	  	RTCDRV_StopTimer(TxFifoTimer);
+  			appTxActive = false;
+  			ezradioStartRx( handle );
+  			count = 0;
+  		}
+  	}
+  	else
+  	{
+  		count=0;
+  	}
   }
 #endif
 }
@@ -527,7 +540,18 @@ bool radio_receiver_on(void)
 
 	return true;
 #endif
-	return(true);																																	// the radio layer should take care of this anyway
+	if(!appTxActive)
+	{
+		appTxActive = false;
+		TxTimedOut = false;
+		RxDataIncoming = false;																											// clear incoming, packet arrived
+		RxTimedOut = false;
+		ezradioResetTRxFifo();
+		ezradio_get_int_status(0u, 0u, 0u, NULL);
+		ezradioStartRx(appRadioHandle);
+		return(true);																																	// the radio layer should take care of this anyway
+	}
+	return(false);																																	// the radio layer should take care of this anyway
 }
 
 /// reset and intiialise the radio

@@ -1,4 +1,4 @@
-// Copyright 2015 Silicon Laboratories, Inc.
+// Copyright 2016 Silicon Laboratories, Inc.
 //
 //
 
@@ -244,7 +244,7 @@
   0x10 /* GROUP: Preamble                   */,\
   0x01 /* NUM_PROPS                         */,\
   0x00 /* START_PROP                        */,\
-  0x10 /* PREAMBLE_TX_LENGTH,TX_LENGTH[7:0] */\
+  0x08 /* PREAMBLE_TX_LENGTH,TX_LENGTH[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PREAMBLE_TX_LENGTH_LEN (5)

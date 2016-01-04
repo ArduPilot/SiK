@@ -91,7 +91,7 @@ Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV
 #endif
 // REQUEST_DEVICE_STATE
 
-  if ( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_STATUS_TX_FIFO_ALMOST_EMPTY_BIT)
+  if ( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_TX_FIFO_ALMOST_EMPTY_PEND_BIT)
 	{
   	CBParam |= ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY;
   }
@@ -237,9 +237,8 @@ Ecode_t ezradioStartTransmitCustom(EZRADIODRV_Handle_t radioHandle, EZRADIODRV_P
     updateFields = true;
   }
 
-  ezradioStartTx(radioHandle, updateFields, pktLengthConf, pioRadioPacket);
+  return(ezradioStartTx(radioHandle, updateFields, pktLengthConf, pioRadioPacket));
 
-  return ECODE_EMDRV_EZRADIODRV_OK;
 }
 
 /**************************************************************************//**
@@ -337,7 +336,10 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
   if (ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE == EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_TX) {
     return ECODE_EMDRV_EZRADIODRV_TRANSMIT_FAILED;
   }
-
+  if(ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE != EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_RX)
+  {
+    return ECODE_EMDRV_EZRADIODRV_TRANSMIT_FAILED;
+  }
   /* Update radio packet filed configurations if requested */
   if (updateFields)
   {
@@ -390,13 +392,6 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
   if(FIFOLen > EZRADIO_FIFO_SIZE){FIFOLen = EZRADIO_FIFO_SIZE;}
   ezradio_cmd_reply_t radioReplyLocal;
   ezradio_fifo_info(0u, &radioReplyLocal);
-  if(64 !=  radioReplyLocal.FIFO_INFO.TX_FIFO_SPACE) // TODO remove debug
-  {
-  	int a,b=5;
-  	a=b;
-  	a++;
-  }
-
   ezradio_write_tx_fifo(FIFOLen, pioRadioPacket);
 
   /* Start sending packet, channel 0, START immediately, Packet n bytes long, go READY when done */
