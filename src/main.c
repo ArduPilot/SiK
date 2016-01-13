@@ -53,6 +53,7 @@
 #include "parameters.h"
 #include "em_wdog.h"
 #include "RCOComp.h"
+#include "pins_user.h"
 // ******************** defines and typedefs *************************
 
 #ifdef printf
@@ -145,6 +146,9 @@ void Init_debug(void) // setup swo output, point xprintf to ITM_SendChar()
 static void hardware_init(void)
 {
 	timer_init();																																	// initialise timers
+#if PIN_MAX > 0
+	pins_user_init();
+#endif
 	serial_init(param_s_get(PARAM_SERIAL_SPEED));																	// UART - set the configured speed
 }
 
