@@ -50,6 +50,7 @@
 #include "ezradio_api_lib_add.h"
 #include "ezradio_plugin_manager.h"
 #include "printfl.h"
+#include "timer.h"
 
 
 /* Radio configuration data array. */
@@ -59,7 +60,7 @@ const uint8_t Radio_Configuration_Data_Array[]  = \
 /* Radio interrupt receive flag */
 bool    ezradioIrqReceived = false;
 static EZRADIODRV_Handle_t myradioHandle = NULL;
-
+static uint16_t IRQ_tick;
 void ezradioPowerUp(void);
 
 #if ( defined EZRADIO_PLUGIN_TRANSMIT )
@@ -67,7 +68,7 @@ Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV
 #endif
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
-Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle );
+Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle , uint16_t IRQ_tick);
 #endif
 
 #if ( defined EZRADIO_PLUGIN_CRC_ERROR )
@@ -83,6 +84,7 @@ void GPIO_EZRadio_INT_IRQHandler( uint8_t pin )
 
   /* Sign radio interrupt received */
   ezradioIrqReceived = true;
+  IRQ_tick = timer2_tick();
 }
 
 /**************************************************************************//**
@@ -141,6 +143,17 @@ void ezradioInit( EZRADIODRV_Handle_t handle )
   /* Read ITs, clear pending ones */
   ezradio_get_int_status(0u, 0u, 0u, NULL);
 
+  ezradio_set_property(EZRADIO_PROP_GRP_ID_FRR_CTL, 4,EZRADIO_PROP_GRP_INDEX_FRR_CTL_A_MODE,
+		EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_CURRENT_STATE,
+#if 0
+		EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_INT_PH_PEND,
+		EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_INT_MODEM_PEND,
+#else
+		EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_DISABLED,
+	 EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_DISABLED,
+#endif
+		EZRADIO_PROP_FRR_CTL_A_MODE_FRR_A_MODE_ENUM_DISABLED);
+
 }
 
 /**************************************************************************//**
@@ -166,16 +179,18 @@ Ecode_t ezradioPluginManager( EZRADIODRV_Handle_t radioHandle )
   {
     /* Accept interrupt before clearing IT in the radio, so prevent race conditions. */
     ezradioIrqReceived = false;
-
     /* Read ITs, clear all pending ones */
+#if 1
+    ezradio_get_int_status_fast_clear_read(radioReplyHandle);
+#else
     ezradio_get_int_status(0x0, 0x0, 0x0, radioReplyHandle);
-
+#endif
 #if ( defined EZRADIO_PLUGIN_TRANSMIT )
     ezradioHandleTransmitPlugin( radioHandle, radioReplyHandle );
 #endif
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
-    ezradioHandleReceivePlugin( radioHandle, radioReplyHandle );
+    ezradioHandleReceivePlugin( radioHandle, radioReplyHandle,IRQ_tick);
 #endif
 
 #if ( defined EZRADIO_PLUGIN_CRC_ERROR )
@@ -189,15 +204,17 @@ Ecode_t ezradioPluginManager( EZRADIODRV_Handle_t radioHandle )
 
 /**************************************************************************//**
  * @brief  Resets both the TX and RX FIFOs.
- *****************************************************************************/
+ ********************************************************;*********************/
 void ezradioResetTRxFifo(void)
 {
-#if ( defined EZRADIO_PLUGIN_RECEIVE )
-  ezradio_fifo_info(EZRADIO_CMD_FIFO_INFO_ARG_FIFO_RX_BIT, NULL);
-#endif //#if ( defined EZRADIO_PLUGIN_RECEIVE )
-
-#if ( defined EZRADIO_PLUGIN_TRANSMIT )
-  ezradio_fifo_info(EZRADIO_CMD_FIFO_INFO_ARG_FIFO_TX_BIT, NULL);
-#endif //#if ( defined EZRADIO_PLUGIN_TRANSMIT )
+	uint8_t fifo=0;
+	fifo = EZRADIO_CMD_FIFO_INFO_ARG_FIFO_RX_BIT|
+			EZRADIO_CMD_FIFO_INFO_ARG_FIFO_TX_BIT;
+#if 1
+  ezradio_fifo_info_fast_reset(fifo);
+#else
+  static ezradio_cmd_reply_t ezradioReply;
+  ezradio_fifo_info(fifo, &ezradioReply);
+#endif
 }
 

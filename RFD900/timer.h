@@ -30,6 +30,9 @@
 //
 
 #include <stdint.h>
+#include "em_device.h"
+#include "em_timer.h"
+#include "timer_config.h"
 
 
 /// return a 16 bit value that rolls over in approximately
@@ -37,7 +40,11 @@
 ///
 /// @return		16 bit value in units of 16 microseconds
 ///
-extern uint16_t timer2_tick(void);
+__STATIC_INLINE uint16_t timer2_tick(void)
+{
+	return(TIMER_CounterGet(TDMTIMER2));
+}
+//extern uint16_t timer2_tick(void);
 
 
 /// initialise timers

@@ -26,6 +26,7 @@
 #include "rtcdriver.h"
 #include "golay.h"
 #include "crc.h"
+#include "serial.h"
 
 // ******************** defines and typedefs *************************
 #define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
@@ -65,15 +66,14 @@ static uint8_t radioTxPkt[MAX_PACKET_LENGTH+3];
 static uint8_t radioTxCount=0;
 static bool     appTxActive = false;																						/* Sign tx active state */
 static bool     RxDataReady = false;
+static uint16_t Rx_Tick;																												// what was the tick count when packet was received
 static bool     RxDataIncoming = false;
 static uint8_t radioRxPkt[MAX_PACKET_LENGTH+3];																					/* Rx packet data array */
 
-static RTCDRV_TimerID_t TxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
 static RTCDRV_TimerID_t RxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
 
 static EZRADIODRV_HandleData_t appRadioInitData = EZRADIODRV_INIT_DEFAULT;							/* EZRadio driver init data and handler */
 static EZRADIODRV_Handle_t appRadioHandle = &appRadioInitData;
-static bool TxTimedOut = false;
 static bool RxTimedOut = false;
 
 // the power_levels array define 8 bit PWM values for each respective power level starting at ??dBm TODO this default table must be filled with close values
@@ -132,25 +132,16 @@ radio_settings_t settings= {
 } ;
 
 // ******************** local function prototypes ********************
-static void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
-static void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
-static void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status );
-static void TxFifoTimeout(RTCDRV_TimerID_t id, void *user );
-static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks);
-static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks);
+static void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
+static void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
+static void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
+static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick);
+static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick);
 
 // ********************* Implementation ******************************
 
 void radio_daemon(void)
 {
-	if(true == TxTimedOut)
-	{
-		appTxActive = false;
-		TxTimedOut = false;
-		ezradioResetTRxFifo();
-		ezradio_get_int_status(0u, 0u, 0u, NULL);
-		ezradioStartRx(appRadioHandle);
-	}
 	if(true == RxTimedOut)
 	{
 		RxDataIncoming = false;																											// clear incoming, packet arrived
@@ -180,15 +171,6 @@ void panic(char *fmt, ...)
 		;
 }
 
-static void TxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //TxFifoTimer handle tx fifo not complete interrupt failed
-{
-	(void) id;
-  if((true == appTxActive)&&(false == TxTimedOut))
-  {
-  	TxTimedOut = true;
-  }
-}
-
 static void RxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //RxFifoTimer handle rx fifo not complete interrupt failed
 {
 	(void) id;
@@ -206,21 +188,21 @@ static void RxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //
 ///				that transmission has failed.
 /// @return			true if packet sent successfully
 ///
-bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
+bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick)
 {
 	bool ret;
 	if (!feature_golay)
 	{
-		ret = radio_transmit_simple(length, buf, timeout_ticks);
+		ret = radio_transmit_simple(length, buf, timeout_ticks,TxTick);
 	}
 	else
 	{
-		ret = radio_transmit_golay(length, buf, timeout_ticks);
+		ret = radio_transmit_golay(length, buf, timeout_ticks,TxTick);
 	}
 	return(ret);
 }
 
-static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
+static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick)
 {
 	static EZRADIODRV_PacketLengthConfig_t pktLength =
   {ezradiodrvTransmitLenghtCustomFieldLen,10,{2,1,9,0,0}} ;
@@ -228,8 +210,15 @@ static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t time
 
 	if((!appTxActive)&&(length <= (sizeof(radioTxPkt)-3)))
 	{
-		pktLength.fieldLen.f3  = length;
 		pktLength.pktLen = length+3;
+#if 1
+		appRadioHandle->packetTx.lenConfig.pktLen = pktLength.pktLen;
+		appRadioHandle->packetTx.lenConfig.fieldLen.f1 = pktLength.fieldLen.f1 = pktLength.pktLen;
+		pktLength.fieldLen.f2  = 0;
+		pktLength.fieldLen.f3  = 0;
+#else
+		pktLength.fieldLen.f3  = length;
+#endif
 		radioTxPkt[0] = ((settings.networkID>>8)&0xFF);
 		radioTxPkt[1] = ((settings.networkID)&0xFF);
 		radioTxPkt[2] = length;
@@ -237,18 +226,24 @@ static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t time
 		{
 			memcpy(&radioTxPkt[3],buf,length);
 		}
-  	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt)));
-    if (appTxActive)
+  	uint16_t tickStart = timer2_tick();
+  	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt,TxTick)));
+  	if (appTxActive)
     {
     	radioTxCount = (pktLength.pktLen >= EZRADIO_FIFO_SIZE)?(EZRADIO_FIFO_SIZE):(pktLength.pktLen);
-    	RTCDRV_StopTimer(TxFifoTimer);
-    	RTCDRV_StartTimer(TxFifoTimer,rtcdrvTimerTypeOneshot, TX_FIFO_TIMEOUT_MS,TxFifoTimeout,appRadioHandle);
+    	// need to wait for completion, calling radio daemon
+    	// until finished or timed out
+    	while(appTxActive&&//(radioTxCount < pktLength.pktLen)&&
+    			  ((uint16_t)(timer2_tick()-tickStart) <  timeout_ticks))
+    	{
+    		radio_daemon();
+    	}
     }
 	}
 	return(Res);
 }
 
-static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
+static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick)
 {
 	uint16_t crc;
 	uint8_t gin[3];
@@ -273,14 +268,14 @@ static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeo
 	gin[2] = length;
 	golay_encode(3, gin, &radioTxPkt[9]);																				// golay encode the CRC
 	golay_encode(rlen, buf, &radioTxPkt[15]);																		// encode the rest of the payload
-	return radio_transmit_simple(elen, &radioTxPkt[3], timeout_ticks);
+	return radio_transmit_simple(elen, &radioTxPkt[3], timeout_ticks,TxTick);
 }
 
 /// receives a packet from the radio
 /// @param len			Pointer to storage for the length of the packet
 /// @param buf			Pointer to storage for the packet
 /// @return			True if a packet was received
-bool radio_receive_packet(uint16_t *length, uint8_t *  buf)
+bool radio_receive_packet(uint16_t *length, uint8_t *  buf,uint16_t * Tick)
 {
   if(RxDataReady)
   {
@@ -289,12 +284,13 @@ bool radio_receive_packet(uint16_t *length, uint8_t *  buf)
 		{
 			receive_packet_length = MAX_PACKET_LENGTH;
 		}
+		*Tick = Rx_Tick;
 		RxDataReady = false;
   	if (!feature_golay)
   	{
 			*length = receive_packet_length;
 			memcpy(buf,&radioRxPkt[3],*length);
-			radio_receiver_on();
+			//radio_receiver_on();
 			return(true);
   	}
   	else			// use golay en/decoding
@@ -392,14 +388,13 @@ bool radio_receive_in_progress(void)
  * @param[in] handle EzRadio plugin manager handler.
  * @param[in] status Callback status.
  *****************************************************************************/
-void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
+void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks)
 {
   if ( ECODE_EMDRV_EZRADIODRV_PACKET_SENT == (status&ECODE_EMDRV_EZRADIODRV_PACKET_SENT))
   {
     /* Sign tx passive state */
-  	RTCDRV_StopTimer(TxFifoTimer);
     appTxActive = false;
-    ezradioStartRx( handle );
+    //ezradioStartRx( handle );
   }
 
   if((true == appTxActive)&&( ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY == (status&ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY)))
@@ -418,44 +413,6 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
   	}
   }
 
-#if 0
-  if(ECODE_EMDRV_EZRADIODRV_CHIP_ERROR == (status&ECODE_EMDRV_EZRADIODRV_CHIP_ERROR))
-  {
-  	RTCDRV_StopTimer(TxFifoTimer);
-    if(appTxActive)
-    {
-    	appTxActive = false;
-    	ezradioStartRx( handle );
-    }
-  }
-  if(ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR == (status&ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR))
-  {
-  	RTCDRV_StopTimer(TxFifoTimer);
-    if(appTxActive)
-    {
-			appTxActive = false;
-			ezradioStartRx( handle );
-    }
-  }
-  if(ECODE_EMDRV_EZRADIODRV_STATE_CHANGE == (status&ECODE_EMDRV_EZRADIODRV_STATE_CHANGE))
-  {
-  	static uint16_t count=0;
-  	if(appTxActive)
-  	{
-  		if(++count >= 2)
-  		{
-  	  	RTCDRV_StopTimer(TxFifoTimer);
-  			appTxActive = false;
-  			ezradioStartRx( handle );
-  			count = 0;
-  		}
-  	}
-  	else
-  	{
-  		count=0;
-  	}
-  }
-#endif
 }
 
 /**************************************************************************//**
@@ -463,23 +420,29 @@ void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
  * @param[in] handle EzRadio plugin manager handler.
  * @param[in] status Callback status.
  *****************************************************************************/
-void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
+void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks)
 {
   if ( ECODE_EMDRV_EZRADIODRV_PACKET_RX == status)
   {
   	RTCDRV_StopTimer(RxFifoTimer);
     RxDataReady = true;
   	RxDataIncoming = false;																											// clear incoming, packet arrived
+  	Rx_Tick = IRQ_ticks;
+  	//putChar ('X');
   }
   else if (ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT == status)
   {
   	static 	ezradio_cmd_reply_t ezradioReply;
   	extern uint8_t lastRSSI;
-  	ezradio_get_modem_status(0x00,&ezradioReply);
-  	lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
-  	RxDataIncoming = true;
-  	RTCDRV_StopTimer(RxFifoTimer);
-  	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);
+  	if(!RxDataIncoming)
+  	{
+  		RxDataIncoming = true;
+  		ezradio_get_modem_status(0x00,&ezradioReply);
+  		lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
+    	RTCDRV_StopTimer(RxFifoTimer);
+    	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);
+  	}
+  	//putChar ('P');
   }
 }
 
@@ -489,7 +452,7 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
  * @param[in] handle EzRadio plugin manager handler.
  * @param[in] status Callback status.
  *****************************************************************************/
-void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status )
+void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks)
 {
   if ( status == ECODE_EMDRV_EZRADIODRV_OK )
   {
@@ -517,41 +480,19 @@ bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks)
 /// @return			Always true.
 bool radio_receiver_on(void)
 {
-//TODO reset stuff when this called
-#if 0
-	packet_received = 0;
-	receive_packet_length = 0;
-	preamble_detected = 0;
-	partial_packet_length = 0;
-
-	// enable receive interrupts
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, RADIO_RX_INTERRUPTS);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENPREAVAL);
-
-	clear_status_registers();
-	radio_clear_transmit_fifo();
-	radio_clear_receive_fifo();
-
-	// put the radio in receive mode
-	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_RXON | EZRADIOPRO_XTON);
-
-	// enable receive interrupt
-	EX0 = 1;
-
-	return true;
+	appTxActive = false;
+	RxDataIncoming = false;																											// clear incoming, packet arrived
+	RxTimedOut = false;
+	//ezradio_change_state(EZRADIO_CMD_CHANGE_STATE_ARG_NEXT_STATE1_NEW_STATE_ENUM_READY);
+	ezradioResetTRxFifo();
+#if 1
+	ezradio_get_int_status_fast_clear();
+#else
+	ezradio_get_int_status(0u, 0u, 0u, NULL);
 #endif
-	if(!appTxActive)
-	{
-		appTxActive = false;
-		TxTimedOut = false;
-		RxDataIncoming = false;																											// clear incoming, packet arrived
-		RxTimedOut = false;
-		ezradioResetTRxFifo();
-		ezradio_get_int_status(0u, 0u, 0u, NULL);
-		ezradioStartRx(appRadioHandle);
-		return(true);																																	// the radio layer should take care of this anyway
-	}
-	return(false);																																	// the radio layer should take care of this anyway
+	ezradioStartRx(appRadioHandle);
+	//putChar ('O');
+	return(true);																																	// the radio layer should take care of this anyway
 }
 
 /// reset and intiialise the radio
@@ -560,11 +501,6 @@ bool radio_initialise(void)
 {
 	InitPWM();
   RTCDRV_Init();																																/* Set RTC to generate interrupt 250ms. */
-  if (ECODE_EMDRV_RTCDRV_OK !=
-      RTCDRV_AllocateTimer( &TxFifoTimer) )
-  {
-    while (1);
-  }
   if (ECODE_EMDRV_RTCDRV_OK !=
       RTCDRV_AllocateTimer( &RxFifoTimer) )
   {
@@ -647,7 +583,7 @@ bool radio_set_channel_spacing( uint32_t value)
 
 /// set the channel for transmit/receive
 /// @param value		The channel number to select
-void radio_set_channel(uint8_t channel)
+void radio_set_channel(uint8_t channel, bool Update)
 {
 	//return;
 	if((channel != appRadioHandle->packetRx.channel)||
@@ -655,19 +591,15 @@ void radio_set_channel(uint8_t channel)
 	{
 		appRadioHandle->packetRx.channel = channel;
 	  appRadioHandle->packetTx.channel = channel;
-	  // restart mode if necessary
-	  ezradio_request_device_state(&ezradioReply);
-	  if(channel != ezradioReply.REQUEST_DEVICE_STATE.CURRENT_CHANNEL)
+	  // when tx or rx called this will be updated
+	  // unfortunately the old code required updating channel variable in radio
+	  // however access to this variable is not available in the new radio
+	  // when in rx mode will need to manually change channel
+
+	  if(Update)
 	  {
-	  	if(EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_RX ==
-	  			ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE)
-	  	{
-	  	  ezradio_change_state(EZRADIO_CMD_CHANGE_STATE_ARG_NEXT_STATE1_NEW_STATE_ENUM_READY);
-				ezradioStartRx(appRadioHandle);
-				// TODO clear radio fifos and state variables
-				 // TODO might be better to use RX hop for this in case we interrupt a receive process
-	  	}
-	  }
+	  	ezradioStartRx(appRadioHandle);
+		}
 	}
 }
 
@@ -863,9 +795,15 @@ void MAVLink_report(void)
 ///
 int16_t radio_temperature(void)
 {
+	int32_t TempDegC;
 	ezradio_get_adc_reading(EZRADIO_CMD_GET_ADC_READING_ARG_ADC_EN_TEMPERATURE_EN_BIT,
 			0xA5,&ezradioReply );
-	return(ezradioReply.GET_ADC_READING.TEMP_ADC);
+	//TEMP(degC) = (899/4096)*TEMP_ADC - 293
+	TempDegC = ezradioReply.GET_ADC_READING.TEMP_ADC;
+	TempDegC *= 899L;
+	TempDegC /= 4096L;
+	TempDegC -= 293;
+	return(TempDegC);
 }
 // maximum temperature we allow the radio to get to before
 // we start limiting the duty cycle

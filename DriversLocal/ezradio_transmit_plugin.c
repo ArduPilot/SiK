@@ -48,10 +48,11 @@
 #include "ezradio_api_lib_add.h"
 #include "ezradio_plugin_manager.h"
 #include "ezradio_transmit_plugin.h"
+#include "timer.h"
 
 #if ( defined EZRADIO_PLUGIN_TRANSMIT )
 
-Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket);
+Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket,uint16_t *TxTick);
 
 #if ( ( defined EZRADIO_PLUGIN_AUTO_ACK ) && ( defined EZRADIO_PLUGIN_RECEIVE ) )
 Ecode_t ezradioHandleAutoAckPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle );
@@ -80,15 +81,15 @@ Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV
 	{
   	CBParam |= ECODE_EMDRV_EZRADIODRV_CHIP_ERROR;
   }
-  if ( radioReplyHandle->GET_INT_STATUS.CHIP_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_CHIP_PEND_FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND_BIT )
-  {
-  	CBParam |= ECODE_EMDRV_EZRADIODRV_UF_OF_ERROR;
-  }
   if ( radioReplyHandle->GET_INT_STATUS.CHIP_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_CHIP_PEND_STATE_CHANGE_PEND_BIT )
   {
   	CBParam |= ECODE_EMDRV_EZRADIODRV_STATE_CHANGE;
   }
 #endif
+  if ( radioReplyHandle->GET_INT_STATUS.CHIP_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_CHIP_PEND_FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND_BIT )
+  {
+  	ezradio_fifo_info(EZRADIO_CMD_FIFO_INFO_ARG_FIFO_TX_BIT, NULL);
+  }
 // REQUEST_DEVICE_STATE
 
   if ( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_TX_FIFO_ALMOST_EMPTY_PEND_BIT)
@@ -111,11 +112,11 @@ Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV
   }
 	if((0 != CBParam)&&(radioHandle->packetTx.userCallback != NULL ))
   {
-    radioHandle->packetTx.userCallback( radioHandle, CBParam);
+    radioHandle->packetTx.userCallback( radioHandle, CBParam,0);
   }
   return ECODE_EMDRV_EZRADIODRV_OK;
 }
-
+#if 0
 /**************************************************************************//**
  * @brief Start basic transmission. Radio transmits with data only in the first
  *        field in this case.
@@ -202,7 +203,7 @@ Ecode_t ezradioStartTransmitConfigured(EZRADIODRV_Handle_t radioHandle, uint8_t 
 
   return ECODE_EMDRV_EZRADIODRV_OK;
 }
-
+#endif
 /**************************************************************************//**
  * @brief Start transmission using the packet parameters from @ref pktLengthConf.
  *
@@ -216,7 +217,7 @@ Ecode_t ezradioStartTransmitConfigured(EZRADIODRV_Handle_t radioHandle, uint8_t 
  *    @ref ECODE_EMDRV_EZRADIODRV_OK on success. On failure an appropriate EZRADIODRV
  *    @ref Ecode_t is returned.
  *****************************************************************************/
-Ecode_t ezradioStartTransmitCustom(EZRADIODRV_Handle_t radioHandle, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket)
+Ecode_t ezradioStartTransmitCustom(EZRADIODRV_Handle_t radioHandle, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket,uint16_t *TxTick)
 {
   bool updateFields = false;
 
@@ -237,10 +238,10 @@ Ecode_t ezradioStartTransmitCustom(EZRADIODRV_Handle_t radioHandle, EZRADIODRV_P
     updateFields = true;
   }
 
-  return(ezradioStartTx(radioHandle, updateFields, pktLengthConf, pioRadioPacket));
+  return(ezradioStartTx(radioHandle, updateFields, pktLengthConf, pioRadioPacket,TxTick));
 
 }
-
+#if 0
 /**************************************************************************//**
  * @brief Start a smart transmission. Depending on the information in the
  *        @ref pktLengthConf parameter the function decides which transmission
@@ -278,7 +279,7 @@ Ecode_t ezradioStartTransmitSmart(EZRADIODRV_Handle_t radioHandle, EZRADIODRV_Pa
 
   return ECODE_EMDRV_EZRADIODRV_OK;
 }
-
+#endif
 
 /**************************************************************************//**
  * @brief Start a default transmission using the packet information previously
@@ -321,7 +322,7 @@ Ecode_t ezradioStartTransmitDefault(EZRADIODRV_Handle_t radioHandle, uint8_t *pi
  *    @ref ECODE_EMDRV_EZRADIODRV_OK on success. On failure an appropriate EZRADIODRV
  *    @ref Ecode_t is returned.
  *****************************************************************************/
-Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket)
+Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRADIODRV_PacketLengthConfig_t pktLengthConf, uint8_t *pioRadioPacket,uint16_t *TxTick)
 {
   ezradio_cmd_reply_t ezradioReply;
 
@@ -331,14 +332,22 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
   }
 
   /* Request and check radio device state */
+  // TODO need to add in FRR register reading for curr_state to reduce delays here
+  // not adding back in may cause packets to be lost
+  uint8_t CurrState;
+#if 1
+  ezradio_frr_a_read(1,&ezradioReply);
+  CurrState = ezradioReply.FRR_A_READ.FRR_A_VALUE;
+#else
   ezradio_request_device_state(&ezradioReply);
-
-  if (ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE == EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_TX) {
+  CurrState = ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE;
+#endif
+  if (CurrState == EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_TX) {
     return ECODE_EMDRV_EZRADIODRV_TRANSMIT_FAILED;
   }
-  if(ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE != EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_RX)
+  //if(CurrState != EZRADIO_CMD_REQUEST_DEVICE_STATE_REP_CURR_STATE_MAIN_STATE_ENUM_RX)
   {
-    return ECODE_EMDRV_EZRADIODRV_TRANSMIT_FAILED;
+ //   return ECODE_EMDRV_EZRADIODRV_TRANSMIT_FAILED;
   }
   /* Update radio packet filed configurations if requested */
   if (updateFields)
@@ -351,6 +360,7 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
     radioHandle->packetTx.lenConfig.pktLen  += radioHandle->packetTx.lenConfig.fieldLen.f4 = pktLengthConf.fieldLen.f4;
     radioHandle->packetTx.lenConfig.pktLen  += radioHandle->packetTx.lenConfig.fieldLen.f5 = pktLengthConf.fieldLen.f5;
 
+#if 0 // pass length into start tx to avoid setting properties
 #if (RADIO_CONFIGURATION_DATA_RADIO_CHIP_FAMILY == RADIO_CHIP_FAMILY_EZRADIOPRO)
 
     ezradio_set_property(
@@ -383,20 +393,23 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
         0, pktLengthConf.fieldLen.f5
         );
 #endif //#if !(RADIO_CONFIG_DATA_RADIO_TYPE == 4455)
+#endif
   }
 
-  /* Fill the TX fifo with datas */
+  /* Fill the TX fifo with data */
   // assume FIFO is empty, fill only to max size of buffer, ints
   // will take care of putting the rest in
   uint16_t FIFOLen = radioHandle->packetTx.lenConfig.pktLen;
   if(FIFOLen > EZRADIO_FIFO_SIZE){FIFOLen = EZRADIO_FIFO_SIZE;}
-  ezradio_cmd_reply_t radioReplyLocal;
-  ezradio_fifo_info(0u, &radioReplyLocal);
   ezradio_write_tx_fifo(FIFOLen, pioRadioPacket);
 
   /* Start sending packet, channel 0, START immediately, Packet n bytes long, go READY when done */
+  *TxTick = timer2_tick();
+#if 1
+  ezradio_start_tx(radioHandle->packetTx.channel, 0x30,  radioHandle->packetTx.lenConfig.pktLen);
+#else
   ezradio_start_tx(radioHandle->packetTx.channel, 0x30,  0u);
-
+#endif
   return ECODE_EMDRV_EZRADIODRV_OK;
 }
 

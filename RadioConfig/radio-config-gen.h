@@ -156,7 +156,7 @@
   0x01 /* GROUP: Int ctl                                                                                                                                                            */,\
   0x01 /* NUM_PROPS                                                                                                                                                                 */,\
   0x02 /* START_PROP                                                                                                                                                                */,\
-  0x06 /* INT_CTL_MODEM_ENABLE,RSSI_LATCH_EN[7],POSTAMBLE_DETECT_EN[6],INVALID_SYNC_EN[5],RSSI_JUMP_EN[4],RSSI_EN[3],INVALID_PREAMBLE_EN[2],PREAMBLE_DETECT_EN[1],SYNC_DETECT_EN[0] */\
+  0x02 /* INT_CTL_MODEM_ENABLE,RSSI_LATCH_EN[7],POSTAMBLE_DETECT_EN[6],INVALID_SYNC_EN[5],RSSI_JUMP_EN[4],RSSI_EN[3],INVALID_PREAMBLE_EN[2],PREAMBLE_DETECT_EN[1],SYNC_DETECT_EN[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_INT_CTL_MODEM_ENABLE_LEN (5)
@@ -498,7 +498,7 @@
   0x02 /* NUM_PROPS                                                  */,\
   0x0D /* START_PROP                                                 */,\
   0x00 /* PKT_FIELD_1_LENGTH,FIELD_1_LENGTH[4:0],FIELD_1_LENGTH[7:0] */,\
-  0x02 /* DATA1                                                      */\
+  0xFF /* DATA1                                                      */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_FIELD_1_LENGTH_LEN (6)
@@ -520,7 +520,7 @@
   0x12 /* GROUP: Pkt                                                                                                                                     */,\
   0x01 /* NUM_PROPS                                                                                                                                      */,\
   0x10 /* START_PROP                                                                                                                                     */,\
-  0x82 /* PKT_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],SEND_CRC[5],SEND_ALT_CRC[4],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
+  0xA2 /* PKT_FIELD_1_CRC_CONFIG,CRC_START[7],ALT_CRC_START[6],SEND_CRC[5],SEND_ALT_CRC[4],CHECK_CRC[3],CHECK_ALT_CRC[2],CRC_ENABLE[1],ALT_CRC_ENABLE[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_FIELD_1_CRC_CONFIG_LEN (5)
@@ -532,7 +532,7 @@
   0x02 /* NUM_PROPS                                                  */,\
   0x11 /* START_PROP                                                 */,\
   0x00 /* PKT_FIELD_2_LENGTH,FIELD_2_LENGTH[4:0],FIELD_2_LENGTH[7:0] */,\
-  0x01 /* DATA1                                                      */\
+  0x00 /* DATA1                                                      */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_FIELD_2_LENGTH_LEN (6)
@@ -566,7 +566,7 @@
   0x02 /* NUM_PROPS                                                  */,\
   0x15 /* START_PROP                                                 */,\
   0x00 /* PKT_FIELD_3_LENGTH,FIELD_3_LENGTH[4:0],FIELD_3_LENGTH[7:0] */,\
-  0xFC /* DATA1                                                      */\
+  0x00 /* DATA1                                                      */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PKT_FIELD_3_LENGTH_LEN (6)

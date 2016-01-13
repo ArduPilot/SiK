@@ -257,7 +257,7 @@ typedef ezradio_cmd_reply_t * EZRADIODRV_ReplyHandle_t;
  * @return None
  ******************************************************************************/
 typedef void (*EZRADIODRV_Callback_t)( EZRADIODRV_Handle_t handle,
-                                       Ecode_t status );
+                                       Ecode_t status ,uint16_t IRQ_tick);
 
 // Inclusion of all the underlying EzRadio plug-in headers.
 #include "ezradio_transmit_plugin.h"

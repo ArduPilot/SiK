@@ -78,7 +78,7 @@ Ecode_t ezradioHandleCrcErrorPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV
 
     if ( radioHandle->packetCrcError.userCallback != NULL )
     {
-      radioHandle->packetCrcError.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_OK );
+      radioHandle->packetCrcError.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_OK ,0);
     }
   }
 

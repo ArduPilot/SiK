@@ -152,7 +152,7 @@ void	panic(char *fmt, ...);
 /// @param buf			Pointer to storage for the packet
 /// @return			True if a packet was received
 ///
-extern bool radio_receive_packet(uint16_t *length, uint8_t *  buf);
+extern bool radio_receive_packet(uint16_t *length, uint8_t *  buf,uint16_t * Tick);
 
 /// test whether the radio has detected a packet preamble
 /// @return			True if a preamble has been detected
@@ -165,7 +165,7 @@ extern bool radio_preamble_detected(void);
 ///				that transmission has failed.
 /// @return			true if packet sent successfully
 ///
-extern bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks);
+extern bool radio_transmit(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick);
 
 /// switch the radio to receive mode
 /// @return			Always true.
@@ -186,7 +186,7 @@ extern bool radio_set_channel_spacing( uint32_t value);
 
 /// set the channel for transmit/receive
 /// @param value		The channel number to select
-extern void radio_set_channel(uint8_t channel);
+extern void radio_set_channel(uint8_t channel, bool RX);
 
 /// get the tx/rx frequency channel
 /// @return			the current channel

@@ -48,6 +48,7 @@
 #include "ezradio_api_lib_add.h"
 #include "ezradio_plugin_manager.h"
 #include "ezradio_receive_plugin.h"
+#include "serial.h"
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
 
@@ -65,7 +66,7 @@ Ecode_t ezradioTransmitAutoAck(EZRADIODRV_Handle_t radioHandle);
  *    @ref ECODE_EMDRV_EZRADIODRV_OK on success. On failure an appropriate EZRADIODRV
  *    @ref Ecode_t is returned.
  *****************************************************************************/
-Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle )
+Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle, uint16_t IRQ_tick)
 {
   static uint8_t pktBufCount=0;
   if ( radioHandle == NULL )
@@ -73,14 +74,12 @@ Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_
     return ECODE_EMDRV_EZRADIODRV_ILLEGAL_HANDLE;
   }
 
-
-  if(( radioReplyHandle->GET_INT_STATUS.MODEM_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_MODEM_PEND_PREAMBLE_DETECT_PEND_BIT)&&
-     !( radioReplyHandle->GET_INT_STATUS.MODEM_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_MODEM_PEND_INVALID_PREAMBLE_PEND_BIT))
+  if(( radioReplyHandle->GET_INT_STATUS.MODEM_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_MODEM_PEND_PREAMBLE_DETECT_PEND_BIT) )
   {
   	pktBufCount = 0;
   	if ( radioHandle->packetRx.userCallback != NULL )
     {
-      radioHandle->packetRx.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT );
+      radioHandle->packetRx.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT ,IRQ_tick);
     }
   }
 
@@ -98,17 +97,19 @@ Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_
     {
     	ezradio_read_rx_fifo(len, &(radioHandle->packetRx.pktBuf[pktBufCount]));
     	pktBufCount += len;
-
-			if(( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_RX_PEND_BIT)&&
+			if( (pktBufCount == (radioHandle->packetRx.pktBuf[2]+3))&&										// if number of bytes matches packet length
+					( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_RX_PEND_BIT)&&
 				 ( radioHandle->packetRx.userCallback != NULL ))
 			{
-				radioHandle->packetRx.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_PACKET_RX );
+				radioHandle->packetRx.userCallback( radioHandle, ECODE_EMDRV_EZRADIODRV_PACKET_RX,IRQ_tick);
+				pktBufCount = 0;
 			}
     }
 
     if( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_RX_PEND_BIT)
     {
     	/* Note: Workaround for some FIFO issue. */
+    	pktBufCount = 0;
     	ezradio_fifo_info(EZRADIO_CMD_FIFO_INFO_ARG_FIFO_RX_BIT, NULL);
     	ezradioStartRx( radioHandle );
     }
@@ -147,12 +148,15 @@ Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_
  *****************************************************************************/
 Ecode_t ezradioStartRx(EZRADIODRV_Handle_t radioHandle)
 {
-  /* Start Receiving packet, channel 0, START immediately, Packet n bytes long */
+#if 0	// channel should already be set, try speeding up
+	ezradio_start_rx_fast();
+#else
+	/* Start Receiving packet, channel 0, START immediately, Packet n bytes long */
     ezradio_start_rx(radioHandle->packetRx.channel, 0u, 0u,
                   EZRADIO_CMD_START_RX_ARG_NEXT_STATE1_RXTIMEOUT_STATE_ENUM_NOCHANGE,
                   EZRADIO_CMD_START_RX_ARG_NEXT_STATE2_RXVALID_STATE_ENUM_READY,
                   EZRADIO_CMD_START_RX_ARG_NEXT_STATE3_RXINVALID_STATE_ENUM_RX );
-
+#endif
     return ECODE_EMDRV_EZRADIODRV_OK;
 }
 

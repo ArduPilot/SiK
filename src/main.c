@@ -164,6 +164,7 @@ int main(void)
   CMU_OscillatorEnable(cmuOsc_HFRCO,true,true);
   CMU_HFRCOBandSet(cmuHFRCOBand_28MHz);
   CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFRCO);
+  CMU_ClockDivSet(cmuClock_HF, cmuClkDiv_1);
   CMU_ClockEnable(cmuClock_HF, true);
   CMU_ClockEnable(cmuClock_HFPER, true);
   CMU_ClockDivSet(cmuClock_HFPER, cmuClkDiv_1);

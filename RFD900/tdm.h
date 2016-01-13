@@ -72,7 +72,5 @@ extern uint8_t duty_cycle;
 /// the LBT threshold
 extern uint8_t lbt_rssi;
 
-/// Disable the hunting of the rssi power levels
-extern void disable_rssi_hunt();
 
 #endif // _TDM_H_

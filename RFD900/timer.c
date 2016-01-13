@@ -19,7 +19,7 @@
 
 // ******************** defines and typedefs *************************
 #define TDMSHIFT 0
-#define TDMFREQ (64250U*(1U<<TDMSHIFT))
+#define TDMFREQ (62500U*(1U<<TDMSHIFT))																					// 16uS to match tdm calculations
 
 // ******************** local variables ******************************
 static volatile uint32_t delay_counter=0;																					/// Counter used by delay_msec
@@ -32,13 +32,6 @@ void delay_msec(register uint16_t msec)
 	delay_set(msec);
 	while (!delay_expired())
 		;
-}
-
-// return a 16 bit value that rolls over in approximately
-// one second intervals
-uint16_t timer2_tick(void)
-{
-	return(TIMER_CounterGet(TDMTIMER2));
 }
 
 // initialise timers
