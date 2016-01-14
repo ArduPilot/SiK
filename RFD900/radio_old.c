@@ -722,8 +722,7 @@ uint8_t radio_last_rssi(void)
 uint8_t radio_current_rssi(void)
 {
 	ezradio_get_modem_status(0x00,&ezradioReply);
-	lastRSSI = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
-	return(lastRSSI);
+	return(ezradioReply.GET_MODEM_STATUS.CURR_RSSI);															// just return it, last is always read during packet rx
 }
 
 /// return the air data rate
