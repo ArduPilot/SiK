@@ -73,7 +73,6 @@
 #define BOARD_MINTXPOWER 0		// Minimum transmit power level
 #define BOARD_MAXTXPOWER 30		// Maximum transmit power level
 
-//#define WATCH_DOG_ENABLE
 
 // GPIO definitions (not exported)
 typedef enum {
@@ -107,44 +106,14 @@ typedef struct{
 #define P3_4				  {gpioPortD, 0}
 
 
-//SBIT(LED_RED,      SFR_P3, 6);
-//SBIT(LED_GREEN,    SFR_P3, 7);
-//SBIT(PIN_CONFIG,   SFR_P0, 2);
-//SBIT(PIN_ENABLE,   SFR_P0, 3);
-//SBIT(PA_ENABLE,    SFR_P2, 5);         // Power Amplifier Enable
-
-
 // Signal polarity definitions
 #define LED_ON		1				// LED Sense inverted when compared to HM_TRP
 #define LED_OFF		0
-//#define BUTTON_ACTIVE	0
 
 // UI definitions
 #define GPIO_LED_BOOTLOADER	GPIO_LED_RED
 #define GPIO_LED_RADIO		GPIO_LED_GREEN
 #define GPIO_LED_ACTIVITY	GPIO_LED_RED
-//#define BUTTON_BOOTLOAD	PIN_CONFIG
 
-// Serial flow control
-//#define SERIAL_RTS	GPIO_PIN_ENABLE	/* always an input */
-//#define SERIAL_CTS	GPIO_PIN_CONFIG	/* input in bootloader, output in app */
 
-// Radio Definitions
-#if 0
-#define EZRADIOPRO_OSC_CAP_VALUE 0xB6 // Measured on RFD900 V1.1
-#define ENABLE_RFD900_SWITCH 1        // Define RF switches on the module (V1.1 are V1.2 the same)
-#define RFD900_DIVERSITY 1            // Enable/Disable diversity on RFD900 (V1.1 are V1.2 the same)
-#define RFD900_INT_TX_POW 4           // TX power feeding into the amp
-SBIT(IRQ,  SFR_P0, 1);                // Connection within RFD900 module, P0.1 is connected to nIRQ
-SBIT(NSS1, SFR_P2, 3);                // SI1020 Internal Connection
-#endif
-#if 0
-enum BoardFrequency {
-        FREQ_433	= 0x43,
-        FREQ_470	= 0x47,
-        FREQ_868	= 0x86,
-        FREQ_915	= 0x91,
-        FREQ_NONE	= 0xf0,
-};
-#endif
 #endif // _BOARD_RFD900E

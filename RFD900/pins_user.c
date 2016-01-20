@@ -81,7 +81,7 @@ bool pins_user_set_io(uint8_t pin, bool in_out)
 		pin_values[pin].pin_mirror = PIN_NULL;
 		
 		GPIO_PinModeSet(pins_user_map[pin].GpioData.Port,pins_user_map[pin].GpioData.Pin,
-				(in_out)?(gpioModePushPull):(gpioModeInput), 0);
+				(in_out)?(gpioModePushPull):(gpioModeInputPull),(in_out)?(0):(1));
 		return true;
 	}
 	return false;
