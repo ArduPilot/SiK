@@ -43,6 +43,7 @@
 #include "serial.h"
 #include "pins_user.h"
 #include "printfl.h"
+#include "aes.h"
 
 //#define USE_TICK_YIELD 1
 #define TIMECODE 0
@@ -160,7 +161,7 @@ static uint8_t  seqNo;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
 
-struct tdm_trailer {
+struct __attribute__ ((__packed__)) tdm_trailer {
 	uint16_t window;																												//:13;
 	uint8_t  seqNo;
 	uint8_t command :1;
@@ -168,6 +169,7 @@ struct tdm_trailer {
 	uint8_t resend :1;
 };
 struct tdm_trailer trailer;
+
 
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
@@ -569,8 +571,9 @@ void tdm_serial_loop(void)
 	uint16_t i;
 	for (i = 0; i < 1; i++)
 	{																// do a once loop so continue statements work
+		static uint8_t lastSeqNo;
 		static uint16_t len;
-		static uint16_t max_xmit;
+		static int16_t max_xmit;
 		uint16_t RxTick;
 		// give the AT command processor a chance to handle a command
 		TimeFunction(maxTicksA,at_command());
@@ -622,7 +625,6 @@ void tdm_serial_loop(void)
 			// extract control bytes from end of packet
 			memcpy(&trailer, &pbuf[len - sizeof(trailer)], sizeof(trailer));
 			len -= sizeof(trailer);
-			static uint8_t lastSeqNo;
 			if(lastSeqNo == trailer.seqNo)																					// if packet is repeated
 			{
 				//printf("duplicate\n");																								// make it easy to see faults
@@ -632,7 +634,6 @@ void tdm_serial_loop(void)
 				//printf("missed x%u e%u\n",trailer.seqNo,lastSeqNo+1);																								// make it easy to see faults
 			}
 			lastSeqNo = trailer.seqNo;
-
 			if (trailer.window == 0 && len != 0)
 			{
 				// its a control packet
@@ -673,11 +674,17 @@ void tdm_serial_loop(void)
 				else if (len != 0 && !packet_is_duplicate(len, pbuf, trailer.resend)
 						&& !at_mode_active)
 				{
+					uint8_t out_len = len;
+					bool send = true;
 					// its user data - send it out
 					// the serial port
 					//printf("rcv(%d,[", len);
 					//LED_ACTIVITY(LED_ON);
-					serial_write_buf(pbuf, len);
+					if(aes_get_encryption_level() > 0)
+					{
+						send = !aes_decrypt(pbuf,len,pbuf,&out_len,lastSeqNo);
+					}
+					if(send){serial_write_buf(pbuf,out_len);}
 					//LED_ACTIVITY(LED_OFF);
 					//printf("]\n");
 				}
@@ -792,6 +799,16 @@ void tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit -= PACKET_OVERHEAD;
+    if (aes_get_encryption_level() > 0) {
+      if (max_xmit < 16) {
+        // With AES, the cipher is up to 16 bytes larger than the text
+        // we are encrypting. So we make sure we have sufficient space
+        // i.e. min size of any cipher text is 16 bytes
+        continue;
+      }
+      max_xmit -= 1; // there is one byte overhead for encoding
+    }
+
 		if (max_xmit > max_data_packet_length)
 		{
 			max_xmit = max_data_packet_length;
@@ -814,7 +831,7 @@ void tdm_serial_loop(void)
 		else
 		{
 			// get a packet from the serial port
-			len = packet_get_next(max_xmit, pbuf);
+			len = packet_get_next(max_xmit, pbuf,seqNo);
 			trailer.command = packet_is_injected();
 		}
 
@@ -930,6 +947,21 @@ void tdm_serial_loop(void)
 		TimeFunction(maxTicksOn,radio_receiver_on());
 		//received_packet = false;
 //		LED_ACTIVITY(LED_OFF);
+#if 0
+		// If we have any packets that need decrypting lets do it now.
+    if(tdm_state_remaining() > (int32_t)(tx_window_width/2))
+    {
+       // If it is starting to get really full, we want to try decrypting
+       // not just one, but a few packets.
+       if (encrypt_buffer_getting_full()) {
+          while (!encrypt_buffer_getting_empty()) {
+            decryptPackets(lastSeqNo);
+          }
+       } else {
+         decryptPackets(lastSeqNo);
+       }
+    }
+#endif
 	}
 #endif
 }

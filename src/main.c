@@ -54,6 +54,7 @@
 #include "em_wdog.h"
 #include "RCOComp.h"
 #include "pins_user.h"
+#include "aes.h"
 // ******************** defines and typedefs *************************
 
 #ifdef printf
@@ -158,7 +159,7 @@ static void hardware_init(void)
  *****************************************************************************/
 int main(void)
 {
-  SCB->VTOR = 0x0000;	// vectors moved as with origin of code
+  //SCB->VTOR = 0x0000;	// vectors moved as with origin of code
 	/* Chip errata */
   CHIP_Init();
 
@@ -181,6 +182,10 @@ int main(void)
 		param_default();
 	hardware_init();																															// Do hardware initialisation
   tdm_init();
+	if (! aes_init(param_s_get(PARAM_ENCRYPTION))) {
+		//panic("failed to initialise aes");
+	}
+
   WDOG_Init_TypeDef init=WDOG_INIT_DEFAULT;
   init.perSel =   wdogPeriod_2k;																								// 1 second
   WDOG_Init(&init);

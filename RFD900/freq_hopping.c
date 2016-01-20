@@ -39,7 +39,8 @@
 //#include "radio.h"
 #include "freq_hopping.h"
 #include "radio_old.h"
-
+#include "crc.h"
+#include "parameters.h"
 
 
 /// how many channels are we hopping over
@@ -87,7 +88,13 @@ fhop_init(uint16_t netid)
 	for (i = 0; i < num_fh_channels; i++) {
 		channel_map[i] = i;
 	}
-	srand(netid);
+  if (0 != param_s_get(PARAM_ENCRYPTION)) {
+    srand(crc16(32, param_get_encryption_key()));
+  }else
+  {	srand(netid);}
+
+
+
 	shuffle(channel_map, num_fh_channels);
 }
 

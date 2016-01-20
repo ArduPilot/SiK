@@ -1,8 +1,8 @@
-#ifndef PACKET_H_
-#define PACKET_H_
+#ifndef _AES_H_
+#define _AES_H_
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
-// Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
+// Copyright (c) 2013 Joe Turner, All Rights Reserved
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -28,52 +28,27 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <stdbool.h>
-
-/// return the next packet to be sent
 ///
-/// @param max_xmit		maximum bytes that can be sent
-/// @param buf			buffer to put bytes in
+/// @file       aes.h
 ///
-/// @return			number of bytes to send
-extern uint8_t packet_get_next(register uint8_t max_xmit, uint8_t * buf, uint8_t SeqNo);
-
-/// return true if the last packet was a resend
+/// Definitions for the radio application AES
 ///
-/// @return			true is a resend
-extern bool packet_is_resend(void);
 
-/// return true if the last packet was a injected packet
-///
-/// @return			true is injected
-extern bool packet_is_injected(void);
 
-/// determine if a received packet is a duplicate
-///
-/// @return			true if this is a duplicate
-extern bool packet_is_duplicate(uint8_t len, uint8_t * buf, bool is_resend);
+#include "AES_defs.h"
+//=============================================================================
+// Function Prototypes
+//-----------------------------------------------------------------------------
 
-/// force the last packet to be re-sent. Used when packet transmit has
-/// failed
-extern void packet_force_resend(void);
+uint8_t aes_encrypt(unsigned char *in_str, uint8_t in_len, unsigned char *out_str, uint8_t *out_len, uint8_t SeqNo);
 
-/// set the maximum size of a packet
-///
-extern void packet_set_max_xmit(uint8_t max);
+bool aes_init(EncryptionLevel_t encryption_level);
 
-/// set the serial rate in bytes/s
-///
-/// @param  speed		serial speed bytes/s
-///
-extern void packet_set_serial_speed(uint16_t speed);
+uint8_t aes_decrypt(unsigned char *in_str,  uint8_t in_len, unsigned char *out_str, uint8_t *out_len, uint8_t SeqNo);
 
-/// inject a packet to be sent when possible
-/// @param buf			buffer to send
-/// @param len			number of bytes
-///			
-extern void packet_inject(uint8_t * buf, uint8_t len);
+EncryptionLevel_t  aes_get_encryption_level();
 
-// mavlink 1.0 marker
-#define MAVLINK10_STX 254
+void aes_set_encryption_level(EncryptionLevel_t  encryption);
+uint16_t AES_KEY_LENGTH(EncryptionLevel_t level);
 
 #endif

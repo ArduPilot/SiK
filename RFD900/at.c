@@ -45,6 +45,7 @@
 #include "printfl.h"
 #include "flash.h"
 #include "PWM.h"
+#include "aes.h"
 
 
 // AT command buffer
@@ -463,6 +464,21 @@ static void at_ampersand(void)
 			at_error();
 		}
 		break;
+
+	case 'E':
+    switch (at_cmd[4]) {
+      case '?':
+        print_encryption_key();
+        return;
+
+      case '=':
+        if (param_set_encryption_key((unsigned char *)&at_cmd[5])) {
+          at_ok();
+          return;
+        }
+        break;
+    }
+   break;
 		
 	default:
 		at_error();

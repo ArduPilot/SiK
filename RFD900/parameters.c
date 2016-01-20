@@ -50,11 +50,8 @@
 #include "printfl.h"
 #include "flash.h"
 #include "crc.h"
+#include "aes.h"
 
-//#define NO_FLASH_TEST 1
-#if NO_FLASH_TEST
-#define FLASH_CALIBRATION_AREA_SIZE   (31)
-#endif
 /// In-ROM parameter info table.
 ///
 const struct parameter_s_info {
@@ -77,6 +74,7 @@ const struct parameter_s_info {
 	{"MANCHESTER",      0},
 	{"RTSCTS",          1},
 	{"MAX_WINDOW",    131},
+  {"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
 };
 
 const struct parameter_r_info {
@@ -113,6 +111,23 @@ pins_user_info_t pin_values[PIN_MAX];
 #define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 2)
 #endif
 
+// Holds the encrpytion string
+static uint8_t encryption_key[32];
+static const uint8_t default_key[32]=
+  { 0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
+    0x2B, 0x73, 0xAE, 0xF0, 0x85, 0x7D, 0x77, 0x81,
+    0x1F, 0x35, 0x2C, 0x07, 0x3B, 0x61, 0x08, 0xD7,
+    0x2D, 0x98, 0x10, 0xA3, 0x09, 0x14, 0xDF, 0xF4 };
+// Place the start away from the other params to allow for expantion 2<<7 +128 = 384
+#define PARAM_E_FLASH_START   (2<<7) + 128
+#define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 3)
+
+// Check to make sure the End of the pins and the beginning of encryption dont overlap
+typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
+
+// Check to make sure we dont overflow off the page
+typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
+static void param_set_default_encryption_key(void);
 
 
 static bool param_s_check(enum Param_S_ID id, uint32_t val)
@@ -161,6 +176,10 @@ static bool param_s_check(enum Param_S_ID id, uint32_t val)
 		// which is the maximum we can handle with a 13
 		// bit trailer for window remaining
 		if (val > 131)
+			return false;
+		break;
+	case PARAM_ENCRYPTION:
+		if (val >= KEY_SIZE_UNDEFINED)
 			return false;
 		break;
 
@@ -215,6 +234,9 @@ bool param_s_set(enum Param_S_ID param, param_t value)
 		value = feature_rtscts?1:0;
 		break;
 
+	case PARAM_ENCRYPTION:
+		 aes_init(value);
+		break;
 	default:
 		break;
 	}
@@ -281,7 +303,6 @@ param_t param_r_get(enum Param_R_ID param)
 	return parameter_r_values[param];
 }
 
-#if !NO_FLASH_TEST
 static bool read_params(uint8_t * input, uint16_t start, uint8_t size)
 {
 	uint16_t		i;
@@ -316,7 +337,6 @@ static void write_params(uint8_t * input, uint16_t start, uint8_t size)
 	flash_write_scratch(i, checksum&0xFF);
 	flash_write_scratch(i+1, checksum>>8);
 }
-#endif
 
 bool param_load(void)
 {
@@ -324,7 +344,6 @@ bool param_load(void)
 
 	// Start with default values
 	param_default();
-#if !NO_FLASH_TEST
 	uint8_t	expected;
 	
 	// read and verify params
@@ -341,7 +360,6 @@ bool param_load(void)
 		return false;
 	if(!read_params((uint8_t *)parameter_r_values, PARAM_R_FLASH_START+1, expected))
 		return false;
-#endif
 	
 	// decide whether we read a supported version of the structure
 	if ((param_t) PARAM_FORMAT_CURRENT != parameter_s_values[PARAM_FORMAT]) {
@@ -361,7 +379,6 @@ bool param_load(void)
 	}
 	
 	// read and verify pin params
-#if !NO_FLASH_TEST
 #if PIN_MAX > 0
 	expected = flash_read_scratch(PIN_FLASH_START);
 	if (expected != sizeof(pin_values))
@@ -369,7 +386,10 @@ bool param_load(void)
 	if(!read_params((uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values)))
 		return false;
 #endif
-#endif
+  // read and verify encryption params
+  if(!read_params((uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
+    return false;
+
 	return true;
 }
 
@@ -377,7 +397,6 @@ void param_save(void)
 {
 	// tag parameters with the current format
 	parameter_s_values[PARAM_FORMAT] = PARAM_FORMAT_CURRENT;
-#if !NO_FLASH_TEST
 
 	// erase the scratch space
 	flash_erase_scratch();
@@ -395,7 +414,10 @@ void param_save(void)
 	flash_write_scratch(PIN_FLASH_START, sizeof(pin_values));
 	write_params((uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values));
 #endif
-#endif
+  // write encryption params
+  flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
+  write_params((uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
+
 }
 
 void param_default(void)
@@ -419,6 +441,7 @@ void param_default(void)
 		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
 	}
 #endif
+	param_set_default_encryption_key();
 }
 
 enum Param_S_ID param_s_id(char * name)
@@ -471,7 +494,6 @@ uint32_t constrain(uint32_t v, uint32_t min, uint32_t max)
 
 bool calibration_set(uint8_t idx, uint8_t value)
 {
-#if !NO_FLASH_TEST
 
 	// if level is valid
 	if(((idx <= BOARD_MAXTXPOWER) && (value != 0xFF))||
@@ -485,9 +507,6 @@ bool calibration_set(uint8_t idx, uint8_t value)
 		}
 	}
 	return false;
-#else
-	return true;
-#endif
 }
 
 uint8_t calibration_get(uint8_t level)
@@ -513,7 +532,6 @@ uint8_t calibration_get(uint8_t level)
 
 bool calibration_lock(void)
 {
-#if !NO_FLASH_TEST
 	uint8_t idx;
 	uint8_t crc = 0;
 
@@ -539,8 +557,103 @@ bool calibration_lock(void)
 		return true;
 	}
 	return false;
-#else
-	return true;
-#endif
+}
 
+// Used to convert individial Hex digits into Integers
+//
+uint8_t read_hex_nibble(const uint8_t c)
+{
+	if ((c >='0') && (c <= '9'))
+	{
+		return c - '0';
+	}
+	else if ((c >='A') && (c <= 'F'))
+	{
+		return c - 'A' + 10;
+	}
+	else if ((c >='a') && (c <= 'f'))
+	{
+		return c - 'a' + 10;
+	}
+	else
+	{
+		// printf("[%u] read_hex_nibble: Error char not in supported range",nodeId);
+		return 0;
+	}
+}
+
+
+/// Convert string to hex codes
+///
+void convert_to_hex(unsigned char *str_in, unsigned char *str_out,	uint8_t key_length)
+{
+	uint8_t i, num;
+
+	for (i=0;i<key_length;i++) {
+		num = read_hex_nibble(str_in[2 * i])<<4;
+		num += read_hex_nibble(str_in[2 * i + 1]);
+		str_out[i] = num;
+	}
+}
+
+/// Set default encryption key
+//
+static void param_set_default_encryption_key(void)
+{
+	memcpy(encryption_key,default_key,sizeof(encryption_key));
+}
+
+/// set the encryption key
+///
+/// Note: There is a reliance on the encryption level as this determines
+///       how many characters we need. So we need to set ATS16 first, THEN
+///       save and then Set the encryption key.
+///
+bool
+param_set_encryption_key(unsigned char *key)
+{
+	uint8_t len, key_length;
+
+  // Use the new encryption level to help with key changes before reboot
+  // Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
+  key_length = AES_KEY_LENGTH(param_s_get(PARAM_ENCRYPTION));
+  len = strlen((char*)key);
+  // If not enough characters (2 char per byte), then set default
+  if (len < 2 * key_length ) {
+    param_set_default_encryption_key();
+    //printf("%s\n",key);
+    printf("ERROR - Key length:%u, Required %u\n",len, 2 * key_length);
+    return true;
+  } else {
+    // We have sufficient characters for the encryption key.
+    // If too many characters, then it will just ignore extra ones
+    printf("key len %d\n",key_length);
+    convert_to_hex(key, encryption_key, key_length);
+  }
+  
+  return true;
+}
+
+/// Print hex codes for given string
+///
+void
+print_encryption_key()
+{
+  uint8_t i;
+  uint8_t key_length = AES_KEY_LENGTH(param_s_get(PARAM_ENCRYPTION));
+  
+  for (i=0; i<key_length; i++) {
+    if (0xF >= encryption_key[i]) {
+      printf("0");
+    }
+		printf("%x",encryption_key[i]);
+	}
+	printf("\n");
+}
+
+/// get the encryption key
+///
+uint8_t* param_get_encryption_key()
+{
+	return encryption_key;
 }
