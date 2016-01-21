@@ -1096,7 +1096,7 @@ void tdm_init(void)
 	uint32_t channel_spacing;
 	uint16_t txpower;
 
-	g_board_frequency = calibration_get(BOARD_MAXTXPOWER + 1);
+	g_board_frequency = calibration_get(CalParam_BAND);
 	g_board_frequency =
 			(BoardFrequencyValid(g_board_frequency)) ?
 					(g_board_frequency) : (FREQ_915);// default to 915, set cal value 31 to change this

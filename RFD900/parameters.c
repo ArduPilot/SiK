@@ -39,22 +39,68 @@
 /// with an 8-bit XOR checksum appended to the end of the flash range.
 ///
 
-
+#include "em_cmu.h"
 #include "radio_old.h"
 #include "tdm.h"
 #include "flash_layout.h"
 #include "pins_user.h"
 #include "parameters.h"
 #include "serial.h"
-#include "board_rfd900e.h"
 #include "printfl.h"
 #include "flash.h"
 #include "crc.h"
 #include "aes.h"
 
+// ******************** defines and typedefs *************************
+typedef enum {
+	CountryUnrestrict	= 0,                                                        // any channel or frequency band
+	CountryAus,						                                                        // predefined channels and frequency band
+	CountryNZ,						                                                        // restrict AT commands for channel number and
+	CountryUSA,
+	CountryEU,
+	CountrySA,
+	CountryLAST
+}CountryCode_t;
+
+#define NUM_FIXED_PARAMS 5
+enum Param_S_ID FixedParam_S_ID[] = {
+PARAM_AIR_SPEED,        // over the air baud rate
+PARAM_TXPOWER,          // transmit power (dBm)
+PARAM_MIN_FREQ,         // min frequency in MHz
+PARAM_MAX_FREQ,         // max frequency in MHz
+PARAM_NUM_CHANNELS,     // number of hopping channels
+};
+// Check to make sure the size matches
+typedef char fpCheck[NUM_FIXED_PARAMS==((sizeof(FixedParam_S_ID)/sizeof(FixedParam_S_ID[0]))) ? 0 : -1];
+
+// Three extra bytes, 1 for the number of params and 2 for the checksum
+#define PARAM_S_FLASH_START   0
+#define PARAM_S_FLASH_END     (PARAM_S_FLASH_START + sizeof(parameter_s_values) + 3)
+
+// Three extra bytes, 1 for the number of params and 2 for the checksum, starts at position 128
+#define PARAM_R_FLASH_START   (2<<6)
+#define PARAM_R_FLASH_END     (PARAM_R_FLASH_START + sizeof(parameter_r_values) + 3)
+
+#if PIN_MAX > 0
+pins_user_info_t pin_values[PIN_MAX];
+// Place the start away from the other params to allow for expantion 2<<7 = 256
+#define PIN_FLASH_START       (2<<7)
+#define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 2)
+#endif
+
+// Holds the encrpytion string
+static uint8_t encryption_key[32];
+// Place the start away from the other params to allow for expantion 2<<7 +128 = 384
+#define PARAM_E_FLASH_START   (2<<7) + 128
+#define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 3)
+// Check to make sure the End of the pins and the beginning of encryption dont overlap
+typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
+// Check to make sure we dont overflow off the page
+typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
+// ******************** local constants ******************************
 /// In-ROM parameter info table.
 ///
-const struct parameter_s_info {
+static const struct parameter_s_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_s_info[PARAM_S_MAX] = {
@@ -77,7 +123,7 @@ const struct parameter_s_info {
   {"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
 };
 
-const struct parameter_r_info {
+static const struct parameter_r_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_r_info[PARAM_R_MAX] = {
@@ -85,56 +131,85 @@ const struct parameter_r_info {
 	{"HYSTERESIS_RSSI", 50},
 };
 
+static const uint16_t FixedCountryParams[CountryLAST][NUM_FIXED_PARAMS] =
+{ {64,30,902,928,50},
+	{64,30,902,928,50},
+	{64,30,902,928,50},
+	{64,30,902,928,50},
+	{64,30,902,928,50},
+	{64,30,902,928,50} };
+
+static const uint8_t default_key[32]=
+  { 0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
+    0x2B, 0x73, 0xAE, 0xF0, 0x85, 0x7D, 0x77, 0x81,
+    0x1F, 0x35, 0x2C, 0x07, 0x3B, 0x61, 0x08, 0xD7,
+    0x2D, 0x98, 0x10, 0xA3, 0x09, 0x14, 0xDF, 0xF4 };
+
+#if PIN_MAX > 0
+static const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
+#endif
+// ******************** local variables ******************************
 /// In-RAM parameter store.
 ///
 /// It seems painful to have to do this, but we need somewhere to
 /// hold all the parameters when we're rewriting the scratchpad
 /// page anyway.
 ///
-param_t	parameter_s_values[PARAM_S_MAX];
-param_t	parameter_r_values[PARAM_R_MAX];
+static param_t	parameter_s_values[PARAM_S_MAX];
+static param_t	parameter_r_values[PARAM_R_MAX];
 
-// Three extra bytes, 1 for the number of params and 2 for the checksum
-#define PARAM_S_FLASH_START   0
-#define PARAM_S_FLASH_END     (PARAM_S_FLASH_START + sizeof(parameter_s_values) + 3)
-
-// Three extra bytes, 1 for the number of params and 2 for the checksum, starts at position 128
-#define PARAM_R_FLASH_START   (2<<6)
-#define PARAM_R_FLASH_END     (PARAM_R_FLASH_START + sizeof(parameter_r_values) + 3)
-
-#if PIN_MAX > 0
-const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
-pins_user_info_t pin_values[PIN_MAX];
-
-// Place the start away from the other params to allow for expantion 2<<7 = 256
-#define PIN_FLASH_START       (2<<7)
-#define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 2)
-#endif
-
-// Holds the encrpytion string
-static uint8_t encryption_key[32];
-static const uint8_t default_key[32]=
-  { 0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
-    0x2B, 0x73, 0xAE, 0xF0, 0x85, 0x7D, 0x77, 0x81,
-    0x1F, 0x35, 0x2C, 0x07, 0x3B, 0x61, 0x08, 0xD7,
-    0x2D, 0x98, 0x10, 0xA3, 0x09, 0x14, 0xDF, 0xF4 };
-// Place the start away from the other params to allow for expantion 2<<7 +128 = 384
-#define PARAM_E_FLASH_START   (2<<7) + 128
-#define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 3)
-
-// Check to make sure the End of the pins and the beginning of encryption dont overlap
-typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
-
-// Check to make sure we dont overflow off the page
-typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
+// ******************** global variables *****************************
+// ******************** local function prototypes ********************
 static void param_set_default_encryption_key(void);
+static int16_t GetFixedParamIdx(enum Param_S_ID id);
+static int16_t GetFixedParam(enum Param_S_ID id);
+// ********************* Implementation ******************************
 
+__STATIC_INLINE uint8_t GetCountry(void)																				// get country, 0 is any country
+{
+	uint8_t val = calibration_get(CalParam_Country);
+	if((val >= CountryUnrestrict)&&(val < CountryLAST))
+		return(val);
+	return(0);
+}
+
+__STATIC_INLINE int16_t FixedParamIdx(enum Param_S_ID id)												// get param idx, -ve is not valid
+{
+	int16_t i;
+	for(i=(sizeof(FixedParam_S_ID)/sizeof(FixedParam_S_ID[0]))-1;i>=0;i--)
+	{
+		if(id == FixedParam_S_ID[i])
+			break;
+	}
+	return(i);	// will be -ve if not found
+}
+
+static int16_t GetFixedParamIdx(enum Param_S_ID id)															// get param idx if country is fixed
+{
+	if(GetCountry() > 0)
+	{
+		return(FixedParamIdx(id));
+	}
+	return(-1);
+}
+
+static int16_t GetFixedParam(enum Param_S_ID id)																// get fix parameter -ve is not valid
+{
+	int16_t idx = GetFixedParamIdx(id);
+	if(idx >= 0)
+	{
+		return(FixedCountryParams[GetCountry()][idx]);
+	}
+	return(-1);
+}
 
 static bool param_s_check(enum Param_S_ID id, uint32_t val)
 {
 	// parameter value out of range - fail
 	if (id >= PARAM_S_MAX)
 		return false;
+	int16_t idx = GetFixedParamIdx(id);
+	if(idx >=0)	return false;
 
 	switch (id) {
 	case PARAM_FORMAT:
@@ -248,8 +323,11 @@ bool param_s_set(enum Param_S_ID param, param_t value)
 
 param_t param_s_get(enum Param_S_ID param)
 {
+	int16_t val;
 	if (param >= PARAM_S_MAX)
 		return 0;
+	if((val=GetFixedParam(param))>=0)
+		return(val);
 	return parameter_s_values[param];
 }
 
@@ -497,7 +575,8 @@ bool calibration_set(uint8_t idx, uint8_t value)
 
 	// if level is valid
 	if(((idx <= BOARD_MAXTXPOWER) && (value != 0xFF))||
-	   ((idx == BOARD_MAXTXPOWER) && BoardFrequencyValid(value)) )
+	   ((idx == CalParam_BAND) && BoardFrequencyValid(value))||
+	   ((idx == CalParam_Country) && (value < CountryLAST)) )
 	{
 		// if the target byte isn't yet written
 		if (flash_read_byte(FLASH_CALIBRATION_AREA + idx) == 0xFF)
@@ -523,7 +602,7 @@ uint8_t calibration_get(uint8_t level)
 	}
 
 	if(((calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER))||
-		 (level == (BOARD_MAXTXPOWER+1) ))																					// allow read of radio band before crc valid as needs to be set before cal finished
+		 ((level >= CalParam_BAND)&&(level < CalParam_LAST)) )
 	{
 		return calibration[level];
 	}

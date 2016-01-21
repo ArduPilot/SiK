@@ -47,6 +47,9 @@
 ///   parameters.c:parameter_names[]
 ///   parameters.c:param_check()
 ///
+
+#include "board_rfd900e.h"
+
 enum Param_S_ID {
 	PARAM_FORMAT = 0,       // Must always be parameter 0
 	PARAM_SERIAL_SPEED,     // BAUD_RATE_* constant
@@ -74,7 +77,13 @@ enum Param_R_ID {
 	PARAM_R_MAX             // Must be last
 };
 
-#define PARAM_FORMAT_CURRENT  0x1CUL  //< current parameter format ID
+typedef enum{
+	CalParam_BAND=BOARD_MAXTXPOWER+1,
+	CalParam_Country,
+	CalParam_LAST,
+}	CalParm_t;
+
+#define PARAM_FORMAT_CURRENT  0x1DUL  //< current parameter format ID
 
 /// Parameter type.
 ///

@@ -37,6 +37,7 @@
 
 #include <stdint.h>
 #include "em_device.h" // need to know flash sizes
+#include "parameters.h"
 
 // Flash memory map
 #define FLASH_APP_START		0x2000					// 2 pages reserved for bootloader
@@ -62,7 +63,7 @@
 
 
 // locked and unlocked areas to store power calibration info
-#define FLASH_CALIBRATION_AREA_SIZE   (BOARD_MAXTXPOWER+1+1) //one extra for band setting
+#define FLASH_CALIBRATION_AREA_SIZE   (CalParam_LAST) //two extra for band and country
 #define FLASH_CALIBRATION_CRC         (FLASH_CAL_END - 1)
 #define FLASH_CALIBRATION_AREA        (FLASH_CALIBRATION_CRC - FLASH_CALIBRATION_AREA_SIZE)
 
