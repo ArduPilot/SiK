@@ -185,9 +185,6 @@ Ecode_t ezradioPluginManager( EZRADIODRV_Handle_t radioHandle )
 #else
     ezradio_get_int_status(0x0, 0x0, 0x0, radioReplyHandle);
 #endif
-#if ( defined EZRADIO_PLUGIN_TRANSMIT )
-    ezradioHandleTransmitPlugin( radioHandle, radioReplyHandle );
-#endif
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
     ezradioHandleReceivePlugin( radioHandle, radioReplyHandle,IRQ_tick);

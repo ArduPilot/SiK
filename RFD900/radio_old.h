@@ -102,7 +102,7 @@ typedef struct {
 typedef struct{
 	uint32_t frequency;
 	uint32_t channel_spacing;
-	uint8_t air_data_rate;
+	uint16_t air_data_rate;
 	uint8_t current_channel;
 	uint8_t transmit_power;
 	uint8_t preamble_length; // in nibbles
@@ -192,6 +192,8 @@ extern void radio_set_channel(uint8_t channel, bool RX);
 /// @return			the current channel
 extern uint8_t radio_get_channel(void);
 
+bool radio_RateValid(uint16_t Air_rate);
+
 /// configure the radio for a given air data rate
 /// @param air_rate		The air data rate, in bits per second
 ///				Note that this value is rounded up to
@@ -224,7 +226,7 @@ extern uint8_t radio_current_rssi(void);
 /// @return			The value passed to the last successful call
 ///				to radio_configure
 ///
-extern uint8_t radio_air_rate(void);
+extern uint16_t radio_air_rate(void);
 
 /// set the radio transmit power (in dBm)
 ///

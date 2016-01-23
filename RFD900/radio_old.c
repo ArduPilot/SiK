@@ -21,8 +21,10 @@
 #include "ezradio_prop.h"
 #include "ezradio_api_lib_add.h"
 #include "parameters.h"
-#include "radio-config-4gfsk-500-300.h"
+#include "radio-config-2gfsk-4-25.h"
 #include "radio-config-2gfsk-64-96.h"
+#include "radio-config-4gfsk-250-42.h"
+#include "radio-config-4gfsk-500-83.h"
 #include "rtcdriver.h"
 #include "golay.h"
 #include "crc.h"
@@ -32,7 +34,7 @@
 #define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 #define RX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 
-#define NUM_DATA_RATES 16
+#define NUM_DATA_RATES 5
 #define RFD900_INT_TX_POW 26           // TX power level into amp (0-127)not linear, 10dbm out, 6.8 after atten
 // 2.250V @ 30dbm; 1.75V @ n = 127; 3.15V @n = 1 ; 90mV @n = 255
 #define NUM_POWER_LEVELS 16
@@ -81,27 +83,18 @@ static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211,
 static ezradio_cmd_reply_t ezradioReply;
 static const uint32_t FCODIV[8] = { 4, 6, 8, 12, 16, 24, 24, 24 };
 static const uint32_t NPRESC[2] = { 4, 2 };
-static const uint8_t Radio_Configuration_Data_Array_4G500300[] = RADIO_4G500300_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_2G425[] = RADIO_2G425_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_2G6496[] = RADIO_2G6496_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_4G25042[] = RADIO_4G25042_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_4G50083[] = RADIO_4G50083_CONFIGURATION_DATA_ARRAY;
 
 static const RFParams_t RFParams[NUM_DATA_RATES] =
 {
-	{	2  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
-	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
-	{	8  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
-	{	16 ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G6496  },
-	{	19 ,ModType_2GFSK, 28500,Radio_Configuration_Data_Array_2G6496  },
-	{	24 ,ModType_2GFSK, 36000,Radio_Configuration_Data_Array_2G6496  },
-	{	32 ,ModType_2GFSK, 48000,Radio_Configuration_Data_Array_2G6496  },
-	{	48 ,ModType_2GFSK, 72000,Radio_Configuration_Data_Array_2G6496  },
-	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496  },
-	{	96 ,ModType_2GFSK,144000,Radio_Configuration_Data_Array_4G500300},
-	{	128,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},
-	{	192,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},// TODO check these later
-	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G500300},
-	{	320,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
-	{	416,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
-	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G500300},
+	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G425  },
+	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496 },
+	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G25042},
+	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G25042},
+	{1000,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G50083},
 };
 
 static uint8_t lastRSSI=0;
@@ -132,7 +125,6 @@ radio_settings_t settings= {
 } ;
 
 // ******************** local function prototypes ********************
-static void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
 static void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
 static void appPacketCrcErrorCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks);
 static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t timeout_ticks,uint16_t *TxTick);
@@ -230,13 +222,49 @@ static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t time
   	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt,TxTick)));
   	if (appTxActive)
     {
-    	radioTxCount = (pktLength.pktLen >= EZRADIO_FIFO_SIZE)?(EZRADIO_FIFO_SIZE):(pktLength.pktLen);
-    	// need to wait for completion, calling radio daemon
-    	// until finished or timed out
-    	while(appTxActive&&//(radioTxCount < pktLength.pktLen)&&
-    			  ((uint16_t)(timer2_tick()-tickStart) <  timeout_ticks))
+  		// this nasty bit of code is here because the access time for fifo length and tx write and int status is so slow that we can't write the buffer in time
+  		// using the tx thresholds
+  		//uint8_t maxbuff=0;
+  		static ezradio_cmd_reply_t radioReplyData;
+  		radioTxCount = (pktLength.pktLen >= EZRADIO_FIFO_SIZE)?(EZRADIO_FIFO_SIZE):(pktLength.pktLen);
+    	while((radioTxCount<pktLength.pktLen)&&((uint16_t)(timer2_tick()-tickStart) <  timeout_ticks))
     	{
-    		radio_daemon();
+    	  static uint8_t insertlen;
+        ezradio_fifo_info_fast_read(&radioReplyData);
+        insertlen = (pktLength.pktLen-radioTxCount);
+        if (insertlen > radioReplyData.FIFO_INFO.TX_FIFO_SPACE)
+        {
+        	insertlen = radioReplyData.FIFO_INFO.TX_FIFO_SPACE;
+        }
+        if(insertlen != 0)
+        {
+        	ezradio_write_tx_fifo(insertlen, &radioTxPkt[radioTxCount]);
+        	radioTxCount += insertlen;
+        }
+        //if(maxbuff  < radioReplyData.FIFO_INFO.TX_FIFO_SPACE) maxbuff = radioReplyData.FIFO_INFO.TX_FIFO_SPACE;
+    	}
+    	if(radioTxCount != pktLength.pktLen)
+    	{
+    		Res= false;
+    	}
+    	else
+    	{
+				// wait for tx complete
+				bool done =false;
+				while(!done&&((uint16_t)(timer2_tick()-tickStart) <  timeout_ticks))
+				{
+					ezradio_get_int_status(0,0,0,&radioReplyData);
+					if ( radioReplyData.GET_INT_STATUS.CHIP_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_CHIP_PEND_FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND_BIT )
+					{
+						ezradio_fifo_info(EZRADIO_CMD_FIFO_INFO_ARG_FIFO_TX_BIT, NULL); // TODO use frr registers for this
+						done = true;
+						Res = false;	// we failed :(
+					}
+					else if( radioReplyData.GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_SENT_PEND_BIT )
+					{
+						done = true;
+					}
+				}
     	}
     }
 	}
@@ -383,39 +411,6 @@ bool radio_receive_in_progress(void)
 }
 
 /**************************************************************************//**
- * @brief  Packet transmitted callback of the application.
- *
- * @param[in] handle EzRadio plugin manager handler.
- * @param[in] status Callback status.
- *****************************************************************************/
-void appPacketTransmittedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uint16_t IRQ_ticks)
-{
-  if ( ECODE_EMDRV_EZRADIODRV_PACKET_SENT == (status&ECODE_EMDRV_EZRADIODRV_PACKET_SENT))
-  {
-    /* Sign tx passive state */
-    appTxActive = false;
-    //ezradioStartRx( handle );
-  }
-
-  if((true == appTxActive)&&( ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY == (status&ECODE_EMDRV_EZRADIODRV_TX_NEAR_EMPTY)))
-  {
-  	if(radioTxCount < (radioTxPkt[2]+3))
-  	{
-  		uint8_t len = (radioTxPkt[2]+3) - radioTxCount;
-  	  ezradio_cmd_reply_t radioReplyData;
-      ezradio_fifo_info_fast_read(&radioReplyData);
-  	  if (len > radioReplyData.FIFO_INFO.TX_FIFO_SPACE)
-  	  {
-  	  	len = radioReplyData.FIFO_INFO.TX_FIFO_SPACE;
-  	  }
-  		ezradio_write_tx_fifo(len, &radioTxPkt[radioTxCount]);
-  		radioTxCount += len;
-  	}
-  }
-
-}
-
-/**************************************************************************//**
  * @brief  Packet received callback of the application.
  * @param[in] handle EzRadio plugin manager handler.
  * @param[in] status Callback status.
@@ -436,13 +431,13 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uin
   	extern uint8_t lastRSSI;
   	if(!RxDataIncoming)
   	{
+    	//putChar ('P');
   		RxDataIncoming = true;
   		ezradio_get_modem_status(0x00,&ezradioReply);
   		lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
     	RTCDRV_StopTimer(RxFifoTimer);
     	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);
   	}
-  	//putChar ('P');
   }
 }
 
@@ -507,7 +502,6 @@ bool radio_initialise(void)
     while (1);
   }
 
-  appRadioInitData.packetTx.userCallback = &appPacketTransmittedCallback;				// Configure packet transmitted callback.
   appRadioInitData.packetRx.userCallback = &appPacketReceivedCallback;					// Configure packet received buffer and callback.
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer
   appRadioInitData.packetRx.pktBufLen = sizeof(radioRxPkt);											// set the dest buffer size
@@ -610,6 +604,17 @@ uint8_t radio_get_channel(void)
 	return(appRadioHandle->packetRx.channel);
 }
 
+bool radio_RateValid(uint16_t air_rate)
+{
+	uint8_t RateIdx = 0;
+	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
+	{
+		RateIdx++;
+	}
+	if (NUM_DATA_RATES <= RateIdx)
+		return (false);
+	return(true);
+}
 /// configure the radio for a given air data rate
 /// @param air_rate		The air data rate, in bits per second (assume they mean Kbits/s, hmmm this needs to change for this modem TODO)
 ///				Note that this value is rounded up to the next supported value
@@ -674,8 +679,8 @@ bool radio_configure( uint16_t air_rate)
 	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
 	 */
 
-	if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
-	{return false;}
+	//if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
+	//{return false;}
 	if (feature_golay) 																														// if golay crc and network id done after packet rx
 	{
 		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH,															// turn all matching off value,mask,ctrl x 4
@@ -728,7 +733,7 @@ uint8_t radio_current_rssi(void)
 /// return the air data rate
 /// @return			The value passed to the last successful call
 ///				to radio_configure
-uint8_t radio_air_rate(void)
+uint16_t radio_air_rate(void)
 {
 	return settings.air_data_rate;
 }

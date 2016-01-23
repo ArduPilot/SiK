@@ -62,17 +62,19 @@ typedef enum {
 	CountryLAST
 }CountryCode_t;
 
-#define NUM_FIXED_PARAMS 5
+#define NUM_FIXED_PARAMS 4
 enum Param_S_ID FixedParam_S_ID[] = {
 PARAM_AIR_SPEED,        // over the air baud rate
-PARAM_TXPOWER,          // transmit power (dBm)
 PARAM_MIN_FREQ,         // min frequency in MHz
 PARAM_MAX_FREQ,         // max frequency in MHz
 PARAM_NUM_CHANNELS,     // number of hopping channels
 };
 // Check to make sure the size matches
 typedef char fpCheck[NUM_FIXED_PARAMS==((sizeof(FixedParam_S_ID)/sizeof(FixedParam_S_ID[0]))) ? 0 : -1];
-
+typedef struct{
+	uint16_t Min;
+	uint16_t Max;
+} ParamLimit_t;
 // Three extra bytes, 1 for the number of params and 2 for the checksum
 #define PARAM_S_FLASH_START   0
 #define PARAM_S_FLASH_END     (PARAM_S_FLASH_START + sizeof(parameter_s_values) + 3)
@@ -131,13 +133,13 @@ static const struct parameter_r_info {
 	{"HYSTERESIS_RSSI", 50},
 };
 
-static const uint16_t FixedCountryParams[CountryLAST][NUM_FIXED_PARAMS] =
-{ {64,30,902,928,50},
-	{64,30,902,928,50},
-	{64,30,902,928,50},
-	{64,30,902,928,50},
-	{64,30,902,928,50},
-	{64,30,902,928,50} };
+static const ParamLimit_t FixedCountryParams[CountryLAST][NUM_FIXED_PARAMS] =
+{ {{ 4,1000},{902,902},{928,928},{50,50}},
+	{{ 4,1000},{902,902},{928,928},{50,50}},
+	{{ 4,1000},{902,902},{928,928},{50,50}},
+	{{ 4,1000},{902,902},{928,928},{50,50}},
+	{{ 4,1000},{902,902},{928,928},{50,50}},
+	{{ 4,1000},{902,902},{928,928},{50,50}} };
 
 static const uint8_t default_key[32]=
   { 0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
@@ -162,7 +164,7 @@ static param_t	parameter_r_values[PARAM_R_MAX];
 // ******************** local function prototypes ********************
 static void param_set_default_encryption_key(void);
 static int16_t GetFixedParamIdx(enum Param_S_ID id);
-static int16_t GetFixedParam(enum Param_S_ID id);
+static const ParamLimit_t * GetFixedParam(enum Param_S_ID id);
 // ********************* Implementation ******************************
 
 __STATIC_INLINE uint8_t GetCountry(void)																				// get country, 0 is any country
@@ -193,14 +195,14 @@ static int16_t GetFixedParamIdx(enum Param_S_ID id)															// get param i
 	return(-1);
 }
 
-static int16_t GetFixedParam(enum Param_S_ID id)																// get fix parameter -ve is not valid
+static const ParamLimit_t* GetFixedParam(enum Param_S_ID id)																// get fix parameter -ve is not valid
 {
 	int16_t idx = GetFixedParamIdx(id);
 	if(idx >= 0)
 	{
-		return(FixedCountryParams[GetCountry()][idx]);
+		return(&FixedCountryParams[GetCountry()][idx]);
 	}
-	return(-1);
+	return(NULL);
 }
 
 static bool param_s_check(enum Param_S_ID id, uint32_t val)
@@ -208,8 +210,13 @@ static bool param_s_check(enum Param_S_ID id, uint32_t val)
 	// parameter value out of range - fail
 	if (id >= PARAM_S_MAX)
 		return false;
-	int16_t idx = GetFixedParamIdx(id);
-	if(idx >=0)	return false;
+	const ParamLimit_t* Limit = GetFixedParam(id);
+	if(Limit != NULL)
+	{
+		if(val < Limit->Min) return false;
+		if(val > Limit->Max) return false;
+		return true;
+	}
 
 	switch (id) {
 	case PARAM_FORMAT:
@@ -221,7 +228,7 @@ static bool param_s_check(enum Param_S_ID id, uint32_t val)
 		return serial_device_valid_speed(val);
 
 	case PARAM_AIR_SPEED:
-		if (val > 256)
+		if(!radio_RateValid(val))
 			return false;
 		break;
 
@@ -323,12 +330,17 @@ bool param_s_set(enum Param_S_ID param, param_t value)
 
 param_t param_s_get(enum Param_S_ID param)
 {
-	int16_t val;
+	param_t val;
+	const ParamLimit_t *Limit;
 	if (param >= PARAM_S_MAX)
 		return 0;
-	if((val=GetFixedParam(param))>=0)
-		return(val);
-	return parameter_s_values[param];
+	val = parameter_s_values[param];
+	if((Limit=GetFixedParam(param)) != NULL)
+	{
+		if(val < Limit->Min) val = Limit->Min;
+		else if(val > Limit->Max) val = Limit->Max;
+	}
+	return(val);
 }
 
 static bool param_r_check(enum Param_R_ID id, uint32_t val)

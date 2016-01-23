@@ -95,7 +95,7 @@ void ezradio_hal_GpioInit( GPIOINT_IrqCallbackPtr_t ezradioIrqCallback, bool ena
 
 void ezradio_hal_SpiInit( void )
 {
-   ezradioSpiInitData.bitRate   = 8E6;
+   ezradioSpiInitData.bitRate   = 10E6;
    ezradioSpiInitData.csControl = spidrvCsControlApplication;
 
    SPIDRV_Init( ezradioSpiHandlePtr, &ezradioSpiInitData );

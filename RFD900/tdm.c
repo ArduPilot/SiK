@@ -613,7 +613,6 @@ void tdm_serial_loop(void)
 			// we're not waiting for a preamble
 			// any more
 			Set_transmit_wait(0,0);
-			//transmit_wait = 0;
 
 			if (len < sizeof(trailer))
 			{
@@ -627,10 +626,12 @@ void tdm_serial_loop(void)
 			len -= sizeof(trailer);
 			if(lastSeqNo == trailer.seqNo)																					// if packet is repeated
 			{
+				errors.rx_errors++;
 				//printf("duplicate\n");																								// make it easy to see faults
 			}
 			else if(trailer.seqNo != (uint8_t)(lastSeqNo+1))
 			{
+				errors.rx_errors++;
 				//printf("missed x%u e%u\n",trailer.seqNo,lastSeqNo+1);																								// make it easy to see faults
 			}
 			lastSeqNo = trailer.seqNo;
@@ -914,11 +915,14 @@ void tdm_serial_loop(void)
 		// after sending a packet leave a bit of time before
 		// sending the next one. The receivers don't cope well
 		// with back to back packets
-		Set_transmit_wait(packet_latency,tickEnd);
-		//transmit_wait = packet_latency;
+		Set_transmit_wait(packet_latency,timer2_tick());
 		if(res)
 		{
 			TXSetupTicks = tickEnd-tickStart;
+		}
+		else
+		{
+			errors.tx_errors++;
 		}
 
 		tdelta = (uint16_t) (timer2_tick() - tickStart);
@@ -1287,6 +1291,9 @@ void tdm_init(void)
 	window_width = 3
 			* (packet_latency + (max_data_packet_length * (uint32_t) ticks_per_byte));
 
+	if(window_width < 2000)
+		window_width = 2000;
+
 	// if LBT is enabled, we need at least 3*5ms of window width
 	if (lbt_rssi != 0)
 	{
@@ -1297,7 +1304,7 @@ void tdm_init(void)
 
 	// the window width cannot be more than 0.4 seconds to meet US
 	// regulations
-#if 0
+
 	if (window_width >= REGULATORY_MAX_WINDOW && num_fh_channels > 1)
 	{
 		window_width = REGULATORY_MAX_WINDOW;
@@ -1313,7 +1320,7 @@ void tdm_init(void)
 	{
 		window_width = 0x1fff;
 	}
-#endif
+
 
 	tx_window_width = window_width;
 
@@ -1387,7 +1394,7 @@ static int16_t Set_tdm_state_remaining(uint16_t val, uint16_t reltick)
 static int16_t transmit_wait(void)
 {
 	uint16_t tn = timer2_tick();
-	uint16_t elapsed = (uint16_t) (tdm_end - tn);
+	uint16_t elapsed = (uint16_t) (wait_end - tn);
 	if (elapsed < wait_ticks)
 	{
 		return (elapsed);
