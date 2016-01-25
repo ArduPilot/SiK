@@ -1220,9 +1220,9 @@ void tdm_init(void)
 	radio_set_channel(param_s_get(PARAM_NETID) % num_fh_channels, true);
 
 	// And intilise the radio with them.
-	if (!radio_configure(param_s_get(PARAM_AIR_SPEED))
-			&& !radio_configure(param_s_get(PARAM_AIR_SPEED))
-			&& !radio_configure(param_s_get(PARAM_AIR_SPEED)))
+	if (!radio_configure()
+			&& !radio_configure()
+			&& !radio_configure())
 	{
 		panic("radio_configure failed");
 	}
