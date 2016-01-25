@@ -743,10 +743,6 @@ uint8_t radio_get_transmit_power(void)
 	return settings.transmit_power;
 }
 
-/// send a MAVLink status report packet
-void MAVLink_report(void)
-{}
-
 /// return temperature in degrees C
 ///
 /// @return		temperature in degrees C, from 0 to 127

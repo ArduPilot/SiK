@@ -67,7 +67,7 @@ enum tdm_state {
 static enum tdm_state tdm_state;
 
 /// a packet buffer for the TDM code
-uint8_t pbuf[MAX_PACKET_LENGTH];
+static uint8_t pbuf[MAX_PACKET_LENGTH];
 
 static uint16_t tdm_end;																												// tdm remaining time will be relative to tick counter
 static uint16_t tdm_ticks;
