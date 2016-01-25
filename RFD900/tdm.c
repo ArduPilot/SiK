@@ -1106,11 +1106,11 @@ void tdm_init(void)
 					(g_board_frequency) : (FREQ_915);// default to 915, set cal value 31 to change this
 	g_board_bl_version = 1;// TODO find a way for the bootloader to tell us it's version
 
-	if (!radio_initialise())
+	if (!radio_initialise(param_s_get(PARAM_AIR_SPEED)))
 	{
 		panic("radio_initialise failed");
 	}
-	radio_set_diversity(false);
+	radio_set_diversity(true);
 
 	switch (g_board_frequency) {
 	case FREQ_868:

@@ -173,7 +173,7 @@ extern bool radio_receiver_on(void);
 
 /// reset and intiialise the radio
 /// @return			True if the initialisation completed successfully.
-extern bool radio_initialise(void);
+extern bool radio_initialise(uint16_t air_rate);
 
 /// set the nominal radio transmit/receive frequencies
 /// This is the frequency of channel zero.
@@ -200,7 +200,7 @@ bool radio_RateValid(uint16_t Air_rate);
 ///				the next supported value
 /// @return			True if the radio was successfully configured.
 ///
-extern bool radio_configure( uint16_t air_rate);
+extern bool radio_configure( void);
 
 /// configure the radio network ID
 /// The network ID is programmed as header bytes, so that packets for

@@ -58,7 +58,6 @@ typedef enum {
 	CountryNZ,						                                                        // restrict AT commands for channel number and
 	CountryUSA,
 	CountryEU,
-	CountrySA,
 	CountryLAST
 }CountryCode_t;
 
@@ -114,9 +113,9 @@ static const struct parameter_s_info {
 	{"ECC",             0},
 	{"MAVLINK",         0},
 	{"OPPRESEND",       0},
-	{"MIN_FREQ",        0},
-	{"MAX_FREQ",        0},
-	{"NUM_CHANNELS",    0},
+	{"MIN_FREQ",      915},
+	{"MAX_FREQ",      928},
+	{"NUM_CHANNELS",   20},
 	{"DUTY_CYCLE",    100},
 	{"LBT_RSSI",        0},
 	{"MANCHESTER",      0},
@@ -134,12 +133,13 @@ static const struct parameter_r_info {
 };
 
 static const ParamLimit_t FixedCountryParams[CountryLAST][NUM_FIXED_PARAMS] =
-{ {{ 4,1000},{902,902},{928,928},{50,50}},
+{ {{ 4,1000},{902,902},{928,928},{1,50}},
+	{{ 4,1000},{915,915},{928,928},{20,20}},
+	{{ 4,1000},{921,921},{929,929},{20,20}},
 	{{ 4,1000},{902,902},{928,928},{50,50}},
-	{{ 4,1000},{902,902},{928,928},{50,50}},
-	{{ 4,1000},{902,902},{928,928},{50,50}},
-	{{ 4,1000},{902,902},{928,928},{50,50}},
-	{{ 4,1000},{902,902},{928,928},{50,50}} };
+	{{ 4,1000},{863,863},{870,870},{50,50}}};
+
+typedef char FCPCheck[(sizeof(FixedCountryParams) ==  (sizeof(ParamLimit_t)*CountryLAST*NUM_FIXED_PARAMS)) ? 0 : -1];
 
 static const uint8_t default_key[32]=
   { 0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,

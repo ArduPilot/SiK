@@ -331,7 +331,7 @@ typedef struct EZRADIODRV_HandleData
   EZRADIODRV_DIRECT_RECEIVE_PLUGIN_INIT_DEFAULT   /* Direct Rx plugin init */
 #endif
 
-void ezradioInit( EZRADIODRV_Handle_t handle );
+void ezradioInit( EZRADIODRV_Handle_t handle,const uint8_t *Radio_Config_Data);
 Ecode_t ezradioPluginManager( EZRADIODRV_Handle_t handle );
 void ezradioResetTRxFifo(void);
 

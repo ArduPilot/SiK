@@ -64,7 +64,7 @@ static uint16_t IRQ_tick;
 void ezradioPowerUp(void);
 
 #if ( defined EZRADIO_PLUGIN_TRANSMIT )
-Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle );
+//Ecode_t ezradioHandleTransmitPlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_ReplyHandle_t radioReplyHandle );
 #endif
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
@@ -109,9 +109,12 @@ void ezradioPowerUp(void)
  *
  * @param[in] handle EzRadio driver instance handler.
  *****************************************************************************/
-void ezradioInit( EZRADIODRV_Handle_t handle )
+void ezradioInit( EZRADIODRV_Handle_t handle,const uint8_t *Radio_Config_Data)
 {
   uint16_t wDelay;
+  const uint8_t * Config_Data = Radio_Configuration_Data_Array;
+  if(NULL != Radio_Config_Data)
+  	Config_Data = Radio_Config_Data;
   myradioHandle = handle;
   /* Initialize radio GPIOs and SPI port */
 
@@ -124,9 +127,8 @@ void ezradioInit( EZRADIODRV_Handle_t handle )
 
   /* Power Up the radio chip */
   ezradioPowerUp();
-
   /* Load radio configuration */
-  while (EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Radio_Configuration_Data_Array))
+  while (EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Config_Data))
   {
     /* Error hook */
 #ifdef ERROR_HOOK

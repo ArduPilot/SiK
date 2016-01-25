@@ -25,6 +25,7 @@
 #include "radio-config-2gfsk-64-96.h"
 #include "radio-config-4gfsk-250-42.h"
 #include "radio-config-4gfsk-500-83.h"
+#include "radio-config-2gfsk-250-159.h"
 #include "rtcdriver.h"
 #include "golay.h"
 #include "crc.h"
@@ -87,12 +88,13 @@ static const uint8_t Radio_Configuration_Data_Array_2G425[] = RADIO_2G425_CONFIG
 static const uint8_t Radio_Configuration_Data_Array_2G6496[] = RADIO_2G6496_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_4G25042[] = RADIO_4G25042_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_4G50083[] = RADIO_4G50083_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_2G250159[] = RADIO_2G250159_CONFIGURATION_DATA_ARRAY;
 
 static const RFParams_t RFParams[NUM_DATA_RATES] =
 {
 	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G425  },
 	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496 },
-	{	250,ModType_2GFSK,159000,NULL},
+	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_2G250159},
 	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G25042},
 	{1000,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G50083},
 };
@@ -492,7 +494,7 @@ bool radio_receiver_on(void)
 
 /// reset and intiialise the radio
 /// @return			True if the initialisation completed successfully.
-bool radio_initialise(void)
+bool radio_initialise(uint16_t air_rate)
 {
 	InitPWM();
   RTCDRV_Init();																																/* Set RTC to generate interrupt 250ms. */
@@ -506,7 +508,19 @@ bool radio_initialise(void)
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer
   appRadioInitData.packetRx.pktBufLen = sizeof(radioRxPkt);											// set the dest buffer size
   appRadioInitData.packetCrcError.userCallback = &appPacketCrcErrorCallback;		// Configure packet received with CRC error callback.
-  ezradioInit( appRadioHandle );																								// Initialize EZRadio device.
+  uint8_t RateIdx;
+	const RFParams_t *Params;
+	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
+	{
+		RateIdx++;
+	}
+	if (NUM_DATA_RATES <= RateIdx)
+		return (false);
+	Params = &RFParams[RateIdx];
+	if(NULL == Params->CfgList)
+		return (false);
+	ezradioInit(appRadioHandle ,Params->CfgList);
+	settings.air_data_rate = Params->air_rate;
   ezradioResetTRxFifo();																												// Reset radio fifos and start reception.
   ezradioStartRx( appRadioHandle );
 
@@ -619,71 +633,8 @@ bool radio_RateValid(uint16_t air_rate)
 /// @param air_rate		The air data rate, in bits per second (assume they mean Kbits/s, hmmm this needs to change for this modem TODO)
 ///				Note that this value is rounded up to the next supported value
 /// @return			True if the radio was successfully configured.
-bool radio_configure( uint16_t air_rate)
+bool radio_configure( void)
 {
-	//static const uint32_t TXOSR[3] = { 10, 40, 20 };
-	// sync word for si4430 default is  word3:00101101=0x2D word2:11010100=D4, same for this radio chip
-	uint8_t RateIdx = 0;
-	const RFParams_t *Params;
-	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
-	{
-		RateIdx++;
-	}
-	if (NUM_DATA_RATES <= RateIdx)
-		return (false);
-	Params = &RFParams[RateIdx];
-	settings.air_data_rate = Params->air_rate;
-	/*  TODO remove this code later, all config done from pre made headers
-	// TX_DATA_RATE = (NCO_CLK_FREQ/TXOSR)
-	// NCO_CLK_FREQ = (MODEM_DATA_RATE*FxtalHz/NCO_MODE)
-	// MODEM_DATA_RATE = (NCO_CLK_FREQ*NCO_MODE)/FxtalHz
-	// NCO_CLK_FREQ = TX_DATA_RATE*TXOSR
-	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 7u,EZRADIO_PROP_GRP_INDEX_MODEM_DATA_RATE, &ezradioReply);
-	longin_t ModemRate = {{0}};
-	longin_t NOCMode = {{0}};
-	uint8_t TxOsr;
-	ModemRate.b[2] = ezradioReply.GET_PROPERTY.DATA[0];
-	ModemRate.b[1] = ezradioReply.GET_PROPERTY.DATA[1];
-	ModemRate.b[0] = ezradioReply.GET_PROPERTY.DATA[2];
-	NOCMode.b[3] = (ezradioReply.GET_PROPERTY.DATA[3]&EZRADIO_PROP_MODEM_TX_NCO_MODE_NCOMOD_25_24_MASK)>>EZRADIO_PROP_MODEM_TX_NCO_MODE_NCOMOD_25_24_LSB;
-	NOCMode.b[2] = ezradioReply.GET_PROPERTY.DATA[4];
-	NOCMode.b[1] = ezradioReply.GET_PROPERTY.DATA[5];
-	NOCMode.b[0] = ezradioReply.GET_PROPERTY.DATA[6];
-	TxOsr = (ezradioReply.GET_PROPERTY.DATA[3]>>EZRADIO_PROP_MODEM_TX_NCO_MODE_TXOSR_LSB)&EZRADIO_PROP_MODEM_TX_NCO_MODE_TXOSR_MAX;
-	uint32_t NCO_CLK_FREQ = air_rate*1000UL*TXOSR[TxOsr];
-	uint64_t temp = ((uint64_t)NCO_CLK_FREQ*(uint64_t)NOCMode.L);
-	temp /= RADIO_CONFIGURATION_DATA_RADIO_XO_FREQ;
-	ModemRate.L = temp;
-	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 3u,EZRADIO_PROP_GRP_INDEX_MODEM_DATA_RATE,
-			ModemRate.b[2],ModemRate.b[1],ModemRate.b[0]);
-	// set modem modulation type
-	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_MOD_TYPE, &ezradioReply);
-	ezradioReply.GET_PROPERTY.DATA[0] &= ~EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_MASK;
-	ezradioReply.GET_PROPERTY.DATA[0] |= (Params->Modulation<< EZRADIO_PROP_MODEM_MOD_TYPE_MOD_TYPE_LSB);
-	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_MOD_TYPE, ezradioReply.GET_PROPERTY.DATA[0]);
-	// set modem deviation MODEM_FREQ_DEV = (2^19*outdiv*desired_Dev_Hz)/(NPRESC*freq_xo)
-	// For 2(G)FSK mode, the specified value is the peak deviation.
-	// For 4(G)FSK mode (if supported), the specified value is the inner deviation
-	// (i.e., between channel center frequency and the nearest symbol deviation level).
-	longin_t FREQ_DEV = { { 0 } };
-	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_CLKGEN_BAND, &ezradioReply);
-	uint8_t SY_SEL = (EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_LSB;
-	uint8_t BAND = (EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_LSB;
-	uint32_t NPresc = NPRESC[SY_SEL];
-	uint32_t outdiv = FCODIV[BAND];
-	temp = ((uint64_t)outdiv*(uint64_t)Params->Deviation)<<19UL;
-	temp /=	((uint64_t)NPresc*(uint64_t)RADIO_CONFIGURATION_DATA_RADIO_XO_FREQ);
-	FREQ_DEV.L = temp;
-	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 3u,EZRADIO_PROP_GRP_INDEX_MODEM_FREQ_DEV, FREQ_DEV.b[2],FREQ_DEV.b[1],FREQ_DEV.b[0]);
-	// set modem rx bandwidth
-	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
-	 */
-
-	if(NULL != Params->CfgList)
-	{
-		if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
-		{return false;}
-	}
 	if (feature_golay) 																														// if golay crc and network id done after packet rx
 	{
 		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH,															// turn all matching off value,mask,ctrl x 4
