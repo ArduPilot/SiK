@@ -1197,7 +1197,7 @@ void tdm_init(void)
 
 	// add half of the channel spacing, to ensure that we are well
 	// away from the edges of the allowed range
-	freq_min += channel_spacing / 2; // TODO ADD back in
+	freq_min += channel_spacing / 2;
 
 	// add another offset based on network ID. This means that
 	// with different network IDs we will have much lower

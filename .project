@@ -86,11 +86,6 @@
 			<locationURI>STUDIO_SDK_LOC/emlib/src/em_timer.c</locationURI>
 		</link>
 		<link>
-			<name>emlib/em_usart.c</name>
-			<type>1</type>
-			<locationURI>STUDIO_SDK_LOC/emlib/src/em_usart.c</locationURI>
-		</link>
-		<link>
 			<name>emlib/em_wdog.c</name>
 			<type>1</type>
 			<locationURI>STUDIO_SDK_LOC/emlib/src/em_wdog.c</locationURI>

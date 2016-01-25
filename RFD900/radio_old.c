@@ -92,7 +92,7 @@ static const RFParams_t RFParams[NUM_DATA_RATES] =
 {
 	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G425  },
 	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496 },
-	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_4G25042},
+	{	250,ModType_2GFSK,159000,NULL},
 	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G25042},
 	{1000,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G50083},
 };
@@ -679,8 +679,11 @@ bool radio_configure( uint16_t air_rate)
 	// MODEM_DECIMATION_CFG1 MODEM_DECIMATION_CFG0 MODEM_CHFLT_RX1_CHFLT_COE MODEM_CHFLT_RX2_CHFLT_COE
 	 */
 
-	//if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
-	//{return false;}
+	if(NULL != Params->CfgList)
+	{
+		if(EZRADIO_CONFIG_SUCCESS != ezradio_configuration_init(Params->CfgList))
+		{return false;}
+	}
 	if (feature_golay) 																														// if golay crc and network id done after packet rx
 	{
 		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH,															// turn all matching off value,mask,ctrl x 4
