@@ -605,6 +605,7 @@ uint8_t calibration_get(uint8_t level)
 	uint8_t idx;
 	uint8_t crc = 0;
 	uint8_t *calibration = (uint8_t *)(FLASH_CALIBRATION_AREA);
+#if 0
 	uint8_t calibration_crc = flash_read_byte(FLASH_CALIBRATION_CRC);
 
 	// Change for next board revision
@@ -612,8 +613,8 @@ uint8_t calibration_get(uint8_t level)
 	{
 		crc ^= calibration[idx];
 	}
-
-	if(((calibration_crc != 0xFF && calibration_crc == crc && level <= BOARD_MAXTXPOWER))||
+#endif
+	if(((/*calibration_crc != 0xFF && calibration_crc == crc && */(calibration[level] != 0xff) && level <= BOARD_MAXTXPOWER))||
 		 ((level >= CalParam_BAND)&&(level < CalParam_LAST)) )
 	{
 		return calibration[level];
