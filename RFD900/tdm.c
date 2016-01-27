@@ -1104,7 +1104,7 @@ void tdm_init(void)
 	g_board_frequency =
 			(BoardFrequencyValid(g_board_frequency)) ?
 					(g_board_frequency) : (FREQ_915);// default to 915, set cal value 31 to change this
-	g_board_bl_version = 1;// TODO find a way for the bootloader to tell us it's version
+	g_board_bl_version = *((uint8_t*)(USERDATA_BASE));	// bl version in user data area
 
 	if (!radio_initialise(param_s_get(PARAM_AIR_SPEED)))
 	{
