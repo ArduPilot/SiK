@@ -23,8 +23,6 @@
 #include "parameters.h"
 #include "radio-config-2gfsk-4-25.h"
 #include "radio-config-2gfsk-64-96.h"
-#include "radio-config-4gfsk-250-42.h"
-#include "radio-config-4gfsk-500-83.h"
 #include "radio-config-2gfsk-250-159.h"
 #include "rtcdriver.h"
 #include "golay.h"
