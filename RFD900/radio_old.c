@@ -35,7 +35,7 @@
 #define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 #define RX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 
-#define NUM_DATA_RATES 5
+#define NUM_DATA_RATES 3
 #define RFD900_INT_TX_POW 26           // TX power level into amp (0-127)not linear, 10dbm out, 6.8 after atten
 // 2.250V @ 30dbm; 1.75V @ n = 127; 3.15V @n = 1 ; 90mV @n = 255
 #define NUM_POWER_LEVELS 16
@@ -84,8 +84,6 @@ static const uint32_t FCODIV[8] = { 4, 6, 8, 12, 16, 24, 24, 24 };
 static const uint32_t NPRESC[2] = { 4, 2 };
 static const uint8_t Radio_Configuration_Data_Array_2G425[] = RADIO_2G425_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_2G6496[] = RADIO_2G6496_CONFIGURATION_DATA_ARRAY;
-static const uint8_t Radio_Configuration_Data_Array_4G25042[] = RADIO_4G25042_CONFIGURATION_DATA_ARRAY;
-static const uint8_t Radio_Configuration_Data_Array_4G50083[] = RADIO_4G50083_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_2G250159[] = RADIO_2G250159_CONFIGURATION_DATA_ARRAY;
 
 static const RFParams_t RFParams[NUM_DATA_RATES] =
@@ -93,8 +91,6 @@ static const RFParams_t RFParams[NUM_DATA_RATES] =
 	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G425  },
 	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496 },
 	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_2G250159},
-	{	500,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G25042},
-	{1000,ModType_4GFSK,159000,Radio_Configuration_Data_Array_4G50083},
 };
 
 static uint8_t lastRSSI=0;
