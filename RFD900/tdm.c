@@ -1267,8 +1267,16 @@ void tdm_init(void)
 	// s=30Km, v=3E8m/s;3E5km/s;30E4km/s , t = s/v=30/30E4=1E-4=100=-6=100uS
 	// pream(8):sync(2):ID(2):len(1):data[n]:CRC(2)
 	// rest of preamble added in later
-	packet_latency = (7 + (10 / 2)) * ticks_per_byte + ((100 + 8) / 16);
-
+	// for 4gfsk (>=500K) the preamble and sync byte are half speed
+	// so need to modify for this case
+	if(air_rate >= 500)
+	{
+		packet_latency = (5 + ((8+2)*2)) * ticks_per_byte + ((100 + 8) / 16);
+	}
+	else
+	{
+		packet_latency = (5 + 8 + 2) * ticks_per_byte + ((100 + 8) / 16);
+	}
 	if (feature_golay)
 	{
 		max_data_packet_length = (MAX_PACKET_LENGTH / 2) - (6 + sizeof(trailer));
@@ -1327,8 +1335,7 @@ void tdm_init(void)
 	// now adjust the packet_latency for the actual preamble
 	// length, so we get the right flight time estimates, while
 	// not changing the round timings
-	packet_latency += ((settings.preamble_length - 10) / 2) * ticks_per_byte;
-	//packet_latency = 150; //172
+	//packet_latency += ((settings.preamble_length - 10) / 2) * ticks_per_byte;
 
 	// tell the packet subsystem our max packet size, which it
 	// needs to know for MAVLink packet boundary detection

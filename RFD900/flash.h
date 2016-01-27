@@ -35,7 +35,6 @@
 extern void	flash_erase_scratch(void);
 extern uint8_t	flash_read_scratch(uint16_t address);
 extern void	flash_write_scratch(uint16_t address, uint8_t c);
-//extern void EraseFlashSignature(void);
 extern void flash_write_byte(uint32_t address, uint8_t c);
 extern void FlashLockBlock(uint8_t * Address);
 

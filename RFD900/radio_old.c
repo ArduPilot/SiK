@@ -73,8 +73,6 @@ static uint16_t Rx_Tick;																												// what was the tick count w
 static bool     RxDataIncoming = false;
 static uint8_t radioRxPkt[MAX_PACKET_LENGTH+3];																					/* Rx packet data array */
 
-static RTCDRV_TimerID_t RxFifoTimer;																						// Timer used to issue time elapsed for TX Fifo
-
 static EZRADIODRV_HandleData_t appRadioInitData = EZRADIODRV_INIT_DEFAULT;							/* EZRadio driver init data and handler */
 static EZRADIODRV_Handle_t appRadioHandle = &appRadioInitData;
 static bool RxTimedOut = false;
@@ -111,8 +109,8 @@ statistics_t statistics, remote_statistics;
 error_counts_t errors={0};
 
 // Board infop
-const char 		g_version_string[]= "blah";	///< printable version string
-const char 		g_banner_string[] ="yoyo";	///< printable startup banner string
+const char 		g_version_string[]= "2.0";	///< printable version string
+const char 		g_banner_string[] ="RFD SiK 2.0 on RFD900xR1.0";
 enum BoardFrequency	g_board_frequency;	///< board RF frequency from the cal table
 uint8_t			g_board_bl_version;	///< bootloader version
 
@@ -165,16 +163,6 @@ void panic(char *fmt, ...)
 		;
 }
 
-static void RxFifoTimeout(RTCDRV_TimerID_t id, void *RadioHandle )										  //RxFifoTimer handle rx fifo not complete interrupt failed
-{
-	(void) id;
-  if((true == RxDataIncoming)&&(false == RxTimedOut))
-  {
-  	RxTimedOut = true;
-  }
-}
-
-
 /// begin transmission of a packet
 /// @param length		Packet length to be transmitted; assumes
 ///				the data is already present in the FIFO.
@@ -224,26 +212,27 @@ static bool radio_transmit_simple(uint8_t length, uint8_t *  buf,  uint16_t time
   	appTxActive = (Res = (ECODE_EMDRV_EZRADIODRV_OK == ezradioStartTransmitCustom(appRadioHandle, pktLength, radioTxPkt,TxTick)));
   	if (appTxActive)
     {
-  		// this nasty bit of code is here because the access time for fifo length and tx write and int status is so slow that we can't write the buffer in time
-  		// using the tx thresholds
-  		//uint8_t maxbuff=0;
   		static ezradio_cmd_reply_t radioReplyData;
   		radioTxCount = (pktLength.pktLen >= EZRADIO_FIFO_SIZE)?(EZRADIO_FIFO_SIZE):(pktLength.pktLen);
     	while((radioTxCount<pktLength.pktLen)&&((uint16_t)(timer2_tick()-tickStart) <  timeout_ticks))
     	{
     	  static uint8_t insertlen;
-        ezradio_fifo_info_fast_read(&radioReplyData);
-        insertlen = (pktLength.pktLen-radioTxCount);
-        if (insertlen > radioReplyData.FIFO_INFO.TX_FIFO_SPACE)
-        {
-        	insertlen = radioReplyData.FIFO_INFO.TX_FIFO_SPACE;
-        }
-        if(insertlen != 0)
-        {
-        	ezradio_write_tx_fifo(insertlen, &radioTxPkt[radioTxCount]);
-        	radioTxCount += insertlen;
-        }
-        //if(maxbuff  < radioReplyData.FIFO_INFO.TX_FIFO_SPACE) maxbuff = radioReplyData.FIFO_INFO.TX_FIFO_SPACE;
+        // read the tx buffer trigger
+    	  // when buffer has  65 bytes free fill iwth 65 bytes
+    	  ezradio_frr_a_read(1,&radioReplyData);
+    	  if(radioReplyData.FRR_A_READ.FRR_A_VALUE&EZRADIO_CMD_GET_INT_STATUS_REP_PH_STATUS_TX_FIFO_ALMOST_EMPTY_BIT)
+    	  {
+					insertlen = (pktLength.pktLen-radioTxCount);
+					if (insertlen > RADIO_CONFIGURATION_DATA_PKT_TX_THRESHOLD)
+					{
+						insertlen = RADIO_CONFIGURATION_DATA_PKT_TX_THRESHOLD;
+					}
+					if(insertlen != 0)
+					{
+						ezradio_write_tx_fifo(insertlen, &radioTxPkt[radioTxCount]);
+						radioTxCount += insertlen;
+					}
+    	  }
     	}
     	if(radioTxCount != pktLength.pktLen)
     	{
@@ -421,7 +410,6 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uin
 {
   if ( ECODE_EMDRV_EZRADIODRV_PACKET_RX == status)
   {
-  	RTCDRV_StopTimer(RxFifoTimer);
     RxDataReady = true;
   	RxDataIncoming = false;																											// clear incoming, packet arrived
   	Rx_Tick = IRQ_ticks;
@@ -430,15 +418,12 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uin
   else if (ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT == status)
   {
   	static 	ezradio_cmd_reply_t ezradioReply;
-  	extern uint8_t lastRSSI;
   	if(!RxDataIncoming)
   	{
     	//putChar ('P');
   		RxDataIncoming = true;
   		ezradio_get_modem_status(0x00,&ezradioReply);
   		lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
-    	RTCDRV_StopTimer(RxFifoTimer);
-    	RTCDRV_StartTimer(RxFifoTimer,rtcdrvTimerTypeOneshot, RX_FIFO_TIMEOUT_MS,RxFifoTimeout,appRadioHandle);
   	}
   }
 }
@@ -497,12 +482,6 @@ bool radio_receiver_on(void)
 bool radio_initialise(uint16_t air_rate)
 {
 	InitPWM();
-  RTCDRV_Init();																																/* Set RTC to generate interrupt 250ms. */
-  if (ECODE_EMDRV_RTCDRV_OK !=
-      RTCDRV_AllocateTimer( &RxFifoTimer) )
-  {
-    while (1);
-  }
 
   appRadioInitData.packetRx.userCallback = &appPacketReceivedCallback;					// Configure packet received buffer and callback.
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer

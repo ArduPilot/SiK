@@ -49,6 +49,8 @@
 #include "ezradio_plugin_manager.h"
 #include "ezradio_receive_plugin.h"
 #include "serial.h"
+#include "radio-config-wds-gen.h"
+
 
 #if ( defined EZRADIO_PLUGIN_RECEIVE )
 
@@ -89,13 +91,23 @@ Ecode_t ezradioHandleReceivePlugin( EZRADIODRV_Handle_t radioHandle, EZRADIODRV_
   {
   	uint8_t len;
     ezradio_cmd_reply_t radioReplyLocal;
-    /* Check how many bytes we received. */
-    ezradio_fifo_info(0u, &radioReplyLocal);
-    len = radioReplyLocal.FIFO_INFO.RX_FIFO_COUNT;
+    if( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_RX_PEND_BIT)
+    {
+    	/* Check how many bytes we received. */
+    	ezradio_fifo_info(0u, &radioReplyLocal);
+    	len = radioReplyLocal.FIFO_INFO.RX_FIFO_COUNT;
+    }
+    else
+    {
+    	len = RADIO_CONFIGURATION_DATA_PKT_RX_THRESHOLD;
+    }
     /* Read out the RX FIFO content. */
     if((pktBufCount+len) <= radioHandle->packetRx.pktBufLen)
     {
-    	ezradio_read_rx_fifo(len, &(radioHandle->packetRx.pktBuf[pktBufCount]));
+    	if(len!= 0)
+    	{
+    		ezradio_read_rx_fifo(len, &(radioHandle->packetRx.pktBuf[pktBufCount]));
+    	}
     	pktBufCount += len;
 			if( (pktBufCount == (radioHandle->packetRx.pktBuf[2]+3))&&										// if number of bytes matches packet length
 					( radioReplyHandle->GET_INT_STATUS.PH_PEND & EZRADIO_CMD_GET_INT_STATUS_REP_PH_PEND_PACKET_RX_PEND_BIT)&&

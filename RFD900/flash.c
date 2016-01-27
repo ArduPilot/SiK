@@ -58,14 +58,6 @@ void flash_write_scratch(uint16_t address, uint8_t c)
 	// only allows 4 byte writes, so must read other four bytes update required byte and write back
 	flash_write_byte(FLASH_SCRATCH | address,c);
 }
-#if 0
-void EraseFlashSignature(void)
-{
-	CheckInit();
-	MSC_ErasePage((uint32_t *)FLASH_SIGNATURE_ADDR);
-
-}
-#endif
 void flash_write_byte(uint32_t address, uint8_t c)
 {
 	CheckInit();
@@ -82,10 +74,21 @@ void FlashLockBlock(uint8_t * Address)
 	uint32_t page = ((uint32_t) Address)/FLASH_PAGE_SIZE; // find the page number
 	uint32_t PLWIdx,PLWMask;
 	uint32_t *PLW;
+	uint32_t  val;
 	// PLW[0] has pages 0-31, PLW[1] has page 32-63...
-	PLWIdx = (page<=31)?(0):(1);
+	if(page<=31)
+	{
+		PLWIdx = 0;
+	}
+	else
+	{
+		PLWIdx = 1;
+		page >>= 1;
+	}
 	PLWMask = 1UL<<(page&0x1F);		// Clear bits above 31 and shift to get bit mask
 	PLW = (uint32_t *)LOCKBITS_BASE;					// set base address of registers
-	PLW[PLWIdx] &= ~PLWMask;			// clear bit to lock flash block
+	val = (PLW[PLWIdx]&~PLWMask);			// clear bit to lock flash block
+	CheckInit();
+	MSC_WriteWord(&PLW[PLWIdx],(void*)&val,sizeof(uint32_t));
 }
 
