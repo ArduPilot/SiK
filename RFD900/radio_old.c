@@ -262,7 +262,7 @@ static bool radio_transmit_golay(uint8_t length, uint8_t *  buf,  uint16_t timeo
 	uint8_t gin[3];
 	uint8_t elen, rlen;
 
-	if (length > (sizeof(radioTxPkt)/2)-9)
+	if (length > ((sizeof(radioTxPkt)-15)/2))
 	{
 		debug("golay packet size %u\n", (unsigned)length);
 		panic("oversized golay packet");
@@ -319,7 +319,7 @@ bool radio_receive_packet(uint16_t *length, uint8_t *  buf,uint16_t * Tick)
   		// enable the receiver for the next packet. This also
   		// enables the EX0 interrupt
   		elen = receive_packet_length;
-  		radio_receiver_on();
+  		//radio_receiver_on();
 
 			if (elen < 12 || (elen%6) != 0)
 			{
@@ -608,7 +608,7 @@ bool radio_RateValid(uint16_t air_rate)
 /// @return			True if the radio was successfully configured.
 bool radio_configure( void)
 {
-	if (feature_golay) 																														// if golay crc and network id done after packet rx
+	if (0)//feature_golay) 																														// if golay crc and network id done after packet rx
 	{
 		ezradio_set_property(EZRADIO_PROP_GRP_ID_MATCH,															// turn all matching off value,mask,ctrl x 4
 				12u,EZRADIO_PROP_GRP_INDEX_MATCH_VALUE_1,0,0,0,0,0,0,0,0,0,0,0,0);
@@ -626,7 +626,7 @@ void radio_set_network_id(uint16_t id)
 {
 	netid[0] = id&0xFF;
 	netid[1] = id>>8;
-	if (!feature_golay)
+	if (1)//!feature_golay)
 	{
 		longin_t val;
 		val.L = id;

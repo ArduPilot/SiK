@@ -1279,13 +1279,13 @@ void tdm_init(void)
 	}
 	if (feature_golay)
 	{
-		max_data_packet_length = (MAX_PACKET_LENGTH / 2) - (6 + sizeof(trailer));
+		max_data_packet_length = ((MAX_PACKET_LENGTH-12)/2) - sizeof(trailer);
 
+		// and adds 6 bytes
+		packet_latency += 6 * ticks_per_byte;
 		// golay encoding doubles the cost per byte
 		ticks_per_byte *= 2;
 
-		// and adds 4 bytes
-		packet_latency += 4 * ticks_per_byte;
 	}
 	else
 	{
@@ -1299,8 +1299,8 @@ void tdm_init(void)
 	window_width = 3
 			* (packet_latency + (max_data_packet_length * (uint32_t) ticks_per_byte));
 
-	if(window_width < 2000)
-		window_width = 2000;
+	if(window_width < 3600)
+		window_width = 3600;
 
 	// if LBT is enabled, we need at least 3*5ms of window width
 	if (lbt_rssi != 0)
