@@ -23,6 +23,7 @@
 #include "parameters.h"
 #include "radio-config-2gfsk-4-25.h"
 #include "radio-config-2gfsk-64-96.h"
+#include "radio-config-2gfsk-125-159.h"
 #include "radio-config-2gfsk-250-159.h"
 #include "rtcdriver.h"
 #include "golay.h"
@@ -33,7 +34,7 @@
 #define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 #define RX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
 
-#define NUM_DATA_RATES 3
+#define NUM_DATA_RATES 4
 #define RFD900_INT_TX_POW 26           // TX power level into amp (0-127)not linear, 10dbm out, 6.8 after atten
 // 2.250V @ 30dbm; 1.75V @ n = 127; 3.15V @n = 1 ; 90mV @n = 255
 #define NUM_POWER_LEVELS 16
@@ -82,12 +83,14 @@ static const uint32_t FCODIV[8] = { 4, 6, 8, 12, 16, 24, 24, 24 };
 static const uint32_t NPRESC[2] = { 4, 2 };
 static const uint8_t Radio_Configuration_Data_Array_2G425[] = RADIO_2G425_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_2G6496[] = RADIO_2G6496_CONFIGURATION_DATA_ARRAY;
+static const uint8_t Radio_Configuration_Data_Array_2G125159[] = RADIO_2G125159_CONFIGURATION_DATA_ARRAY;
 static const uint8_t Radio_Configuration_Data_Array_2G250159[] = RADIO_2G250159_CONFIGURATION_DATA_ARRAY;
 
 static const RFParams_t RFParams[NUM_DATA_RATES] =
 {
 	{	4  ,ModType_2GFSK, 25000,Radio_Configuration_Data_Array_2G425  },
 	{	64 ,ModType_2GFSK, 96000,Radio_Configuration_Data_Array_2G6496 },
+	{	125,ModType_2GFSK,159000,Radio_Configuration_Data_Array_2G125159 },
 	{	250,ModType_2GFSK,159000,Radio_Configuration_Data_Array_2G250159},
 };
 
@@ -481,7 +484,7 @@ bool radio_initialise(uint16_t air_rate)
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer
   appRadioInitData.packetRx.pktBufLen = sizeof(radioRxPkt);											// set the dest buffer size
   appRadioInitData.packetCrcError.userCallback = &appPacketCrcErrorCallback;		// Configure packet received with CRC error callback.
-  uint8_t RateIdx;
+  uint8_t RateIdx=0;
 	const RFParams_t *Params;
 	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
 	{

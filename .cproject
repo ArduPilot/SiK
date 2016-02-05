@@ -145,7 +145,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial2.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -291,7 +291,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial2.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -441,7 +441,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Drivers|CMSIS/ezr32lg/startup_gcc_ezr32lg.s|src/ATCmds.c|src/Serial.c|CMSIS/ezr32lg|emlib|Drivers/si4x6x|Drivers/dmadrv.c|Drivers/ezradio_api_lib.c|Drivers/ezradio_comm.c|Drivers/ezradio_hal.c|Drivers/ezradio_auto_ack_plugin.c|Drivers/ezradio_crcerror_plugin.c|Drivers/ezradio_direct_receive_plugin.c|Drivers/ezradio_direct_transmit_plugin.c|Drivers/ezradio_plugin_manager.c|Drivers/ezradio_pn9_plugin.c|Drivers/ezradio_receive_plugin.c|Drivers/ezradio_transmit_plugin.c|Drivers/ezradio_unmod_carrier_plugin.c|Drivers/gpiointerrupt.c|Drivers/rtcdriver.c|Drivers/spidrv.c|Drivers/ustimer.c|Drivers/display.c|Drivers/displayls013b7dh03.c|Drivers/displaypalemlib.c|Drivers/dmactrl.c|Drivers/retargetio.c|Drivers/retargettextdisplay.c|Drivers/textdisplay.c|Drivers/udelay.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial2.c|RFD900/Copy of tdm.c|Drivers|CMSIS/ezr32lg/startup_gcc_ezr32lg.s|src/ATCmds.c|src/Serial.c|CMSIS/ezr32lg|emlib|Drivers/si4x6x|Drivers/dmadrv.c|Drivers/ezradio_api_lib.c|Drivers/ezradio_comm.c|Drivers/ezradio_hal.c|Drivers/ezradio_auto_ack_plugin.c|Drivers/ezradio_crcerror_plugin.c|Drivers/ezradio_direct_receive_plugin.c|Drivers/ezradio_direct_transmit_plugin.c|Drivers/ezradio_plugin_manager.c|Drivers/ezradio_pn9_plugin.c|Drivers/ezradio_receive_plugin.c|Drivers/ezradio_transmit_plugin.c|Drivers/ezradio_unmod_carrier_plugin.c|Drivers/gpiointerrupt.c|Drivers/rtcdriver.c|Drivers/spidrv.c|Drivers/ustimer.c|Drivers/display.c|Drivers/displayls013b7dh03.c|Drivers/displaypalemlib.c|Drivers/dmactrl.c|Drivers/retargetio.c|Drivers/retargettextdisplay.c|Drivers/textdisplay.c|Drivers/udelay.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
