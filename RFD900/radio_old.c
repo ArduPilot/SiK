@@ -761,6 +761,7 @@ int16_t radio_temperature(void)
 
 void radio_set_diversity(bool enable)
 {
+#if 0
 	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_ANT_DIV_CONTROL, &ezradioReply);
 	ezradioReply.GET_PROPERTY.DATA[0] &= ~EZRADIO_PROP_MODEM_ANT_DIV_CONTROL_ANTDIV_MASK;
 	uint8_t Mask = (enable)?(EZRADIO_PROP_MODEM_ANT_DIV_CONTROL_ANTDIV_ENUM_AUTO):
@@ -768,6 +769,21 @@ void radio_set_diversity(bool enable)
 	Mask <<= EZRADIO_PROP_MODEM_ANT_DIV_CONTROL_ANTDIV_LSB;
 	ezradioReply.GET_PROPERTY.DATA[0] |= Mask;
 	ezradio_set_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,
+			1
 			EZRADIO_PROP_GRP_INDEX_MODEM_ANT_DIV_CONTROL,ezradioReply.GET_PROPERTY.DATA[0]);
+#endif
+	if(enable)
+	{
+		PRS->ROUTE |= (PRS_ROUTE_CH0PEN | PRS_ROUTE_CH1PEN);
+  	GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 0);
+  	GPIO_PinModeSet(gpioPortA, 1, gpioModePushPull, 0);
+	}
+	else
+	{
+		// radio not playing ball, so cut them off!
+  	GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 1);
+  	GPIO_PinModeSet(gpioPortA, 1, gpioModePushPull, 0);
+		PRS->ROUTE &= ~(PRS_ROUTE_CH0PEN | PRS_ROUTE_CH1PEN);
+	}
 }
 // ********************* radio_old.c **********************************
