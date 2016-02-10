@@ -602,8 +602,8 @@ bool calibration_set(uint8_t idx, uint8_t value)
 
 uint8_t calibration_get(uint8_t level)
 {
-	uint8_t idx;
-	uint8_t crc = 0;
+	//uint8_t idx;
+	//uint8_t crc = 0;
 	uint8_t *calibration = (uint8_t *)(FLASH_CALIBRATION_AREA);
 #if 0
 	uint8_t calibration_crc = flash_read_byte(FLASH_CALIBRATION_CRC);

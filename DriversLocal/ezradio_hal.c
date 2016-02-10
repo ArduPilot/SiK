@@ -57,7 +57,7 @@ void ezradio_hal_GpioInit( GPIOINT_IrqCallbackPtr_t ezradioIrqCallback, bool ena
    GPIO_PinModeSet( (GPIO_Port_TypeDef) RF_SDN_PORT, RF_SDN_PIN, gpioModePushPull,  0 );
    GPIO_PinModeSet( (GPIO_Port_TypeDef) RF_INT_PORT, RF_INT_PIN, gpioModeInputPull, 1 );
 
-   if (enablePTI)
+   //if (enablePTI) // need this for diversity too
    {
      /* Setup PRS for PTI pins */
      CMU_ClockEnable(cmuClock_PRS, true);

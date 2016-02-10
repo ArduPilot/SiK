@@ -1110,7 +1110,6 @@ void tdm_init(void)
 	{
 		panic("radio_initialise failed");
 	}
-	radio_set_diversity(true);
 
 	switch (g_board_frequency) {
 	case FREQ_868:

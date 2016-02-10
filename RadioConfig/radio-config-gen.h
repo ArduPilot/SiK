@@ -5,7 +5,7 @@
 // Modem configuration parameters
 // version: 1.3.0.94
 // afc_en: 0
-// ant_div: 0
+// ant_div: 1
 // BER_mode: 0
 // Ch_Fil_Bw_AFC: 0
 // Chip_Version: 2
@@ -62,8 +62,8 @@
 
 #define RADIO_CONFIG_GPIO_PIN_CFG { \
   0x13 /* CMD: Gpio pin cfg                */,\
-  0x03 /* GPIO0,PULL_CTL[6],GPIO_MODE[5:0] */,\
-  0x02 /* GPIO1,PULL_CTL[6],GPIO_MODE[5:0] */,\
+  0x16 /* GPIO0,PULL_CTL[6],GPIO_MODE[5:0] */,\
+  0x17 /* GPIO1,PULL_CTL[6],GPIO_MODE[5:0] */,\
   0x21 /* GPIO2,PULL_CTL[6],GPIO_MODE[5:0] */,\
   0x20 /* GPIO3,PULL_CTL[6],GPIO_MODE[5:0] */,\
   0x00 /* NIRQ,PULL_CTL[6],NIRQ_MODE[5:0]  */,\
@@ -79,7 +79,7 @@
   0x00 /* GROUP: Global                  */,\
   0x01 /* NUM_PROPS                      */,\
   0x00 /* START_PROP                     */,\
-  0x45 /* GLOBAL_XO_TUNE,TUNE_VALUE[6:0] */\
+  0x4D /* GLOBAL_XO_TUNE,TUNE_VALUE[6:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_GLOBAL_XO_TUNE_LEN (5)
@@ -255,7 +255,7 @@
   0x10 /* GROUP: Preamble                                           */,\
   0x01 /* NUM_PROPS                                                 */,\
   0x01 /* START_PROP                                                */,\
-  0x14 /* PREAMBLE_CONFIG_STD_1,SKIP_SYNC_TIMEOUT[7],RX_THRESH[6:0] */\
+  0x18 /* PREAMBLE_CONFIG_STD_1,SKIP_SYNC_TIMEOUT[7],RX_THRESH[6:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_PREAMBLE_CONFIG_STD_1_LEN (5)
@@ -983,7 +983,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x0F /* START_PROP                          */,\
-  0x67 /* MODEM_TX_FILTER_COEFF_8,TXCOE8[7:0] */\
+  0x48 /* MODEM_TX_FILTER_COEFF_8,TXCOE8[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_8_LEN (5)
@@ -994,7 +994,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x10 /* START_PROP                          */,\
-  0x60 /* MODEM_TX_FILTER_COEFF_7,TXCOE7[7:0] */\
+  0x3F /* MODEM_TX_FILTER_COEFF_7,TXCOE7[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_7_LEN (5)
@@ -1005,7 +1005,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x11 /* START_PROP                          */,\
-  0x4D /* MODEM_TX_FILTER_COEFF_6,TXCOE6[7:0] */\
+  0x29 /* MODEM_TX_FILTER_COEFF_6,TXCOE6[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_6_LEN (5)
@@ -1016,7 +1016,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x12 /* START_PROP                          */,\
-  0x36 /* MODEM_TX_FILTER_COEFF_5,TXCOE5[7:0] */\
+  0x14 /* MODEM_TX_FILTER_COEFF_5,TXCOE5[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_5_LEN (5)
@@ -1027,7 +1027,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x13 /* START_PROP                          */,\
-  0x21 /* MODEM_TX_FILTER_COEFF_4,TXCOE4[7:0] */\
+  0x08 /* MODEM_TX_FILTER_COEFF_4,TXCOE4[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_4_LEN (5)
@@ -1038,7 +1038,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x14 /* START_PROP                          */,\
-  0x11 /* MODEM_TX_FILTER_COEFF_3,TXCOE3[7:0] */\
+  0x02 /* MODEM_TX_FILTER_COEFF_3,TXCOE3[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_3_LEN (5)
@@ -1049,7 +1049,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x15 /* START_PROP                          */,\
-  0x08 /* MODEM_TX_FILTER_COEFF_2,TXCOE2[7:0] */\
+  0x00 /* MODEM_TX_FILTER_COEFF_2,TXCOE2[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_2_LEN (5)
@@ -1060,7 +1060,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x16 /* START_PROP                          */,\
-  0x03 /* MODEM_TX_FILTER_COEFF_1,TXCOE1[7:0] */\
+  0x00 /* MODEM_TX_FILTER_COEFF_1,TXCOE1[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_1_LEN (5)
@@ -1071,7 +1071,7 @@
   0x20 /* GROUP: Modem                        */,\
   0x01 /* NUM_PROPS                           */,\
   0x17 /* START_PROP                          */,\
-  0x01 /* MODEM_TX_FILTER_COEFF_0,TXCOE0[7:0] */\
+  0x00 /* MODEM_TX_FILTER_COEFF_0,TXCOE0[7:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_TX_FILTER_COEFF_0_LEN (5)
@@ -1231,8 +1231,8 @@
   0x03 /* NUM_PROPS                                           */,\
   0x0A /* START_PROP                                          */,\
   0x00 /* MODEM_FREQ_DEV,FREQDEV[0],FREQDEV[7:0],FREQDEV[7:0] */,\
-  0x15 /* DATA1                                               */,\
-  0xB5 /* DATA2                                               */\
+  0x2B /* DATA1                                               */,\
+  0x6A /* DATA2                                               */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_FREQ_DEV_LEN (7)
@@ -1405,8 +1405,8 @@
   0x20 /* GROUP: Modem                           */,\
   0x02 /* NUM_PROPS                              */,\
   0x27 /* START_PROP                             */,\
-  0x03 /* MODEM_BCR_GAIN,CRGAIN[2:0],CRGAIN[7:0] */,\
-  0x5B /* DATA1                                  */\
+  0x01 /* MODEM_BCR_GAIN,CRGAIN[2:0],CRGAIN[7:0] */,\
+  0xAD /* DATA1                                  */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_BCR_GAIN_LEN (6)
@@ -1685,7 +1685,7 @@
   0x20 /* GROUP: Modem                                                           */,\
   0x01 /* NUM_PROPS                                                              */,\
   0x49 /* START_PROP                                                             */,\
-  0x00 /* MODEM_ANT_DIV_CONTROL,ANT2PM_THD[7:4],MATAP[3],ANTDIV[2:1],RESERVED[0] */\
+  0x04 /* MODEM_ANT_DIV_CONTROL,ANT2PM_THD[7:4],MATAP[3],ANTDIV[2:1],RESERVED[0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_ANT_DIV_CONTROL_LEN (5)
@@ -1849,7 +1849,7 @@
   0x20 /* GROUP: Modem                                                                                         */,\
   0x01 /* NUM_PROPS                                                                                            */,\
   0x55 /* START_PROP                                                                                           */,\
-  0x07 /* MODEM_ONE_SHOT_AFC,ONESHOT_AFC_EN[7],BCR_ALIGN_EN[6],EST_OSR_EN[5],AFCMA_EN[4],ONESHOT_WAIT_CNT[3:0] */\
+  0x01 /* MODEM_ONE_SHOT_AFC,ONESHOT_AFC_EN[7],BCR_ALIGN_EN[6],EST_OSR_EN[5],AFCMA_EN[4],ONESHOT_WAIT_CNT[3:0] */\
 }
 
 #define RADIO_CONFIG_SET_PROPERTY_MODEM_ONE_SHOT_AFC_LEN (5)

@@ -499,6 +499,27 @@ bool radio_initialise(uint16_t air_rate)
 	settings.air_data_rate = Params->air_rate;
   ezradioResetTRxFifo();																												// Reset radio fifos and start reception.
   ezradioStartRx( appRadioHandle );
+#if 0
+  // testing deviation setting generated when BT != 0.5
+  // FDevN  = ((2^19*outdiv*FDevHz)/(NPRESC*freqXO))
+  // FDevHz =  (FDevN*NPRESC*freqXO)/(2^19*outdiv)
+	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 1u,EZRADIO_PROP_GRP_INDEX_MODEM_CLKGEN_BAND, &ezradioReply);
+	uint8_t SY_SEL = (EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_SY_SEL_LSB;
+	uint8_t BAND   = (EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_MASK&ezradioReply.GET_PROPERTY.DATA[0])>>EZRADIO_PROP_MODEM_CLKGEN_BAND_BAND_LSB;
+  uint32_t NPresc = NPRESC[SY_SEL];
+	uint32_t outdiv = FCODIV[BAND];
+	uint32_t Scale = (NPresc*RADIO_CONFIGURATION_DATA_RADIO_XO_FREQ)/outdiv;
+	ezradio_get_property(EZRADIO_PROP_GRP_ID_MODEM, 3u,EZRADIO_PROP_GRP_INDEX_MODEM_FREQ_DEV, &ezradioReply);
+	longin_t FDevN;
+	FDevN.L = 0;
+	FDevN.b[2] = ezradioReply.GET_PROPERTY.DATA[0];
+	FDevN.b[1] = ezradioReply.GET_PROPERTY.DATA[1];
+	FDevN.b[0] = ezradioReply.GET_PROPERTY.DATA[2];
+	uint64_t FDevHz;
+	FDevHz = (uint64_t)FDevN.L*(uint64_t)Scale;
+	FDevHz /= (1UL<<19);
+#endif
+
 
 	return(true);
 }

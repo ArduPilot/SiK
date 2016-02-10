@@ -90,8 +90,6 @@ static void GpioSetup(void)
 
   /* Initialize GPIO interrupt */
   GPIOINT_Init();
-  GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 1);
-  GPIO_PinModeSet(gpioPortA, 1, gpioModePushPull, 0);
 }
 
 static void TraceSwoSetup(void)
