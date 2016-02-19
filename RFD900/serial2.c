@@ -446,9 +446,9 @@ static void rxDmaComplete(unsigned int channel, bool primary, void *user)
 	if (rx_insert >= sizeof(rx_buf))
 		rx_insert = 0;  														// note must always realign to 0
 	rxDmaDst[primary] += (2 * RX_DMA_BLOCK_SIZE);	// set dst to end of other half
-	if (rxDmaDst[primary] >= (rx_buf + sizeof(rx_buf)))// loop around to 0 if needed
+	if (rxDmaDst[primary] >= (rx_buf + sizeof(rx_buf)+RX_DMA_BLOCK_SIZE))// if end goes past end of buffer
 	{
-		rxDmaDst[primary] = rx_buf;
+		rxDmaDst[primary] -= sizeof(rx_buf);				// subtract buffer length to get address nearest start
 	}
 	// Re-arm DMA channel for RX
 	DMA_RefreshPingPong(channel, primary, false, rxDmaDst[primary], NULL,
