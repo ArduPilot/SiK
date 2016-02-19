@@ -288,6 +288,11 @@ Ecode_t SPIDRV_Init( SPIDRV_Handle_t handle, SPIDRV_Init_t *initData )
     return ECODE_EMDRV_SPIDRV_DMA_ALLOC_ERROR;
   }
 
+  if ( DMADRV_AllocateChannel(&handle->rxDMACh2,NULL) != ECODE_EMDRV_DMADRV_OK )
+  {
+    return ECODE_EMDRV_SPIDRV_DMA_ALLOC_ERROR;
+  }
+
   return ECODE_EMDRV_SPIDRV_OK;
 }
 
@@ -1658,7 +1663,7 @@ static void StartReceiveDMA( SPIDRV_Handle_t handle,
                            handle->txDMASignal,
                            txPort,
                            (void *)&(handle->initData.dummyTxValue),
-                           false,
+                           true,
                            count,
                            size,
                            NULL,
@@ -1763,7 +1768,7 @@ static void StartTransmitDMA( SPIDRV_Handle_t handle,
 
   // Receive DMA runs only to get precise numbers for SPIDRV_GetTransferStatus()
   // Start receive dma.
-  DMADRV_PeripheralMemory( handle->rxDMACh,
+  DMADRV_PeripheralMemory( handle->rxDMACh2,
                            handle->rxDMASignal,
                            &(handle->dummyRx),
                            rxPort,

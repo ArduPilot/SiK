@@ -28,4 +28,9 @@
 #define PWMTIMER_ROUTE_CCXPEN TIMER_ROUTE_CC2PEN
 #define PWMTIMER_ROUTE_LOCATION TIMER_ROUTE_LOCATION_LOC1
 
+#define RXfn(_a) 	_a##_IRQHandler(void)
+#define RXTIMER_IRQHandler(a) 		RXfn(TIMER0)
+#define RXTIMER_CLOCK	 cmuClock_TIMER0
+#define RXTIMER 								TIMER0
+#define RXTIMER_IRQn            TIMER0_IRQn
 #endif /* TIMER_CONFIG_H_ */

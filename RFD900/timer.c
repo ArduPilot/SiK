@@ -15,12 +15,13 @@
 #include "timer_config.h"
 #include "em_letimer.h"
 #include "timer.h"
-
+#include "ustimer.h"
 
 // ******************** defines and typedefs *************************
 #define TDMSHIFT 0
 #define TDMFREQ (62500U*(1U<<TDMSHIFT))																					// 16uS to match tdm calculations
 
+#define usec2Ticks(usec) ((usec+(1000000UL/TDMFREQ)-1)/(1000000UL/TDMFREQ))
 // ******************** local variables ******************************
 static volatile uint32_t delay_counter=0;																					/// Counter used by delay_msec
 // ******************** global variables *****************************
@@ -37,6 +38,9 @@ void delay_msec(register uint16_t msec)
 // initialise timers
 void timer_init(void)
 {
+	static bool Init = false;
+	if(Init)return;
+	Init = true;
 	// set up 100Hz ms timer interrupt at 100Hz
 	// set up cascaded timers to generate 64250 Hz 16 bit free running timer
 	// similar to the old system
@@ -152,5 +156,21 @@ void LETIMER0_IRQHandler(void)
 	if (delay_counter > 0)
 		delay_counter--;
 }
+Ecode_t USTIMER_Init( void )
+{
+	timer_init();
+	return(ECODE_EMDRV_USTIMER_OK);
+}
+
+Ecode_t USTIMER_DeInit( void ){return(ECODE_EMDRV_USTIMER_OK);};
+
+Ecode_t USTIMER_Delay( uint32_t usec )
+{
+	uint16_t Ticks = usec2Ticks(usec);
+	uint16_t tickStart = timer2_tick();
+	while(((uint16_t)(timer2_tick() - tickStart)) <Ticks);
+	return(ECODE_EMDRV_USTIMER_OK);
+}
+
 
 // ********************* end of timer.c ******************************

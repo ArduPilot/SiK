@@ -336,8 +336,8 @@ Ecode_t ezradioStartTx(EZRADIODRV_Handle_t radioHandle, bool updateFields, EZRAD
   // not adding back in may cause packets to be lost
   uint8_t CurrState;
 #if 1
-  ezradio_frr_a_read(1,&ezradioReply);
-  CurrState = ezradioReply.FRR_A_READ.FRR_A_VALUE;
+  ezradio_frr_b_read(1,&ezradioReply);
+  CurrState = ezradioReply.FRR_B_READ.FRR_B_VALUE;
 #else
   ezradio_request_device_state(&ezradioReply);
   CurrState = ezradioReply.REQUEST_DEVICE_STATE.CURR_STATE;

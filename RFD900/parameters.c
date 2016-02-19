@@ -399,7 +399,7 @@ static bool read_params(uint8_t * input, uint16_t start, uint8_t size)
 	
 	for (i = start; i < start+size; i ++){
 		input[i-start] = flash_read_scratch(i);
-		printf("%d-%d\n",i,input[i-start]);
+		//printf("%d-%d\n",i,input[i-start]);
 	}
 	
 	// verify checksum

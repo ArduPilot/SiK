@@ -410,17 +410,19 @@ void appPacketReceivedCallback ( EZRADIODRV_Handle_t handle, Ecode_t status ,uin
     RxDataReady = true;
   	RxDataIncoming = false;																											// clear incoming, packet arrived
   	Rx_Tick = IRQ_ticks;
+	  ezradio_frr_c_read(1,&ezradioReply);
+	  lastRSSI = ezradioReply.FRR_C_READ.FRR_C_VALUE;
   	//putChar ('X');
   }
   else if (ECODE_EMDRV_EZRADIODRV_PREAMBLE_DETECT == status)
   {
-  	static 	ezradio_cmd_reply_t ezradioReply;
+  	//static 	ezradio_cmd_reply_t ezradioReply;
   	if(!RxDataIncoming)
   	{
     	//putChar ('P');
   		RxDataIncoming = true;
-  		ezradio_get_modem_status(0x00,&ezradioReply);
-  		lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
+  		//ezradio_get_modem_status(0x00,&ezradioReply);
+  		//lastRSSI  = ezradioReply.GET_MODEM_STATUS.CURR_RSSI;
   	}
   }
 }

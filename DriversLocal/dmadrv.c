@@ -1003,11 +1003,8 @@ static void DmaPingPongCallback( unsigned int channel, bool primary, void *user 
 #endif
 
 #if defined( EMDRV_DMADRV_UDMA ) && !defined( EMDRV_DMADRV_USE_NATIVE_API )
-/***************************************************************************//**
- * @brief
- *  Start a UDMA transfer.
- ******************************************************************************/
-static Ecode_t StartTransfer( DmaMode_t             mode,
+
+__STATIC_INLINE Ecode_t StartTransferSetup( DmaMode_t             mode,
                               DmaDirection_t        direction,
                               unsigned int          channelId,
                               DMADRV_PeripheralSignal_t
@@ -1016,10 +1013,8 @@ static Ecode_t StartTransfer( DmaMode_t             mode,
                               void                  *buf1,
                               void                  *buf2,
                               bool                  bufInc,
-                              int                   len,
                               DMADRV_DataSize_t     size,
-                              DMADRV_Callback_t     callback,
-                              void                  *cbUserParam )
+															DMADRV_Callback_t     callback)
 {
   ChTable_t *ch;
   DMA_CfgChannel_TypeDef chCfg;
@@ -1033,7 +1028,6 @@ static Ecode_t StartTransfer( DmaMode_t             mode,
   if ( ( channelId > EMDRV_DMADRV_DMA_CH_COUNT )
        || ( buf0 == NULL )
        || ( buf1 == NULL )
-       || ( len > DMADRV_MAX_XFER_COUNT )
        || ( ( mode == dmaModePingPong ) && ( buf2 == NULL ) ) )
   {
     return ECODE_EMDRV_DMADRV_PARAM_ERROR;
@@ -1127,13 +1121,27 @@ static Ecode_t StartTransfer( DmaMode_t             mode,
   {
     DMA_CfgDescr( channelId, false, &descrCfg );
   }
+  return ECODE_EMDRV_DMADRV_OK;
+}
 
-  ch->callback      = callback;
-  ch->userParam     = cbUserParam;
-  ch->callbackCount = 0;
-  ch->length        = len;
+__STATIC_INLINE Ecode_t StartTransferStart( DmaMode_t             mode,
+                              DmaDirection_t        direction,
+                              unsigned int          channelId,
+                              void                  *buf0,
+                              void                  *buf1,
+                              void                  *buf2,
+															int                   len,
+                              DMADRV_Callback_t     callback,
+                              void                  *cbUserParam )
+{
+  if( len > DMADRV_MAX_XFER_COUNT )
+    return ECODE_EMDRV_DMADRV_PARAM_ERROR;
 
-  DMA->IFC = 1 << channelId;
+	DMA->IFC = 1 << channelId;
+  chTable[ channelId ].callback      = callback;
+  chTable[ channelId ].userParam     = cbUserParam;
+  chTable[ channelId ].callbackCount = 0;
+  chTable[ channelId ].length        = len;
 
   /* Start DMA cycle. */
   if ( mode == dmaModeBasic )
@@ -1165,8 +1173,38 @@ static Ecode_t StartTransfer( DmaMode_t             mode,
                             len - 1);
     }
   }
-
   return ECODE_EMDRV_DMADRV_OK;
+}
+/***************************************************************************//**
+ * @brief
+ *  Start a UDMA transfer.
+ ******************************************************************************/
+static Ecode_t StartTransfer( DmaMode_t             mode,
+                              DmaDirection_t        direction,
+                              unsigned int          channelId,
+                              DMADRV_PeripheralSignal_t
+                                                    peripheralSignal,
+                              void                  *buf0,
+                              void                  *buf1,
+                              void                  *buf2,
+                              bool                  bufInc,
+                              int                   len,
+                              DMADRV_DataSize_t     size,
+                              DMADRV_Callback_t     callback,
+                              void                  *cbUserParam )
+{
+	static Ecode_t chInitRes[ EMDRV_DMADRV_DMA_CH_COUNT ]={[0 ... (EMDRV_DMADRV_DMA_CH_COUNT-1)] = ECODE_EMDRV_DMADRV_NOT_INITIALIZED};
+	if(chInitRes[channelId]!= ECODE_EMDRV_DMADRV_OK)
+	{
+		chInitRes[channelId] = StartTransferSetup(mode,direction,channelId,
+			peripheralSignal,buf0,buf1,buf2,bufInc,size,callback);
+	}
+
+	if(ECODE_EMDRV_DMADRV_OK == chInitRes[channelId])
+	{
+		chInitRes[channelId] = StartTransferStart(mode,direction,channelId,buf0,buf1,buf2,len,callback,cbUserParam);
+	}
+	return(chInitRes[channelId]);
 }
 #endif /* defined( EMDRV_DMADRV_UDMA ) && !defined( EMDRV_DMADRV_USE_NATIVE_API ) */
 

@@ -130,8 +130,8 @@ extern uint16_t	serial_read_available(void);
 
 /// check if RTS allows us to send more data
 ///
-extern void serial_check_rts(void);
-
+//extern void serial_check_rts(void);
+#define serial_check_rts(a)
 void putChar (char c);
 
 #endif // _SERIAL_H_
