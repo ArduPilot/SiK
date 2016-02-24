@@ -151,8 +151,9 @@ bool ReadPPM(uint8_t *Data, uint16_t* Len)																			// read any complet
 	prim = LastPrimary;																														// point to most fresh data
 	if(0 == PPMRxLen[prim])return(false);																					// if it didn't find sync pulse
 	LastPrimary = -1;																															// invalidate both buffers now
-	*Len = PPMRxLen[prim]<<1;
+	*Len = (PPMRxLen[prim]<<1);
 	memcpy(Data,DMABuffer[prim],*Len);																						// copy data to user
+	((uint16_t*)Data)[PPMRxLen[prim]-1] = DMABuffer[prim][DMA_BUFF_LEN-1];				// we changed dma nminus1 in process to 1 it1em so it posted it where it would have been for the last entry
 	PPMRxLen[prim] = 0;																														// clear length field
 	return(true);
 }
@@ -296,7 +297,7 @@ void PPMTIMER_IRQHandler (void)																									// a pulse longer than 4
 	}
 	else if(remaining)																														// if any data not received yet
 	{
-	  descr->CTRL &= ~(_DMA_CTRL_N_MINUS_1_MASK);																	// set the remaining DMA to 1 (or 0 for one item) and cross your fingers this works
+	  descr->CTRL &= ~(_DMA_CTRL_N_MINUS_1_MASK);
 	  PPMRxLen[primary] = DMA_BUFF_LEN - remaining+1;															// set how many values will be in dma buffer after next one completes
 	}
 	else
@@ -424,7 +425,7 @@ static void TxDMAComplete(unsigned int channel, bool primary, void *user)				// 
 	{
 		if(DataMissing >= MAX_DATA_LOSS)																						// if too many consecutive packets lost
 		{
-			memcpy(DMABuffer[!primary],DataLossData,DataLossDataLen);									// copy in default data
+			memcpy(DMABuffer[!primary],DataLossData,DataLossDataLen<<1);									// copy in default data
 			PPMTxLen = DataLossDataLen;
 		}
 		else																																				// else
