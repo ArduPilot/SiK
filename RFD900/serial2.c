@@ -40,7 +40,7 @@
 #include "at.h"
 #include "packet.h"
 #include "serial.h"
-
+#include "prs_config.h"
 // ******************** defines and typedefs *************************
 #define RX_TIMEOUT_MS     100
 
@@ -105,6 +105,8 @@ static bool tx_idle = true;
 static unsigned int DMATxCh = 0;
 static unsigned int DMARxCh = 0;
 static uint8_t * rxDmaDst[2] = { rx_buf + RX_DMA_BLOCK_SIZE, rx_buf };
+static DMA_DESCRIPTOR_TypeDef *RxPrimDescr;
+static DMA_DESCRIPTOR_TypeDef *RxAltDescr;
 // ******************** local function prototypes ********************
 static void Init_Serial(uint8_t speed);
 static uint8_t serial_device_set_speed(register uint8_t speed);
@@ -114,7 +116,7 @@ static bool dmaTransferDone(unsigned int channel, unsigned int seqNo,
 		void *user);
 static void RTSIrqCB(uint8_t pin);
 static void setupRxDma(void);
-static void setupRxTimer(void);
+//static void setupRxTimer(void);
 static void rxDmaComplete(unsigned int channel, bool primary, void *user);
 // ********************* Implementation ******************************
 void serial_init(uint8_t speed)
@@ -132,10 +134,13 @@ void serial_init(uint8_t speed)
 	DMADRV_Init();
 	DMADRV_AllocateChannel(&DMATxCh, NULL );
 	DMADRV_AllocateChannel(&DMARxCh, NULL );
+	RxPrimDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->CTRLBASE)) + DMARxCh;// Get primary descriptor
+	RxAltDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->ALTCTRLBASE)) + DMARxCh;// Get alternate descriptor
+
 	GPIOINT_CallbackRegister(RTS_PORT.Pin, RTSIrqCB);
 	GPIO_IntConfig(RTS_PORT.Port, RTS_PORT.Pin, false, true, true);
 	setupRxDma();
-	setupRxTimer();
+	//setupRxTimer();
 	//static const char hello[] = "hello how are won't you jump in my game?";
 	//serial_write_buf((uint8_t*)hello, strlen(hello));
 }
@@ -459,12 +464,58 @@ static void rxDmaComplete(unsigned int channel, bool primary, void *user)
 	}
 }
 
+void Serial_Check(void)																													// save a timer and check serial port for inactivity every 100mS
+{
+	static bool primary,lastPrimary = true;
+	primary = ((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary;
+	if(primary == lastPrimary)
+	{
+		static uint16_t NMinus1,lastNMinus1 = 0;
+		static DMA_DESCRIPTOR_TypeDef *currDescr;
+		currDescr = (((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary)?(RxPrimDescr):(RxAltDescr);
+		NMinus1 = ((currDescr->CTRL&_DMA_CTRL_N_MINUS_1_MASK)>>_DMA_CTRL_N_MINUS_1_SHIFT);
+		if(lastNMinus1 == NMinus1)
+		{
+			uint8_t c;
+			static uint16_t lastRxInsert;
+			rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;
+			if(rx_insert >= sizeof(rx_buf))
+			{
+				rx_insert = 0;
+			}
+			if (at_mode_active)																												// if AT mode is active, the AT processor owns the byte
+			{
+				while(BUF_NOT_EMPTY(rx))																								// if any data available
+				{
+					BUF_REMOVE(rx,c);																											// remove last data from queue
+					if (!at_cmd_ready)																										// If an AT command is ready/being processed, we would ignore this byte
+					{
+						at_input(c);																												// parse at byte
+					}
+				}
+			}
+			else																																			// else not at mode
+			{
+				if(lastRxInsert != rx_insert)																						// if another byte has been inserted
+				{
+					if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
+					else							{c = rx_buf[rx_insert-1];}
+					at_plus_detector(c);																									// run the last byte past the +++ detector
+				}
+			}
+			lastRxInsert = rx_insert;
+		}
+		lastNMinus1 = NMinus1;
+	}
+	lastPrimary = primary;
+}
 /**************************************************************************//**
  * @brief  TIMER? Interrupt handler
  * The TIMER OF interrupt is triggered when the RX line has been stationary for
  * longer than the timout period. This ISR then checks how many bytes have been
  * transferred and updates the rx_insert accordingly.
  *****************************************************************************/
+#if 0
 void RXTIMER_IRQHandler(void)
 {
 	uint8_t c;
@@ -544,11 +595,12 @@ static void setupRxTimer(void)
 	GPIO_InputSenseSet(GPIO_INSENSE_PRS, GPIO_INSENSE_PRS);// Enable input sensing for PRS
 	GPIO_IntConfig(gpioPortD, 6, false, false, false);// disable PRS/GPIO interrupts
 																										// PRS channel 3 listen to pin 6
-	PRS_SourceSignalSet(3, PRS_CH_CTRL_SOURCESEL_GPIOL,
+	PRS_SourceSignalSet(SERPRS, PRS_CH_CTRL_SOURCESEL_GPIOL,
 			PRS_CH_CTRL_SIGSEL_GPIOPIN6, prsEdgeOff);
 	TIMER_IntEnable(RXTIMER, TIMER_IEN_OF);// Generate interrupt on overflow (timeout)
 	NVIC_EnableIRQ(RXTIMER_IRQn);			// enable Timer IRQ to take action on expiry
 }
+#endif
 
 /**************************************************************************//**
  * @brief Configure DMA for UART RX

@@ -40,6 +40,7 @@
 
 #include "gpiointerrupt.h"
 #include "ezradio_hal.h"
+#include "prs_config.h"
 SPIDRV_HandleData_t  ezradioSpiHandle;
 SPIDRV_Handle_t      ezradioSpiHandlePtr = &ezradioSpiHandle;
 SPIDRV_Init_t        ezradioSpiInitData = SPIDRV_MASTER_USARTRF0;
@@ -75,8 +76,8 @@ void ezradio_hal_GpioInit( GPIOINT_IrqCallbackPtr_t ezradioIrqCallback, bool ena
      GPIO_IntConfig(RF_GPIO1_PORT, RF_GPIO1_PIN, false, false, false);
 
      /* Setup PRS for RF GPIO pins  */
-     PRS_SourceAsyncSignalSet(0, PRS_CH_CTRL_SOURCESEL_GPIOH, PRS_CH_CTRL_SIGSEL_GPIOPIN15);
-     PRS_SourceAsyncSignalSet(1, PRS_CH_CTRL_SOURCESEL_GPIOH, PRS_CH_CTRL_SIGSEL_GPIOPIN14);
+     PRS_SourceAsyncSignalSet(RFGPIO0PRS, PRS_CH_CTRL_SOURCESEL_GPIOH, PRS_CH_CTRL_SIGSEL_GPIOPIN15);
+     PRS_SourceAsyncSignalSet(RFGPIO1PRS, PRS_CH_CTRL_SOURCESEL_GPIOH, PRS_CH_CTRL_SIGSEL_GPIOPIN14);
      PRS->ROUTE = (PRS_ROUTE_CH0PEN | PRS_ROUTE_CH1PEN);
 
      /* Make sure PRS sensing is enabled (should be by default) */

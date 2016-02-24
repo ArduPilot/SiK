@@ -33,7 +33,6 @@
 
 #include <stdbool.h>
 #include "em_device.h"
-#include "em_aes.h"
 #include "aes_ctr_128.h"
 
 static uint16_t               numberOfBlocks;

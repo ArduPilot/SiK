@@ -55,6 +55,7 @@
 #include "RCOComp.h"
 #include "pins_user.h"
 #include "aes.h"
+#include "ppm.h"
 // ******************** defines and typedefs *************************
 
 #ifdef printf
@@ -149,6 +150,10 @@ static void hardware_init(void)
 	pins_user_init();
 #endif
 	serial_init(param_s_get(PARAM_SERIAL_SPEED));																	// UART - set the configured speed
+	if(param_s_get(PARAM_RCIN)||param_s_get(PARAM_RCOUT))
+	{
+		InitPPM((param_s_get(PARAM_RCIN))?(PPMModeIn):(PPMModeOut));																										// Initialise PPM to read or write
+	}
 }
 
 

@@ -67,7 +67,9 @@ enum Param_S_ID {
 	PARAM_MANCHESTER,       // enable manchester encoding
 	PARAM_RTSCTS,           // enable hardware flow control
 	PARAM_MAX_WINDOW,       // The maximum window size allowed
-	PARAM_ENCRYPTION,     // no Enycryption (0), 128 or 256 bit key
+	PARAM_ENCRYPTION,     	// no Enycryption (0), 128 or 256 bit key
+	PARAM_RCIN,     				// enable RC PPM Input
+	PARAM_RCOUT,     				// enable RC PPM Output
 	PARAM_S_MAX             // must be last
 };
 
@@ -83,7 +85,7 @@ typedef enum{
 	CalParam_LAST,
 }	CalParm_t;
 
-#define PARAM_FORMAT_CURRENT  0x1DUL  //< current parameter format ID
+#define PARAM_FORMAT_CURRENT  0x1FUL  //< current parameter format ID
 
 /// Parameter type.
 ///
@@ -155,6 +157,9 @@ uint32_t constrain(uint32_t v, uint32_t min, uint32_t max);
 extern bool calibration_set(uint8_t idx, uint8_t value);
 extern uint8_t calibration_get(uint8_t level);
 extern bool calibration_lock();
+
+extern void param_get_PPMDefaults(uint16_t *Data,uint16_t* Len);
+extern void param_set_PPMDefaults(uint16_t *Data, uint16_t Len);
 
 /// get the encryption key
 ///

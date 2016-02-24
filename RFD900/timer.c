@@ -99,7 +99,7 @@ uint8_t timer_entropy(void)
 
 void delay_set(register uint32_t msec)
 {
-	delay_counter = (msec + 9) / 10;
+	delay_counter = (msec + 90) / 100;
 }
 
 bool delay_expired(void)
@@ -118,7 +118,7 @@ static void mSTimer_Init(void)
 	CMU_ClockDivSet(MSTIMER_cmuClock, cmuClkDiv_1);
 	CMU_ClockEnable(MSTIMER_cmuClock, true);
 
-	uint32_t Count = CMU_ClockFreqGet(MSTIMER_cmuClock)/100;
+	uint32_t Count = CMU_ClockFreqGet(MSTIMER_cmuClock)/10;
 	LETIMER_CompareSet(LETIMER0, 0, Count);
 
 	const LETIMER_Init_TypeDef letimerInit =
@@ -144,14 +144,9 @@ static void mSTimer_Init(void)
 void LETIMER0_IRQHandler(void)
 {
   LETIMER_IntClear(LETIMER0, LETIMER_IF_UF);
-  static uint8_t rtscheck = 0;
 	// call the AT parser tick
 	at_timer();
-	if(++rtscheck == 3)	//call rts check approx every 30mS
-	{
-		if (feature_rtscts) {serial_check_rts();}
-		rtscheck = 0;
-	}
+	Serial_Check();
 	// update the delay counter
 	if (delay_counter > 0)
 		delay_counter--;

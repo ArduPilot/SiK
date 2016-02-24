@@ -46,7 +46,7 @@
 #include "flash.h"
 #include "PWM.h"
 #include "aes.h"
-
+#include "ppm.h"
 
 // AT command buffer
 char at_cmd[AT_CMD_MAXLEN + 1];
@@ -133,7 +133,7 @@ at_input(register uint8_t c)
 #define ATP_WAIT_FOR_PLUS3	3
 #define ATP_WAIT_FOR_ENABLE	4
 
-#define ATP_COUNT_1S		100	// 100 ticks of the 100Hz timer
+#define ATP_COUNT_1S		10	// 10 ticks of the 10Hz timer
 
 static uint8_t	at_plus_state;
 static uint8_t	at_plus_counter = ATP_COUNT_1S;
@@ -447,6 +447,10 @@ static void at_ampersand(void)
 	case 'P':
 		tdm_change_phase();
 		break;
+
+	case 'R':
+		(PPMRecordDefault())?(at_ok()):(at_error());
+  break;
 
 	case 'T':
 		// enable test modes

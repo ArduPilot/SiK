@@ -44,6 +44,7 @@
 #include "pins_user.h"
 #include "printfl.h"
 #include "aes.h"
+#include "ppm.h"
 
 //#define USE_TICK_YIELD 1
 #define TIMECODE 0
@@ -160,13 +161,20 @@ static uint16_t maxTicksOn = 0;
 static uint8_t  seqNo;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
+typedef enum{
+	Data_Data = 0,
+	Data_AT,
+	Data_PPM
+} DataCmd_t;
 
+#define SEQNOBITS 4
+#define SEQNMASK  ((1<<SEQNOBITS)-1)
 struct __attribute__ ((__packed__)) tdm_trailer {
 	uint16_t window;																												//:13;
-	uint8_t  seqNo;
-	uint8_t command :1;
-	uint8_t bonus :1;
-	uint8_t resend :1;
+	uint8_t  seqNo	:SEQNOBITS;
+	uint8_t command :2;
+	uint8_t bonus  	:1;
+	uint8_t resend 	:1;
 };
 struct tdm_trailer trailer;
 
@@ -629,7 +637,7 @@ void tdm_serial_loop(void)
 				errors.rx_errors++;
 				//printf("duplicate\n");																								// make it easy to see faults
 			}
-			else if(trailer.seqNo != (uint8_t)(lastSeqNo+1))
+			else if(trailer.seqNo != ((uint8_t)(lastSeqNo+1)&SEQNMASK))
 			{
 				errors.rx_errors++;
 				//printf("missed x%u e%u\n",trailer.seqNo,lastSeqNo+1);																								// make it easy to see faults
@@ -668,7 +676,11 @@ void tdm_serial_loop(void)
 				(void)delt;
 				(void)old;
 #endif
-				if (trailer.command == 1)
+				if (trailer.command == Data_PPM)
+				{
+					PPMWrite(pbuf,len);
+				}
+				else if (trailer.command == Data_AT)
 				{
 					handle_at_command(len);
 				}
@@ -821,12 +833,16 @@ void tdm_serial_loop(void)
 #endif
 
 		// ask the packet system for the next packet to send
-		if (send_at_command && max_xmit >= strlen(remote_at_cmd))
+		if(ReadPPM(pbuf,&len))
+		{
+			trailer.command = Data_PPM;
+		}
+		else if (send_at_command && max_xmit >= strlen(remote_at_cmd))
 		{
 			// send a remote AT command
 			len = strlen(remote_at_cmd);
 			memcpy(pbuf, remote_at_cmd, len);
-			trailer.command = 1;
+			trailer.command = Data_AT;
 			send_at_command = false;
 		}
 		else
@@ -904,11 +920,12 @@ void tdm_serial_loop(void)
 			}
 		}
 		trailer.seqNo = seqNo++;
+		seqNo &= SEQNMASK;
 		memcpy(&pbuf[len], &trailer, sizeof(trailer));
 		bool res;
 		if (!(res = radio_transmit(len + sizeof(trailer), pbuf,
 				remaining ,&tickEnd)) && len != 0
-				&& trailer.window != 0 && trailer.command == 0)
+				&& trailer.window != 0 && trailer.command == Data_Data)
 		{
 			packet_force_resend();
 		}

@@ -50,6 +50,7 @@
 #include "flash.h"
 #include "crc.h"
 #include "aes.h"
+#include "ppm.h"
 
 // ******************** defines and typedefs *************************
 typedef enum {
@@ -89,6 +90,10 @@ pins_user_info_t pin_values[PIN_MAX];
 #define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 2)
 #endif
 
+static uint16_t PPM_Defaults[DMA_BUFF_LEN+1];																		// holds ppm default stream + length
+#define PPM_FLASH_START   (2<<7) + 64																						// allow 64 byte for pin config (2*10 max)
+#define PPPM_FLASH_END     (PPM_FLASH_START + sizeof(PPM_Defaults) + 3)
+
 // Holds the encrpytion string
 static uint8_t encryption_key[32];
 // Place the start away from the other params to allow for expantion 2<<7 +128 = 384
@@ -122,6 +127,8 @@ static const struct parameter_s_info {
 	{"RTSCTS",          0},
 	{"MAX_WINDOW",    131},
   {"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
+  {"GPI1_1R/CIN",     0},
+  {"GPO1_1R/COUT",    0},
 };
 
 static const struct parameter_r_info {
@@ -241,6 +248,10 @@ static bool param_s_check(enum Param_S_ID id, uint32_t val)
 			return false;
 		break;
 
+	case PARAM_RCIN:
+	case PARAM_RCOUT:
+		if(parameter_s_values[(id==PARAM_RCOUT)?(PARAM_RCIN):(PARAM_RCOUT)])
+			return false;
 	case PARAM_ECC:
 	case PARAM_OPPRESEND:
 		// boolean 0/1 only
@@ -476,6 +487,8 @@ bool param_load(void)
 	if(!read_params((uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values)))
 		return false;
 #endif
+  if(!read_params((uint8_t *)PPM_Defaults, PPM_FLASH_START+1, sizeof(PPM_Defaults)))
+    return false;
   // read and verify encryption params
   if(!read_params((uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
     return false;
@@ -504,6 +517,8 @@ void param_save(void)
 	flash_write_scratch(PIN_FLASH_START, sizeof(pin_values));
 	write_params((uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values));
 #endif
+  flash_write_scratch(PPM_FLASH_START, sizeof(PPM_Defaults));
+  write_params((uint8_t *)PPM_Defaults, PPM_FLASH_START+1, sizeof(PPM_Defaults));
   // write encryption params
   flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
   write_params((uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
@@ -531,6 +546,8 @@ void param_default(void)
 		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
 	}
 #endif
+	PPM_Read_Defaults(PPM_Defaults);
+
 	param_set_default_encryption_key();
 }
 
@@ -749,3 +766,16 @@ uint8_t* param_get_encryption_key()
 {
 	return encryption_key;
 }
+
+void param_get_PPMDefaults(uint16_t *Data,uint16_t* Len)
+{
+	*Len = PPM_Defaults[DMA_BUFF_LEN];
+	memcpy(Data,PPM_Defaults,(*Len)<<1);
+}
+
+void param_set_PPMDefaults(uint16_t *Data, uint16_t Len)
+{
+	PPM_Defaults[DMA_BUFF_LEN] = Len;
+	memcpy(PPM_Defaults,Data,Len<<1);
+}
+
