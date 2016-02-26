@@ -62,12 +62,14 @@
 #define TXSYNC_WIDTH_TICKS 	uS2Ticks(4000UL)																	  // should be 4000 , but lets give us an extra mS to respond
 #define PULSE_WITDH_TICKS uS2Ticks(300UL)																				// rx detect period threshold for sync
 #define MAX_DATA_LOSS			50																										// frames to lose before going back to default
+#define MAX_DMA_FAIL_COUNT	20
 // ******************** local variables ******************************
 static PPMMode_t PPMMode=0;																											// what mode are we in tx or rx?
 static uint16_t PPMTxLen=0;																											// what is the txlength (channnels+1)
 static volatile uint16_t PPMRxLen[2]={0};																				// how much data did we rx (channels+1)
+static volatile uint16_t TmpPPMRxLen[2]={0};																		// how much data did we rx (channels+1)
 static const GPIO_Port_Pin_TypeDef PPMGPIO = P1_1;															// where is our tx/rx pin located
-static unsigned int DMACh = 0;																									// rx dma , or tx dma on time
+static signed int DMACh = -1;																										// rx dma , or tx dma on time
 static DMA_CB_TypeDef cb;																												// callbacks for dma ch1
 static uint16_t DMABuffer[2][DMA_BUFF_LEN];																			// tx/rx ping pong buffers
 static uint16_t DataLossData[] = {[0 ... DMA_BUFF_LEN-2] = uS2Ticks(1000UL),[DMA_BUFF_LEN-1]=uS2Ticks(8000UL)};		// what to send when there is complete data loss
@@ -76,6 +78,8 @@ static bool DataWaiting[2];																											// set by write calls, dma
 static volatile int16_t LastPrimary=0;																					// ?alt/prim last tx/rx DMA complere event
 static DMA_DESCRIPTOR_TypeDef *primDescr;																				// local storage for primary rx descriptor
 static DMA_DESCRIPTOR_TypeDef *altDescr;																				// local storage for alternate rx descriptor
+static uint16_t DMAFailCount=0;
+static bool TimerRunning = false;																							// tx timer running flag
 // ******************** local function prototypes ********************
 static void SetupPPMReader(void);																								// PPM read setup
 static void SetupPPMWriter(void);																								// PPM write setup
@@ -95,9 +99,17 @@ __STATIC_INLINE uint16_t GetDMANMinus1(unsigned int Ch)													// find coun
 	return(NMinus1);
 }
 
+__STATIC_INLINE void CheckDMARunning(void)																			// check if DMA is still running and restart if not
+{
+	if(DMAFailCount++ >= MAX_DMA_FAIL_COUNT)																			// if counter has reached max for dma failure
+	{
+		DMAFailCount = 0;																														// reset fail count
+		InitPPM(PPMMode);																														// init ppm again if dma failed
+	}
+}
+
 bool PPMWrite(uint8_t *Data, uint16_t Len)																			// write one complete PPM stream to port
 {
-	static bool TimerRunning = false;																							// tx timer running flag
 	int16_t i=0;
 	if(PPMModeOut != PPMMode) return(false);
 	Len = Len>>1;
@@ -140,6 +152,10 @@ bool PPMWrite(uint8_t *Data, uint16_t Len)																			// write one comple
 	  TimerRunning = true;
 		TIMER_Enable(PPMTIMER,true);
 	}
+	else
+	{
+		CheckDMARunning();
+	}
 	return(true);
 }
 
@@ -147,19 +163,29 @@ bool ReadPPM(uint8_t *Data, uint16_t* Len)																			// read any complet
 {
 	bool prim;
 	if(PPMModeIn != PPMMode) return(false);
+  if(TimerRunning)
+  {
+	  TimerRunning = false;
+		CheckDMARunning();
+  }
 	if(LastPrimary<0)return(false);																								// no data is ready
 	prim = LastPrimary;																														// point to most fresh data
 	if(0 == PPMRxLen[prim])return(false);																					// if it didn't find sync pulse
 	LastPrimary = -1;																															// invalidate both buffers now
 	*Len = (PPMRxLen[prim]<<1);
 	memcpy(Data,DMABuffer[prim],*Len);																						// copy data to user
-	((uint16_t*)Data)[PPMRxLen[prim]-1] = DMABuffer[prim][DMA_BUFF_LEN-1];				// we changed dma nminus1 in process to 1 it1em so it posted it where it would have been for the last entry
 	PPMRxLen[prim] = 0;																														// clear length field
+	int i;
+	for(i=0;i<((*Len)>>1);i++)																										// reset on time buffer values
+	{
+		(((uint16_t*)Data)[i])--;																										// offset by 1 as timer output period is top+1
+	}
 	return(true);
 }
 
 bool PPMRecordDefault(void)																											// record the default signal to send now
 {
+	if(PPMModeIn != PPMMode) return(false);
 	memcpy(DataLossData,DMABuffer[1],PPMTxLen<<1);
 	DataLossDataLen = PPMTxLen;
 	param_set_PPMDefaults(DataLossData,DataLossDataLen);
@@ -177,7 +203,7 @@ bool InitPPM(PPMMode_t Mode)																										// Initialise PPM to read 
 	if(Mode >= PPMModeLast)return(false);
 	PPMMode = Mode;
 	DMADRV_Init();																																// init dma driver if not already
-	DMADRV_AllocateChannel(&DMACh, NULL );																				// allocate a channel for rx/tx dma
+	if(DMACh < 0){DMADRV_AllocateChannel((unsigned int*)&DMACh, NULL );}					// allocate a channel for rx/tx dma
   primDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->CTRLBASE)) + DMACh;							// Get primary descriptor
   altDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->ALTCTRLBASE)) + DMACh;						// Get alternate descriptor
 	param_get_PPMDefaults(DataLossData,&DataLossDataLen);
@@ -298,11 +324,13 @@ void PPMTIMER_IRQHandler (void)																									// a pulse longer than 4
 	else if(remaining)																														// if any data not received yet
 	{
 	  descr->CTRL &= ~(_DMA_CTRL_N_MINUS_1_MASK);
-	  PPMRxLen[primary] = DMA_BUFF_LEN - remaining+1;															// set how many values will be in dma buffer after next one completes
+	  TmpPPMRxLen[primary] = DMA_BUFF_LEN - remaining+1;													// set how many values will be in dma buffer after next one completes
+	  TimerRunning = true;
 	}
 	else
 	{
-	  PPMRxLen[primary] = DMA_BUFF_LEN;																						// could be we didn't see next positive edge or there were 12 channels
+	  TmpPPMRxLen[primary] = DMA_BUFF_LEN;																				// could be we didn't see next positive edge or there were 12 channels
+	  TimerRunning = true;
 	}
 }
 
@@ -338,8 +366,12 @@ static void SetupRxDMA(void)																										// setup rx dma to read ti
 static void RxDMAComplete(unsigned int channel, bool primary, void *user)
 {
   (void) user;
+  PPMRxLen[primary] = TmpPPMRxLen[primary];
+  TmpPPMRxLen[primary] = 0;
+	DMABuffer[primary][PPMRxLen[primary]-1] = DMABuffer[primary][DMA_BUFF_LEN-1]; // we changed dma nminus1 in process to 1 it1em so it posted it where it would have been for the last entry
   DMA_RefreshPingPong(channel,primary,false,NULL,NULL,DMA_BUFF_LEN - 1,false);	// refresh to max length again
   LastPrimary = primary;																												// let user know which is the most fresh
+  DMAFailCount = 0;
 }
 
 static void SetupTxTimer(void)																									// setup tx timer to generate PWM signal directly on pin
@@ -353,6 +385,7 @@ static void SetupTxTimer(void)																									// setup tx timer to gene
   CMU_ClockEnable(cmuClock_GPIO, true);																					// enable gpio clock
   CMU_ClockEnable(PPMTIMER_CLOCK, true);																				// enable timer clock
   GPIO_PinModeSet(PPMGPIO.Port, PPMGPIO.Pin, gpioModePushPull, 1);							// set pin to output, high
+  TIMER_Enable(PPMTIMER,false);
   TIMER_InitCC_TypeDef timerCCInit =																						// timer CC PWM
   {
     .eventCtrl  = timerEventEveryEdge,
@@ -386,6 +419,7 @@ static void SetupTxTimer(void)																									// setup tx timer to gene
     .sync       = false,
   };
   TIMER_Init(PPMTIMER, &timerInit);
+  TimerRunning = false;
 }
 
 static void SetupTxDMA(void)																										// setup TX DMA , two channels high time and period setting
@@ -439,6 +473,7 @@ static void TxDMAComplete(unsigned int channel, bool primary, void *user)				// 
 		DataMissing=0;																															// clear packet loss counter
   }
   DataWaiting[primary] = false;																									// clear flag data is sent
+  DMAFailCount = 0;
   DMA_RefreshPingPong(channel,primary,false,NULL,DMABuffer[primary],PPMTxLen-1,false);				// refresh dma
 }
 

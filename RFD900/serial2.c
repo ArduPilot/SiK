@@ -107,6 +107,7 @@ static unsigned int DMARxCh = 0;
 static uint8_t * rxDmaDst[2] = { rx_buf + RX_DMA_BLOCK_SIZE, rx_buf };
 static DMA_DESCRIPTOR_TypeDef *RxPrimDescr;
 static DMA_DESCRIPTOR_TypeDef *RxAltDescr;
+static uint16_t RXDMABlockCount;
 // ******************** local function prototypes ********************
 static void Init_Serial(uint8_t speed);
 static uint8_t serial_device_set_speed(register uint8_t speed);
@@ -447,11 +448,12 @@ static uint8_t serial_device_set_speed(register uint8_t speed)
  *****************************************************************************/
 static void rxDmaComplete(unsigned int channel, bool primary, void *user)
 {
+	RXDMABlockCount++;
 	rx_insert = rxDmaDst[primary] + RX_DMA_BLOCK_SIZE - rx_buf;// increment the amount we just added
 	if (rx_insert >= sizeof(rx_buf))
 		rx_insert = 0;  														// note must always realign to 0
 	rxDmaDst[primary] += (2 * RX_DMA_BLOCK_SIZE);	// set dst to end of other half
-	if (rxDmaDst[primary] >= (rx_buf + sizeof(rx_buf)+RX_DMA_BLOCK_SIZE))// if end goes past end of buffer
+	if (rxDmaDst[primary] > (rx_buf + sizeof(rx_buf)-RX_DMA_BLOCK_SIZE))// if end goes past end of buffer
 	{
 		rxDmaDst[primary] -= sizeof(rx_buf);				// subtract buffer length to get address nearest start
 	}
@@ -466,48 +468,46 @@ static void rxDmaComplete(unsigned int channel, bool primary, void *user)
 
 void Serial_Check(void)																													// save a timer and check serial port for inactivity every 100mS
 {
-	static bool primary,lastPrimary = true;
+	static bool primary;
+	static uint16_t LastBlockCount=0;
+	static uint16_t NMinus1,lastNMinus1 = 0;
+	static DMA_DESCRIPTOR_TypeDef *currDescr;
 	primary = ((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary;
-	if(primary == lastPrimary)
+	currDescr = (((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary)?(RxPrimDescr):(RxAltDescr);
+	NMinus1 = ((currDescr->CTRL&_DMA_CTRL_N_MINUS_1_MASK)>>_DMA_CTRL_N_MINUS_1_SHIFT);
+	if((LastBlockCount == RXDMABlockCount)&&(lastNMinus1 == NMinus1))
 	{
-		static uint16_t NMinus1,lastNMinus1 = 0;
-		static DMA_DESCRIPTOR_TypeDef *currDescr;
-		currDescr = (((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary)?(RxPrimDescr):(RxAltDescr);
-		NMinus1 = ((currDescr->CTRL&_DMA_CTRL_N_MINUS_1_MASK)>>_DMA_CTRL_N_MINUS_1_SHIFT);
-		if(lastNMinus1 == NMinus1)
+		uint8_t c;
+		static uint16_t lastRxInsert;
+		rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;
+		if(rx_insert >= sizeof(rx_buf))
 		{
-			uint8_t c;
-			static uint16_t lastRxInsert;
-			rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;
-			if(rx_insert >= sizeof(rx_buf))
-			{
-				rx_insert = 0;
-			}
-			if (at_mode_active)																												// if AT mode is active, the AT processor owns the byte
-			{
-				while(BUF_NOT_EMPTY(rx))																								// if any data available
-				{
-					BUF_REMOVE(rx,c);																											// remove last data from queue
-					if (!at_cmd_ready)																										// If an AT command is ready/being processed, we would ignore this byte
-					{
-						at_input(c);																												// parse at byte
-					}
-				}
-			}
-			else																																			// else not at mode
-			{
-				if(lastRxInsert != rx_insert)																						// if another byte has been inserted
-				{
-					if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
-					else							{c = rx_buf[rx_insert-1];}
-					at_plus_detector(c);																									// run the last byte past the +++ detector
-				}
-			}
-			lastRxInsert = rx_insert;
+			rx_insert = 0;
 		}
-		lastNMinus1 = NMinus1;
+		if (at_mode_active)																												// if AT mode is active, the AT processor owns the byte
+		{
+			while(BUF_NOT_EMPTY(rx))																								// if any data available
+			{
+				BUF_REMOVE(rx,c);																											// remove last data from queue
+				if (!at_cmd_ready)																										// If an AT command is ready/being processed, we would ignore this byte
+				{
+					at_input(c);																												// parse at byte
+				}
+			}
+		}
+		else																																			// else not at mode
+		{
+			if(lastRxInsert != rx_insert)																						// if another byte has been inserted
+			{
+				if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
+				else							{c = rx_buf[rx_insert-1];}
+				at_plus_detector(c);																									// run the last byte past the +++ detector
+			}
+		}
+		lastRxInsert = rx_insert;
 	}
-	lastPrimary = primary;
+	lastNMinus1 = NMinus1;
+	LastBlockCount = RXDMABlockCount;
 }
 /**************************************************************************//**
  * @brief  TIMER? Interrupt handler

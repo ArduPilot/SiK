@@ -193,7 +193,8 @@ void USART1_TX_IRQHandler(void){	USARTX_TX_IRQHandler(USART1);}
 
 /// check if RTS allows us to send more data
 ///
-void serial_check_rts(void)
+void Serial_Check(void)
+//void serial_check_rts(void)
 {
 	if (BUF_NOT_EMPTY(tx) && tx_idle) {
 		serial_restart();

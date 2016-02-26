@@ -1,3 +1,5 @@
+//TODO check tick timer for overflow errors
+//		 add tx slot sharing in
 // -*- Mode: C; c-basic-offset: 8; -*-
 //
 // Copyright (c) 2012 Andrew Tridgell, All Rights Reserved
@@ -46,7 +48,7 @@
 #include "aes.h"
 #include "ppm.h"
 
-//#define USE_TICK_YIELD 1
+#define USE_TICK_YIELD 1
 #define TIMECODE 0
 
 #if TIMECODE
@@ -71,7 +73,7 @@ static enum tdm_state tdm_state;
 static uint8_t pbuf[MAX_PACKET_LENGTH];
 
 static uint16_t tdm_end;																												// tdm remaining time will be relative to tick counter
-static uint16_t tdm_ticks;
+static int32_t tdm_ticks;
 
 /// This is enough to hold at least 3 packets and is based
 /// on the configured air data rate.
@@ -182,8 +184,8 @@ struct tdm_trailer trailer;
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
 static char remote_at_cmd[AT_CMD_MAXLEN + 1];
-static int16_t Set_tdm_state_remaining(uint16_t val, uint16_t reltick);
-static int32_t tdm_state_remaining(void);
+static int16_t Set_tdm_state_remaining(int32_t val, uint16_t reltick);
+static int32_t tdm_state_remaining(uint16_t tn);
 static int16_t transmit_wait(void);
 static void Set_transmit_wait(uint16_t val, uint16_t reltick);
 
@@ -240,7 +242,7 @@ static uint16_t flight_time_estimate(uint16_t packet_len)
 static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 {
 	enum tdm_state old_state = tdm_state;
-	//uint16_t old_remaining = tdm_state_remaining();
+	//uint16_t old_remaining = tdm_state_remaining(timer2_tick());
   int16_t delta =0;
 	if (trailer.bonus)
 	{
@@ -289,7 +291,7 @@ static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 	}
 
 	if(at_testmode & AT_TEST_TDM) {
-		uint16_t remaining = tdm_state_remaining();
+		uint16_t remaining = tdm_state_remaining(timer2_tick());
 		if (old_state != tdm_state || delta > (int16_t)(packet_latency>>1) || delta < -(int16_t) packet_latency>>1)
 		{
 			printf("TDM: %u/%u len=%u rem=%u win=%u T%u R%u Rx%u Ch%u AT%u Tx%u On%u",
@@ -313,21 +315,23 @@ static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 ///
 static void tdm_state_update(void)
 {
+	bool StateChanged = false;
 	// update the amount of time we are waiting for a preamble
 	// to turn into a real packet
 	// have we passed the next transition point?
-	if(tdm_state_remaining() <= 0)
+	while(tdm_state_remaining(timer2_tick()) <= 0)
 	{
+		StateChanged = true;
 		// advance the tdm state machine
 		tdm_state = (tdm_state + 1) % 4;
 
 		if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_RECEIVE)
 		{
-			Set_tdm_state_remaining(tx_window_width+tdm_state_remaining(),timer2_tick());
+			Set_tdm_state_remaining((int32_t)tx_window_width+tdm_state_remaining(timer2_tick()),timer2_tick());
 		}
 		else
 		{
-			Set_tdm_state_remaining(silence_period+tdm_state_remaining(),timer2_tick());
+			Set_tdm_state_remaining((int32_t)silence_period+tdm_state_remaining(timer2_tick()),timer2_tick());
 		}
 
 		// change frequency at the start and end of our transmit window
@@ -347,7 +351,9 @@ static void tdm_state_update(void)
 				lbt_rand = 0;
 			}
 		}
-
+	}
+	if(StateChanged)
+	{
 		if (tdm_state == TDM_TRANSMIT && (duty_cycle - duty_cycle_offset) != 100)
 		{
 			// update duty cycle averages
@@ -456,10 +462,10 @@ static void link_update(void)
 		// for a full set of hops with this time base
 		if (timer_entropy() & 1)
 		{
-			register uint16_t old_remaining = tdm_state_remaining();
-			if (tdm_state_remaining() > silence_period)
+			register int16_t old_remaining = tdm_state_remaining(timer2_tick());
+			if (tdm_state_remaining(timer2_tick()) > (int32_t)silence_period)
 			{
-				Set_tdm_state_remaining(tdm_state_remaining()-(2*packet_latency),timer2_tick());
+				Set_tdm_state_remaining(tdm_state_remaining(timer2_tick())-(2*(int16_t)packet_latency),timer2_tick());
 			}
 			else
 			{
@@ -467,8 +473,8 @@ static void link_update(void)
 			}
 			if (at_testmode & AT_TEST_TDM)
 			{
-				printf("TDM: change timing %u/%u\n", (unsigned )old_remaining,
-						(unsigned )tdm_state_remaining());
+				printf("TDM: change timing %u/%u\n", (signed )old_remaining,
+						(unsigned )tdm_state_remaining(timer2_tick()));
 			}
 		}
 		if (at_testmode & AT_TEST_TDM)
@@ -659,11 +665,11 @@ void tdm_serial_loop(void)
 				// sync our transmit windows based on
 				// received header
 				int16_t delt;
-				uint16_t old = tdm_state_remaining();
+				uint16_t old = tdm_state_remaining(timer2_tick());
 				delt = sync_tx_windows(len, RxTick);
 				last_t = tnow;
 #if 0
-				uint16_t remaining = tdm_state_remaining();
+				uint16_t remaining = tdm_state_remaining(timer2_tick());
 				// need to see tick count when rxed,tx.window value, old&new remaining,
 				printf("RX%u seq%u rem%u remo%u win%u del%d\n",
 						(unsigned )timer2_tick(),
@@ -795,13 +801,13 @@ void tdm_serial_loop(void)
 
 		// how many bytes could we transmit in the time we
 		// have left?
-		if (tdm_state_remaining() < (int32_t)packet_latency)
+		if (tdm_state_remaining(timer2_tick()) < (int32_t)packet_latency)
 		{
 			// none ....
 			continue;
 		}
 		tickStart = timer2_tick();
-		int32_t remaining = tdm_state_remaining();
+		int32_t remaining = tdm_state_remaining(timer2_tick());
 		remaining = remaining- (int32_t)(packet_latency+TXSetupTicks+TXDelayTicks);	// how many ticks till we actually get to transmit
 		if(remaining <= 0)
 		{continue;}
@@ -906,10 +912,10 @@ void tdm_serial_loop(void)
 		// start transmitting the packet
 		uint16_t val;
 		val = TXSetupTicks + flight_time_estimate(len + sizeof(trailer));// time to send packet and receive across the air
-		remaining = tdm_state_remaining();
+		remaining = tdm_state_remaining(timer2_tick());
 		if (trailer.window != 0)
 		{
-			if (remaining <= val)			// if no time left, whoopsie problem!
+			if (remaining <= (int32_t)val)			// if no time left, whoopsie problem!
 			{
 				trailer.window = 1;
 				panic("no time left!");
@@ -948,7 +954,7 @@ void tdm_serial_loop(void)
 		printf("TX%u seq%u rem%u remo%u fli%u win%u\n",
 				(unsigned )res,
 				(unsigned )trailer.seqNo,
-				(unsigned )tdm_state_remaining(),
+				(unsigned )tdm_state_remaining(timer2_tick()),
 				(unsigned )remaining,
 				(unsigned )val,
 				(unsigned )trailer.window);
@@ -968,21 +974,6 @@ void tdm_serial_loop(void)
 		TimeFunction(maxTicksOn,radio_receiver_on());
 		//received_packet = false;
 //		LED_ACTIVITY(LED_OFF);
-#if 0
-		// If we have any packets that need decrypting lets do it now.
-    if(tdm_state_remaining() > (int32_t)(tx_window_width/2))
-    {
-       // If it is starting to get really full, we want to try decrypting
-       // not just one, but a few packets.
-       if (encrypt_buffer_getting_full()) {
-          while (!encrypt_buffer_getting_empty()) {
-            decryptPackets(lastSeqNo);
-          }
-       } else {
-         decryptPackets(lastSeqNo);
-       }
-    }
-#endif
 	}
 #endif
 }
@@ -1116,7 +1107,6 @@ void tdm_init(void)
 	uint32_t freq_min, freq_max;
 	uint32_t channel_spacing;
 	uint16_t txpower;
-
 	g_board_frequency = calibration_get(CalParam_BAND);
 	g_board_frequency =
 			(BoardFrequencyValid(g_board_frequency)) ?
@@ -1315,8 +1305,8 @@ void tdm_init(void)
 	window_width = 3
 			* (packet_latency + (max_data_packet_length * (uint32_t) ticks_per_byte));
 
-	if(window_width < 3600)
-		window_width = 3600;
+	if(window_width < 3125)	// 50mS
+		window_width = 3125;
 
 	// if LBT is enabled, we need at least 3*5ms of window width
 	if (lbt_rssi != 0)
@@ -1386,28 +1376,27 @@ void tdm_report_timing(void)
 	delay_msec(1);
 }
 
-
 // read the tdm time remaining now
-static int32_t tdm_state_remaining(void)
+static int32_t tdm_state_remaining(uint16_t tn)
 {
-	uint16_t tn = timer2_tick();
 	uint16_t elapsed = (uint16_t) (tdm_end - tn);
-	if (elapsed < tdm_ticks)
+	if ((int32_t)elapsed < tdm_ticks)
 	{
 		return (elapsed);
 	}
 	else
 	{
-		return ((int32_t) tdm_end - (int32_t)tn);
+		return ((int16_t)(tdm_end - tn));
 	}
 }
 
 // set the tdm time remaining relative to a specified system tick count
 // return the change in ticks
-static int16_t Set_tdm_state_remaining(uint16_t val, uint16_t reltick)
+static int16_t Set_tdm_state_remaining(int32_t val, uint16_t reltick)
 {
 	uint16_t lastend = tdm_end;
-	tdm_end = val + reltick;
+	if(val<0)	{tdm_end = reltick - (uint16_t)(-val);}
+	else 			{tdm_end = (uint16_t)val + reltick;		}
 	tdm_ticks = val;
 	return((uint16_t)(lastend-reltick) - val);																		// find the amount we changed it by, relative to same point
 }

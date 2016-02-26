@@ -145,7 +145,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="RFD900/serial.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial2.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -291,7 +291,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="RFD900/serial.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial2.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
