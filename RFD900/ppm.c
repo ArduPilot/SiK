@@ -156,10 +156,11 @@ bool PPMWrite(uint8_t *Data, uint16_t Len)																			// write one comple
 	{
 		CheckDMARunning();
 	}
+	//GPIO_PinOutToggle(gpioPortD,5);
 	return(true);
 }
 
-bool ReadPPM(uint8_t *Data, uint16_t* Len)																			// read any complete incoming stream from PPM port
+bool ReadPPM(uint8_t *Data, uint16_t* Len,uint16_t max_len)										  // read any complete incoming stream from PPM port
 {
 	bool prim;
 	if(PPMModeIn != PPMMode) return(false);
@@ -171,6 +172,7 @@ bool ReadPPM(uint8_t *Data, uint16_t* Len)																			// read any complet
 	if(LastPrimary<0)return(false);																								// no data is ready
 	prim = LastPrimary;																														// point to most fresh data
 	if(0 == PPMRxLen[prim])return(false);																					// if it didn't find sync pulse
+	if((PPMRxLen[prim]<<1) > max_len)return(false);																// if won't fit in buffer
 	LastPrimary = -1;																															// invalidate both buffers now
 	*Len = (PPMRxLen[prim]<<1);
 	memcpy(Data,DMABuffer[prim],*Len);																						// copy data to user
@@ -180,6 +182,7 @@ bool ReadPPM(uint8_t *Data, uint16_t* Len)																			// read any complet
 	{
 		(((uint16_t*)Data)[i])--;																										// offset by 1 as timer output period is top+1
 	}
+	//GPIO_PinOutToggle(gpioPortD,5);
 	return(true);
 }
 
@@ -222,6 +225,7 @@ bool InitPPM(PPMMode_t Mode)																										// Initialise PPM to read 
 	{
 		SetupPPMWriter();
 	}
+  //GPIO_PinModeSet(gpioPortD,5, gpioModePushPull, 0);
 	return(true);
 }
 

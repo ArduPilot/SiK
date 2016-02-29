@@ -20,7 +20,7 @@ typedef enum{
 } PPMMode_t;
 
 bool PPMWrite(uint8_t *Data, uint16_t Len);																			// write one complete PPM stream to port
-bool ReadPPM(uint8_t *Data, uint16_t* Len);																			// read any complete incoming stream from PPM port
+bool ReadPPM(uint8_t *Data, uint16_t* Len,uint16_t max_len);										// read any complete incoming stream from PPM port
 bool InitPPM(PPMMode_t Mode);																										// Initialise PPM to read or write
 bool PPMRecordDefault(void);																										// record the default signal to send now
 void PPM_Read_Defaults(uint16_t *Data);																					// read out the desired default values + length

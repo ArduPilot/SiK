@@ -72,7 +72,7 @@ static volatile bool			tx_idle;
 
 // ******************** global variables *****************************
 // ******************** local function prototypes ********************
-// FIFO status
+// FIFO status, note you must not allow insert and remove to be the same or will crash queue
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
 #define BUF_NEXT_REMOVE(_b)	((_b##_remove + 1) == sizeof(_b##_buf)?0:(_b##_remove + 1))
 #define BUF_FULL(_b)	(BUF_NEXT_INSERT(_b) == (_b##_remove))
@@ -80,7 +80,7 @@ static volatile bool			tx_idle;
 #define BUF_EMPTY(_b)	(_b##_insert == _b##_remove)
 #define BUF_NOT_EMPTY(_b)	(_b##_insert != _b##_remove)
 #define BUF_USED(_b)	((_b##_insert >= _b##_remove)?(_b##_insert - _b##_remove):(sizeof(_b##_buf) - _b##_remove) + _b##_insert)
-#define BUF_FREE(_b)	((_b##_insert >= _b##_remove)?(sizeof(_b##_buf) + _b##_remove - _b##_insert):_b##_remove - _b##_insert)
+#define BUF_FREE(_b)	((_b##_insert > _b##_remove)?(sizeof(_b##_buf) + _b##_remove - _b##_insert):(_b##_remove - _b##_insert)-1)
 
 // FIFO insert/remove operations
 //
@@ -462,7 +462,7 @@ bool serial_read_buf(uint8_t * buf, uint8_t count)
 
 #ifdef SERIAL_CTS
 	{
-		if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH) \
+		if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
 		{
 			GPIOSet(UART_Config.GPIOCTS,false);
 		}

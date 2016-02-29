@@ -67,7 +67,7 @@ extern void tdm_change_phase(void);
 extern void tdm_show_rssi(void);
 
 /// the long term duty cycle we are aiming for
-extern uint8_t duty_cycle;
+extern uint16_t duty_cycle;
 
 /// the LBT threshold
 extern uint8_t lbt_rssi;

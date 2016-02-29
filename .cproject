@@ -61,7 +61,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/nvm/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/rtcdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/sleep/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/spidrv/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/SDK/emdrv/spidrv/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/uartdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/ustimer/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib&quot;"/>
@@ -101,7 +101,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/nvm/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/rtcdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/sleep/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/spidrv/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/SDK/emdrv/spidrv/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/uartdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/ustimer/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib&quot;"/>
@@ -208,7 +208,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/nvm/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/rtcdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/sleep/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/spidrv/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/SDK/emdrv/spidrv/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/uartdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/ustimer/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib&quot;"/>
@@ -247,7 +247,7 @@
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/nvm/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/rtcdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/sleep/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/spidrv/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/SDK/emdrv/spidrv/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/uartdrv/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/emdrv/ustimer/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${StudioSdkPath}/reptile/glib&quot;"/>

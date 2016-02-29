@@ -189,10 +189,10 @@ int main(void)
 		//panic("failed to initialise aes");
 	}
 
-  WDOG_Init_TypeDef init=WDOG_INIT_DEFAULT;
-  init.perSel =   wdogPeriod_2k;																								// 1 second
-  WDOG_Init(&init);
   InitRCOCalibration();
+  WDOG_Init_TypeDef init=WDOG_INIT_DEFAULT;
+  init.perSel =   wdogPeriod_513;																								// 1 second
+  WDOG_Init(&init);
 
   /* Enter infinite loop that will take care of ezradio plugin manager and packet transmission. */
   while (1)

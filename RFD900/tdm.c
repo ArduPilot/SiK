@@ -517,22 +517,22 @@ void tdm_remote_at(void)
 }
 
 // handle an incoming at command from the remote radio
-static void handle_at_command(uint8_t len)
+static void handle_at_command(uint8_t *pbuff, uint8_t len)
 {
-	if (len < 2 || len > AT_CMD_MAXLEN || pbuf[0] != (uint8_t) 'R'
-			|| pbuf[1] != (uint8_t) 'T')
+	if (len < 2 || len > AT_CMD_MAXLEN || pbuff[0] != (uint8_t) 'R'
+			|| pbuff[1] != (uint8_t) 'T')
 	{
 		// assume its an AT command reply
 		register uint8_t i;
 		for (i = 0; i < len; i++)
 		{
-			putChar(pbuf[i]);
+			putChar(pbuff[i]);
 		}
 		return;
 	}
 
 	// setup the command in the at_cmd buffer
-	memcpy(at_cmd, pbuf, len);
+	memcpy(at_cmd, pbuff, len);
 	at_cmd[len] = 0;
 	at_cmd[0] = 'A'; // replace 'R'
 	at_cmd_len = len;
@@ -541,12 +541,12 @@ static void handle_at_command(uint8_t len)
 	// run the AT command, capturing any output to the packet
 	// buffer
 	// this reply buffer will be sent at the next opportunity
-	printf_start_capture(pbuf, sizeof(pbuf));
+	printf_start_capture(pbuff, sizeof(pbuff));
 	at_command();
 	len = printf_end_capture();
 	if (len > 0)
 	{
-		packet_inject(pbuf, len);
+		packet_inject(pbuff, len);
 	}
 }
 
@@ -611,6 +611,7 @@ void tdm_serial_loop(void)
 		// see if we have received a packet
 		if (radio_receive_packet(&len, pbuf, &RxTick))
 		{
+			uint8_t *buffptr = pbuf;
 			tdelta = (uint16_t) (timer2_tick() - tickStart);
 			maxTicksX = (tdelta > maxTicksX) ? (tdelta) : (maxTicksX);
 			LED_ACTIVITY(LED_ON);
@@ -684,13 +685,23 @@ void tdm_serial_loop(void)
 #endif
 				if (trailer.command == Data_PPM)
 				{
-					PPMWrite(pbuf,len);
+					uint8_t pos;
+					PPMWrite(&pbuf[1],pbuf[0]);																						// write ppm data
+					pos = pbuf[0]+1;																											// set position of following data
+					if(pbuf[pos])																													// if there was any other data attached
+					{
+						len = pbuf[pos];																										// set new length
+						trailer.command = pbuf[pos+1];																			// set data type
+						buffptr = &pbuf[pos+2];																							// set new data ptr
+					}
 				}
-				else if (trailer.command == Data_AT)
+
+				if (trailer.command == Data_AT)
 				{
-					handle_at_command(len);
+					handle_at_command(buffptr,len);
 				}
-				else if (len != 0 && !packet_is_duplicate(len, pbuf, trailer.resend)
+				else if((Data_Data == trailer.command) &&
+						len != 0 && !packet_is_duplicate(len, buffptr, trailer.resend)
 						&& !at_mode_active)
 				{
 					uint8_t out_len = len;
@@ -701,9 +712,9 @@ void tdm_serial_loop(void)
 					//LED_ACTIVITY(LED_ON);
 					if(aes_get_encryption_level() > 0)
 					{
-						send = !aes_decrypt(pbuf,len,pbuf,&out_len,lastSeqNo);
+						send = !aes_decrypt(buffptr,len,buffptr,&out_len,lastSeqNo);
 					}
-					if(send){serial_write_buf(pbuf,out_len);}
+					if(send){serial_write_buf(buffptr,out_len);}
 					//LED_ACTIVITY(LED_OFF);
 					//printf("]\n");
 				}
@@ -818,6 +829,10 @@ void tdm_serial_loop(void)
 			continue;
 		}
 		max_xmit -= PACKET_OVERHEAD;
+		if (max_xmit < 2)
+		{
+			continue;
+		}
     if (aes_get_encryption_level() > 0) {
       if (max_xmit < 16) {
         // With AES, the cipher is up to 16 bytes larger than the text
@@ -839,8 +854,21 @@ void tdm_serial_loop(void)
 #endif
 
 		// ask the packet system for the next packet to send
-		if(ReadPPM(pbuf,&len))
+		if(ReadPPM(&pbuf[1],&len,max_xmit-2))
 		{
+			uint8_t dlen;
+			pbuf[0] = len;
+			if(max_xmit > (len+3))
+			{
+				pbuf[len+1]  = packet_get_next(max_xmit-(len+3), &pbuf[len+3],seqNo);
+				pbuf[len+2]  = packet_is_injected();
+			}
+			else
+			{
+				pbuf[len+1]  = 0;
+			}
+			dlen = pbuf[len+1];
+			len += (3+dlen);
 			trailer.command = Data_PPM;
 		}
 		else if (send_at_command && max_xmit >= strlen(remote_at_cmd))
@@ -1299,7 +1327,8 @@ void tdm_init(void)
 	}
 
 	// set the silence period to two times the packet latency
-	silence_period = 4 * packet_latency;
+	silence_period = 2 * packet_latency;
+	if(silence_period < 100){silence_period = 100;}
 
 	// set the transmit window to allow for 3 full sized packets
 	window_width = 3
@@ -1327,6 +1356,12 @@ void tdm_init(void)
 	if (window_width > param_s_get(PARAM_MAX_WINDOW)*(1000/16))
 	{
 		window_width = param_s_get(PARAM_MAX_WINDOW)*(1000/16);
+	}
+
+	// for PPM a set widow width is needed
+	if (param_s_get(PARAM_RCIN)||param_s_get(PARAM_RCOUT))
+	{
+		window_width = (20000UL/16);																								// fix window to 20mS
 	}
 
 	// make sure it fits in the 13 bits of the trailer window
