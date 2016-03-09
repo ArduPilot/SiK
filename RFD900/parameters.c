@@ -103,32 +103,41 @@ static uint8_t encryption_key[32];
 typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
 // Check to make sure we dont overflow off the page
 typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
+
+static const char * SerList[] = {"1200","2400","4800","9600","19200","38400","57600","115200","230400",NULL};
+static const char * AirList[] = {"4","64","125","250",NULL};
+static const char * EncList[] = {"None","128b",NULL};
+static const char * BoolList[] = {"Off","On",NULL};
 // ******************** local constants ******************************
 /// In-ROM parameter info table.
 ///
 static const struct parameter_s_info {
 	const char	*name;
+	ParamType_t ParamType;
+	uint32_t 		Min;
+	uint32_t 		Max;
 	param_t		default_value;
+	const char	** nameList;
 } parameter_s_info[PARAM_S_MAX] = {
-	{"FORMAT",         PARAM_FORMAT_CURRENT},
-	{"SERIAL_SPEED",   57}, // match APM default of 57600
-	{"AIR_SPEED",      64}, // relies on MAVLink flow control
-	{"NETID",          25},
-	{"TXPOWER",        30},
-	{"ECC",             0},
-	{"MAVLINK",         1},
-	{"OPPRESEND",       0},
-	{"MIN_FREQ",      915000},
-	{"MAX_FREQ",      928000},
-	{"NUM_CHANNELS",   20},
-	{"DUTY_CYCLE",    100},
-	{"LBT_RSSI",        0},
-	{"MANCHESTER",      0},
-	{"RTSCTS",          0},
-	{"MAX_WINDOW",    131},
-  {"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
-  {"GPI1_1R/CIN",     0},
-  {"GPO1_1R/COUT",    0},
+	{"FORMAT",          PT_Int ,0     ,0xff  ,PARAM_FORMAT_CURRENT,NULL    },
+	{"SERIAL_SPEED",    PT_List,1     ,230   ,57                  ,SerList }, // match APM default of 57600
+	{"AIR_SPEED",       PT_List,4     ,250   ,64                  ,AirList }, // relies on MAVLink flow control
+	{"NETID",           PT_Int ,0     ,0xff  ,25                  ,NULL    },
+	{"TXPOWER",         PT_Int ,0     ,30    ,30                  ,NULL    },
+	{"ECC",             PT_Bool,0     ,1     ,0                   ,BoolList},
+	{"MAVLINK",         PT_Bool,0     ,1     ,1                   ,BoolList},
+	{"OPPRESEND",       PT_Bool,0     ,1     ,0                   ,BoolList},
+	{"MIN_FREQ",        PT_Int ,902000,929000,915000              ,NULL    },
+	{"MAX_FREQ",        PT_Int ,902000,929000,928000              ,NULL    },
+	{"NUM_CHANNELS",    PT_Int ,1     ,50    ,20                  ,NULL    },
+	{"DUTY_CYCLE",      PT_Int ,1     ,100   ,100                 ,NULL    },
+	{"LBT_RSSI",        PT_Int ,0     ,0xff  ,0                   ,NULL    },
+	{"MANCHESTER",      PT_Bool,0     ,1     ,0                   ,BoolList},
+	{"RTSCTS",          PT_Bool,0     ,1     ,0                   ,BoolList},
+	{"MAX_WINDOW",      PT_Int ,20    ,400   ,131                 ,NULL    },
+  {"ENCRYPTION_LEVEL",PT_List,0     ,1     ,0                   ,EncList }, // no Enycryption (0), 128 or 256 bit key
+  {"GPI1_1R/CIN",     PT_Bool,0     ,1     ,0                   ,BoolList},
+  {"GPO1_1R/COUT",    PT_Bool,0     ,1     ,0                   ,BoolList},
 };
 
 static const struct parameter_r_info {
@@ -566,6 +575,38 @@ const char *param_s_name(enum Param_S_ID param)
 {
 	if (param < PARAM_S_MAX) {
 		return parameter_s_info[param].name;
+	}
+	return 0;
+}
+
+const char ** param_s_nameList(enum Param_S_ID param)
+{
+	if (param < PARAM_S_MAX) {
+		return parameter_s_info[param].nameList;
+	}
+	return 0;
+}
+
+ParamType_t param_s_Type(enum Param_S_ID param)
+{
+	if (param < PARAM_S_MAX) {
+		return parameter_s_info[param].ParamType;
+	}
+	return 0;
+}
+
+uint32_t param_s_Min(enum Param_S_ID param)
+{
+	if (param < PARAM_S_MAX) {
+		return parameter_s_info[param].Min;
+	}
+	return 0;
+}
+
+uint32_t param_s_Max(enum Param_S_ID param)
+{
+	if (param < PARAM_S_MAX) {
+		return parameter_s_info[param].Max;
 	}
 	return 0;
 }

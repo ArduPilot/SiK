@@ -77,7 +77,7 @@ extern uint8_t  at_testmode;    ///< AT_TEST_* bits
 #define AT_TEST_TDM  2
 
 // max size of an AT command
-#define AT_CMD_MAXLEN	16
+#define AT_CMD_MAXLEN	(6 + 16*2)
 
 // AT command buffer
 extern char at_cmd[AT_CMD_MAXLEN + 1];

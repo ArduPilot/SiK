@@ -293,6 +293,31 @@ static void at_parse_number()
 		idx++;
 	}
 }
+static const char TypeStr[PT_Last] = {'N','B','L'};
+
+static void ShowATParamExt(void)
+{
+	uint8_t id;
+	const char** List;
+	// convenient way of showing all parameters
+	for (id = 0; id < PARAM_S_MAX; id++)
+	{
+		printf("S%u:%s(%c)[%lu..%lu]=%lu",(unsigned)id,param_s_name(id),TypeStr[param_s_Type(id)],
+				param_s_Min(id),param_s_Max(id),(unsigned long)param_s_get(id));
+		List = param_s_nameList(id);
+		if(NULL != List)
+		{
+			printf("{");
+			while(NULL != *List)
+			{
+				printf("%s,",*List);
+				List++;
+			}
+			printf("}");
+		}
+		printf("\n");
+	}
+}
 
 static void at_i(void)
 {
@@ -319,6 +344,11 @@ static void at_i(void)
 		register uint8_t start = 0;
 		register uint8_t end = PARAM_S_MAX-1;
 
+		if (at_cmd[4] == '?')
+		{
+			ShowATParamExt();
+			return;
+		}
 		if (at_cmd[4] == ':' && isdigit((uint16_t)(at_cmd[5]))) {
 				idx = 5;
 				at_parse_number();

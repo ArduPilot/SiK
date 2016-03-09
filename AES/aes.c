@@ -24,7 +24,7 @@ static uint8_t Nonce[16];																												// Nonce
 static uint8_t initVector[16];																									// init vector passed to en/decode
 static uint8_t encrypt_packet[MAX_ENCRYPT_PACKET_LENGTH];												// Used to hold data that we are going to encrypt
 static EncryptionLevel_t  encryption_level;																			// encryption bits, enum
-static const uint16_t KeySize[KEY_SIZE_UNDEFINED] = {0,128};															// the keycode length for supported length enums
+static const uint16_t KeySize[KEY_SIZE_UNDEFINED] = {0,128/8};									// the keycode length for supported length enums
 static uint8_t key_size_code = 0;																								// local var for keeping current key length
 static uint8_t CounterPos=0;
 

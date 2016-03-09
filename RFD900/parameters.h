@@ -85,6 +85,15 @@ typedef enum{
 	CalParam_LAST,
 }	CalParm_t;
 
+typedef enum{
+	PT_Int=0,
+	PT_Bool,
+	PT_List,
+	PT_Last,
+	PT_SIZEFIX = 0xff
+} ParamType_t;
+
+
 #define PARAM_FORMAT_CURRENT  0x1FUL  //< current parameter format ID
 
 /// Parameter type.
@@ -133,6 +142,10 @@ extern enum Param_R_ID param_r_id(char * name);
 ///
 extern const char *param_s_name(enum Param_S_ID param);
 extern const char *param_r_name(enum Param_R_ID param);
+uint32_t param_s_Max(enum Param_S_ID param);
+uint32_t param_s_Min(enum Param_S_ID param);
+ParamType_t param_s_Type(enum Param_S_ID param);
+const char ** param_s_nameList(enum Param_S_ID param);
 
 /// Load parameters from the flash scratchpad.
 ///
