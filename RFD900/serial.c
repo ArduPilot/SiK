@@ -80,7 +80,7 @@ static volatile bool			tx_idle;
 #define BUF_EMPTY(_b)	(_b##_insert == _b##_remove)
 #define BUF_NOT_EMPTY(_b)	(_b##_insert != _b##_remove)
 #define BUF_USED(_b)	((_b##_insert >= _b##_remove)?(_b##_insert - _b##_remove):(sizeof(_b##_buf) - _b##_remove) + _b##_insert)
-#define BUF_FREE(_b)	((_b##_insert > _b##_remove)?(sizeof(_b##_buf) + _b##_remove - _b##_insert):(_b##_remove - _b##_insert)-1)
+#define BUF_FREE(_b)	((_b##_insert >= _b##_remove)?(sizeof(_b##_buf) + _b##_remove - _b##_insert):(_b##_remove - _b##_insert)-1)
 
 // FIFO insert/remove operations
 //
