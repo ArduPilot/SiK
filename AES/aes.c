@@ -106,8 +106,8 @@ __STATIC_INLINE uint8_t *aes_pad(unsigned char *in_str, uint8_t len)
 
 // encrypt the data pointed to by in_str with length len
 // returns a number indicate outcome. 0 is success
-uint8_t aes_encrypt(unsigned char *in_str, uint8_t in_len, unsigned char *out_str,
-			uint8_t *out_len,uint8_t SeqNo)
+uint8_t aes_encrypt(unsigned char *in_str, uint16_t in_len, unsigned char *out_str,
+			uint16_t *out_len,uint8_t SeqNo)
 {
 	uint8_t blocks;
 	unsigned char *pt;

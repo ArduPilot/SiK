@@ -54,8 +54,8 @@ typedef struct {
 #define RX_BUFF_MAX 2048			// must be a multiple of 2*RX_DMA_BUFF_SIZE
 #define TX_BUFF_MAX 1024			// must be a multiple of TX_DMA_BUFF_SIZE
 // threshold for considering the rx buffer full
-#define SERIAL_CTS_THRESHOLD_LOW  64	// must be a multiple of RX_DMA_BLOCK_SIZE
-#define SERIAL_CTS_THRESHOLD_HIGH 96  // must be a multiple of RX_DMA_BLOCK_SIZE
+#define SERIAL_CTS_THRESHOLD_LOW  (64-1)	// must be a multiple of RX_DMA_BLOCK_SIZE
+#define SERIAL_CTS_THRESHOLD_HIGH (96-1)  // must be a multiple of RX_DMA_BLOCK_SIZE
 
 // FIFO insert/remove operations
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
@@ -108,17 +108,18 @@ static uint8_t * rxDmaDst[2] = { rx_buf + RX_DMA_BLOCK_SIZE, rx_buf };
 static DMA_DESCRIPTOR_TypeDef *RxPrimDescr;
 static DMA_DESCRIPTOR_TypeDef *RxAltDescr;
 static uint16_t RXDMABlockCount;
+static uint16_t TxDmaData;
 // ******************** local function prototypes ********************
 static void Init_Serial(uint8_t speed);
 static uint8_t serial_device_set_speed(register uint8_t speed);
 static void serial_restart_fromISR(bool FromISR);
 #define serial_restart() serial_restart_fromISR(false);
-static bool dmaTransferDone(unsigned int channel, unsigned int seqNo,
-		void *user);
+static void dmaTransferDone(unsigned int channel, bool prim,void *user);
 static void RTSIrqCB(uint8_t pin);
 static void setupRxDma(void);
 //static void setupRxTimer(void);
 static void rxDmaComplete(unsigned int channel, bool primary, void *user);
+static void setupTxDma(void);
 // ********************* Implementation ******************************
 void serial_init(uint8_t speed)
 {
@@ -137,10 +138,10 @@ void serial_init(uint8_t speed)
 	DMADRV_AllocateChannel(&DMARxCh, NULL );
 	RxPrimDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->CTRLBASE)) + DMARxCh;// Get primary descriptor
 	RxAltDescr = ((DMA_DESCRIPTOR_TypeDef *)(DMA->ALTCTRLBASE)) + DMARxCh;// Get alternate descriptor
-
 	GPIOINT_CallbackRegister(RTS_PORT.Pin, RTSIrqCB);
 	GPIO_IntConfig(RTS_PORT.Port, RTS_PORT.Pin, false, true, true);
 	setupRxDma();
+	setupTxDma();
 	//setupRxTimer();
 	//static const char hello[] = "hello how are won't you jump in my game?";
 	//serial_write_buf((uint8_t*)hello, strlen(hello));
@@ -174,6 +175,7 @@ static void Init_Serial(uint8_t speed)
 		Init.mvdis = 0;
 		Init.prsRxEnable = 0;
 		Init.prsRxCh = 0;
+		Init.oversampling = usartOVS4;
 
 		USART_Reset(Config->USART);
 		USART_InitAsync(Config->USART, &Init);
@@ -182,6 +184,32 @@ static void Init_Serial(uint8_t speed)
 				| Config->location;
 		USART_Enable(Config->USART, usartEnable); // enable rx and tx
 	}
+}
+
+/**************************************************************************//**
+ * @brief Configure DMA for UART TX
+ * TX uses basic dma mode, only size changes between transfers
+ *****************************************************************************/
+static void setupTxDma(void)
+{
+	static DMA_CB_TypeDef cb;
+	DMA_CfgChannel_TypeDef txChnlCfg;
+	DMA_CfgDescr_TypeDef txDescrCfg;
+
+	cb.cbFunc = dmaTransferDone;										// Setting up call-back function
+	cb.userPtr = &TxDmaData;
+	txChnlCfg.highPri = false;															// Setting up channel
+	txChnlCfg.enableInt = true;
+	txChnlCfg.select = DMAREQ_USART1_TXBL;
+	txChnlCfg.cb = &cb;
+	DMA_CfgChannel(DMATxCh, &txChnlCfg);
+
+	txDescrCfg.dstInc = dmaDataIncNone;							// Setting up channel descriptor
+	txDescrCfg.srcInc = dmaDataInc1;
+	txDescrCfg.size = dmaDataSize1;
+	txDescrCfg.arbRate = dmaArbitrate1;
+	txDescrCfg.hprot = 0;
+	DMA_CfgDescr(DMATxCh, true, &txDescrCfg);
 }
 
 // RTS negative edge just occured, re enable transmit when this happens
@@ -193,17 +221,15 @@ static void RTSIrqCB(uint8_t pin)
 	}
 }
 
-static bool dmaTransferDone(unsigned int channel, unsigned int seqNo,
-		void *user)
+static void dmaTransferDone(unsigned int channel, bool seqNo,void *user)
 {
 	(void) channel;
 	(void) seqNo;
-	tx_remove += (uint32_t) user;
+	tx_remove += (*((uint16_t*) user));
 	if (tx_remove >= sizeof(tx_buf))
 		tx_remove -= sizeof(tx_buf);
 	tx_idle = true;
 	serial_restart_fromISR(true);
-	return (true);
 }
 
 static void serial_restart_fromISR(bool FromISR)
@@ -225,9 +251,9 @@ static void serial_restart_fromISR(bool FromISR)
 		// start the dma transfer again
 		src = &tx_buf[tx_remove];
 		tx_idle = false;
-		DMADRV_MemoryPeripheral(DMATxCh, dmadrvPeripheralSignal_USART1_TXBL,
-				(void*) &UART_Config.USART->TXDATA, src, 1, len, dmadrvDataSize1,
-				dmaTransferDone, (void*) ((uint32_t) len));
+		TxDmaData = len;
+		DMA_ActivateBasic(DMATxCh,true,false,(void *) &(UART_Config.USART->TXDATA),
+				src,len-1);
 	}
 }
 
@@ -364,40 +390,33 @@ uint8_t serial_peekx(uint16_t offset)
 
 // read count bytes from the serial buffer. This implementation
 // tries to be as efficient as possible, without disabling interrupts
-bool serial_read_buf(uint8_t * buf, uint8_t count)
+bool serial_read_buf(uint8_t * buf, uint8_t len)
 {
 	uint16_t n1;
 	// the caller should have already checked this,
 	// but lets be sure
-	if (count > serial_read_available())
+	if((0 ==len)||(len > serial_read_available()))
 	{
 		return false;
 	}
 	// see how much we can copy from the tail of the buffer
-	n1 = count;
-	if (n1 > sizeof(rx_buf) - rx_remove)
-	{
-		n1 = sizeof(rx_buf) - rx_remove;
-	}
-	memcpy(buf, &rx_buf[rx_remove], n1);
-	count -= n1;
-	buf += n1;
-	// update the remove marker being careful to only write it with valid values
 	myremove = rx_remove;
-	myremove += n1;
-	if (myremove >= sizeof(rx_buf))
+	n1  = sizeof(rx_buf) - myremove;
+	if(n1 >= len)
+	{
+		memcpy(buf,&rx_buf[myremove], len);
+	}
+	else
+	{
+		memcpy(buf,&rx_buf[myremove], n1);
+		memcpy(buf+n1,rx_buf,len-n1);
+	}
+	myremove += len;
+	if(myremove >= sizeof(rx_buf))
 	{
 		myremove -= sizeof(rx_buf);
 	}
 	rx_remove = myremove;
-	// any more bytes to do?
-	if (count > 0)
-	{
-		memcpy(buf, &rx_buf[0], count);
-		{
-			rx_remove = count;
-		}
-	}
 
 	if (BUF_FREE_SAFE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
 	{

@@ -47,8 +47,8 @@ static bool last_recv_is_resend;
 static bool force_resend;
 
 static uint8_t last_received[MAX_PACKET_LENGTH];
-static uint8_t last_sent[MAX_PACKET_LENGTH];
-static uint8_t last_sent_len;
+static uint8_t last_sent[(MAX_PACKET_LENGTH*3)/2];
+static uint16_t last_sent_len;
 static uint8_t last_recv_len;
 
 // serial speed in 16usecs/byte
@@ -205,9 +205,9 @@ uint8_t mavlink_frame(uint8_t max_xmit, uint8_t * buf)
 }
 
 
-static uint8_t encryptReturn(uint8_t *buf_out, uint8_t *buf_in, uint8_t buf_in_len, uint8_t SeqNo)
+static uint16_t encryptReturn(uint8_t *buf_out, uint8_t *buf_in, uint16_t buf_in_len, uint8_t SeqNo)
 {
-	uint8_t len_encrypted;
+	uint16_t len_encrypted;
   if (aes_get_encryption_level() > 0)
   {
     if (aes_encrypt(buf_in, buf_in_len, buf_out, &len_encrypted,SeqNo) != 0)
@@ -471,7 +471,7 @@ packet_is_duplicate(uint8_t len, uint8_t * buf, bool is_resend)
 
 // inject a packet to send when possible
 void 
-packet_inject(uint8_t * buf, uint8_t len)
+packet_inject(uint8_t * buf, uint16_t len)
 {
 	if (len > sizeof(last_sent)) {
 		len = sizeof(last_sent);

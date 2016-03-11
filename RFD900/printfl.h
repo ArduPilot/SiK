@@ -17,10 +17,10 @@ void	printfl(const char *fmt, ...);
 #define printf(_fmt, args...)	printfl(_fmt, ##args)		///< avoid fighting with the library printf() prototype
 
 /// start a capture of printf data
-void printf_start_capture(uint8_t *buf, uint8_t size);
+void printf_start_capture(uint8_t *buf, uint16_t size);
 
 /// end printf capture, returning number of bytes that have been captured
-uint8_t printf_end_capture(void);
+uint16_t printf_end_capture(void);
 
 
 #endif /* PRINTFL_H_ */

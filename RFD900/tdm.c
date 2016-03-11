@@ -70,7 +70,7 @@ enum tdm_state {
 static enum tdm_state tdm_state;
 
 /// a packet buffer for the TDM code
-static uint8_t pbuf[MAX_PACKET_LENGTH];
+static uint8_t pbuf[(MAX_PACKET_LENGTH*3)/2];
 
 static uint16_t tdm_end;																												// tdm remaining time will be relative to tick counter
 static int32_t tdm_ticks;
@@ -517,7 +517,7 @@ void tdm_remote_at(void)
 }
 
 // handle an incoming at command from the remote radio
-static void handle_at_command(uint8_t *pbuff, uint8_t len)
+static void handle_at_command(uint8_t *pbuff, uint16_t len,uint16_t bufflen)
 {
 	if (len < 2 || len > AT_CMD_MAXLEN || pbuff[0] != (uint8_t) 'R'
 			|| pbuff[1] != (uint8_t) 'T')
@@ -541,7 +541,7 @@ static void handle_at_command(uint8_t *pbuff, uint8_t len)
 	// run the AT command, capturing any output to the packet
 	// buffer
 	// this reply buffer will be sent at the next opportunity
-	printf_start_capture(pbuff, sizeof(pbuff));
+	printf_start_capture(pbuff, bufflen);
 	at_command();
 	len = printf_end_capture();
 	if (len > 0)
@@ -698,7 +698,7 @@ void tdm_serial_loop(void)
 
 				if (trailer.command == Data_AT)
 				{
-					handle_at_command(buffptr,len);
+					handle_at_command(buffptr,len,sizeof(pbuf)-(buffptr-pbuf));
 				}
 				else if((Data_Data == trailer.command) &&
 						len != 0 && !packet_is_duplicate(len, buffptr, trailer.resend)

@@ -145,7 +145,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="RFD900/serial2.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -291,7 +291,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="RFD900/serial2.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RFD900/serial.c|DriversLocal/ustimer.c|RFD900/Copy of tdm.c|Drivers|Drivers/ezradio_transmit_plugin.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -304,10 +304,10 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="(No toolchain) - None Toolchain Configuration - EZR32LG330F128R63"/>
 		<configuration configurationName="Multiple configurations">
 			<resource resourceType="PROJECT" workspacePath="/SLWSTK6202A_ezradio_simple_trx_tdm"/>
 		</configuration>
-		<configuration configurationName="(No toolchain) - None Toolchain Configuration - EZR32LG330F128R63"/>
 		<configuration configurationName="GNU ARM v4.8.3 - Release">
 			<resource resourceType="PROJECT" workspacePath="/SLWSTK6202A_ezradio_simple_trx"/>
 		</configuration>

@@ -40,7 +40,7 @@
 // Function Prototypes
 //-----------------------------------------------------------------------------
 
-uint8_t aes_encrypt(unsigned char *in_str, uint8_t in_len, unsigned char *out_str, uint8_t *out_len, uint8_t SeqNo);
+uint8_t aes_encrypt(unsigned char *in_str, uint16_t in_len, unsigned char *out_str, uint16_t *out_len, uint8_t SeqNo);
 
 bool aes_init(EncryptionLevel_t encryption_level);
 

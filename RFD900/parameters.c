@@ -132,7 +132,7 @@ static const struct parameter_s_info {
 	{"NUM_CHANNELS",    PT_Int ,1     ,50    ,20                  ,NULL    },
 	{"DUTY_CYCLE",      PT_Int ,1     ,100   ,100                 ,NULL    },
 	{"LBT_RSSI",        PT_Int ,0     ,0xff  ,0                   ,NULL    },
-	{"MANCHESTER",      PT_Bool,0     ,1     ,0                   ,BoolList},
+	//{"MANCHESTER",      PT_Bool,0     ,1     ,0                   ,BoolList},
 	{"RTSCTS",          PT_Bool,0     ,1     ,0                   ,BoolList},
 	{"MAX_WINDOW",      PT_Int ,20    ,400   ,131                 ,NULL    },
   {"ENCRYPTION_LEVEL",PT_List,0     ,1     ,0                   ,EncList }, // no Enycryption (0), 128 or 256 bit key

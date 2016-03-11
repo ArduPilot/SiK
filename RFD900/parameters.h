@@ -64,7 +64,7 @@ enum Param_S_ID {
 	PARAM_NUM_CHANNELS,     // number of hopping channels
 	PARAM_DUTY_CYCLE,       // duty cycle (percentage)
 	PARAM_LBT_RSSI,         // listen before talk threshold
-	PARAM_MANCHESTER,       // enable manchester encoding
+//	PARAM_MANCHESTER,       // enable manchester encoding
 	PARAM_RTSCTS,           // enable hardware flow control
 	PARAM_MAX_WINDOW,       // The maximum window size allowed
 	PARAM_ENCRYPTION,     	// no Enycryption (0), 128 or 256 bit key
@@ -94,7 +94,7 @@ typedef enum{
 } ParamType_t;
 
 
-#define PARAM_FORMAT_CURRENT  0x1FUL  //< current parameter format ID
+#define PARAM_FORMAT_CURRENT  0x20UL  //< current parameter format ID
 
 /// Parameter type.
 ///

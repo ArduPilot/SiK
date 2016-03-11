@@ -231,6 +231,7 @@ void serial_init(register uint8_t speed)
     Init.parity = (NoParity==Config->Parity)?(usartNoParity):((EvenParity==Config->Parity)?(usartEvenParity):(usartOddParity));
     Init.stopbits = (Stopbits1 == Config->Stopbits)?(usartStopbits1):(usartStopbits2);
     Init.enable = false;  // enable later after everything set up
+    Init.oversampling = usartOVS4;
     USART_InitAsync(Config->USART,&Init);
 
     USART_IntClear(Config->USART, _USART_IFC_MASK  );

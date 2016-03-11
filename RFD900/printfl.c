@@ -72,8 +72,8 @@ static  long val;
 // for remote AT command control
 static bool capture;
 static uint8_t *capture_buffer;
-static uint8_t capture_buffer_size;
-static uint8_t captured_size;
+static uint16_t capture_buffer_size;
+static uint16_t captured_size;
 // ******************** local function prototypes ********************
 static char *ultoa(unsigned long num, char *str, int radix); 										// non ansi c blurgh
 static char *ltoa(long num, char *str, int radix);
@@ -91,7 +91,7 @@ static void output_char(char c)
 }
 
 // start capturing bytes from printf()
-void printf_start_capture(uint8_t *buf, uint8_t size)
+void printf_start_capture(uint8_t *buf, uint16_t size)
 {
 	capture_buffer = buf;
 	captured_size = 0;
@@ -100,7 +100,7 @@ void printf_start_capture(uint8_t *buf, uint8_t size)
 }
 
 // end capture, returning number of bytes that have been captured
-uint8_t 
+uint16_t
 printf_end_capture(void)
 {
 	capture = false;

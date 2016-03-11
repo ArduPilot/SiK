@@ -20,6 +20,7 @@
 #include "em_cmu.h"
 #include "em_int.h"
 
+#include "dmadrv_config.h"
 #include "dmadrv.h"
 
 #if defined( EMDRV_DMADRV_UDMA )
@@ -144,7 +145,8 @@ Ecode_t DMADRV_AllocateChannel( unsigned int *channelId, void *capabilities )
   }
 
   INT_Disable();
-  for ( i=0; i < EMDRV_DMADRV_DMA_CH_COUNT; i++ )
+  //for ( i=0; i < EMDRV_DMADRV_DMA_CH_COUNT; i++ )
+  for ( i=EMDRV_DMADRV_DMA_CH_COUNT-1; i >=0; i-- )
   {
     if ( !chTable[ i ].allocated )
     {

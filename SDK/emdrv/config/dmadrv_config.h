@@ -34,7 +34,7 @@
 /// DMADRV channel count configuration option.
 /// Number of DMA channels to support. A lower DMA channel count will reduce
 /// ram memory footprint.
-#define EMDRV_DMADRV_DMA_CH_COUNT 6
+#define EMDRV_DMADRV_DMA_CH_COUNT 8
 
 /// DMADRV native API configuration option.
 /// Use the native emlib api of the DMA controller, but still use DMADRV
