@@ -62,8 +62,8 @@ static volatile uint8_t transmit_channel;
 static volatile uint8_t receive_channel;
 
 /// map between hopping channel numbers and physical channel numbers
-static uint8_t channel_map[MAX_FREQ_CHANNELS];
-
+static uint8_t channel_map[MAX_FREQ_CHANNELS+1];
+static uint8_t num_channels;																										// altered number of channels so it is always odd
 // a vary simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
@@ -83,19 +83,23 @@ void
 fhop_init(uint16_t netid)
 {
 	uint8_t i;
+	num_channels = num_fh_channels;
 	// create a random mapping between virtual and physical channel
 	// numbers, seeded by the network ID
-	for (i = 0; i < num_fh_channels; i++) {
+	for (i = 0; i < num_channels; i++)
+	{
 		channel_map[i] = i;
 	}
-  if (0 != param_s_get(PARAM_ENCRYPTION)) {
-    srand(crc16(32, param_get_encryption_key()));
-  }else
+  if (0 != param_s_get(PARAM_ENCRYPTION))
+  { srand(crc16(32, param_get_encryption_key()));}
+  else
   {	srand(netid);}
-
-
-
-	shuffle(channel_map, num_fh_channels);
+	shuffle(channel_map, num_channels);
+	if(0 == (num_channels&0x01))																									// if even number of channels
+	{
+		channel_map[num_channels]=channel_map[num_channels>>1];											// add one extra channel so we don't loop back to same channel each time
+		num_channels++;
+	}
 }
 
 // tell the TDM code what channel to transmit on
@@ -116,7 +120,7 @@ fhop_receive_channel(void)
 void 
 fhop_window_change(void)
 {
-	transmit_channel = (transmit_channel + 1) % num_fh_channels;
+	transmit_channel = (transmit_channel + 1) % num_channels;
 	if (have_radio_lock) {
 		// when we have lock, the receive channel follows the
 		// transmit channel
@@ -124,7 +128,7 @@ fhop_window_change(void)
 	} else if (transmit_channel == 0) {
 		// when we don't have lock, the receive channel only
 		// changes when the transmit channel wraps
-		receive_channel = (receive_channel + 1) % num_fh_channels;
+		receive_channel = (receive_channel + 1) % num_channels;
 		debug("Trying RCV on channel %d\n", (int)receive_channel);
 	}
 }
@@ -146,7 +150,7 @@ fhop_set_locked(bool locked)
 		transmit_channel = receive_channel;
 	} else {
 		// try the next receive channel
-		receive_channel = (receive_channel+1) % num_fh_channels;
+		receive_channel = (receive_channel+1) % num_channels;
 	}
 }
 
