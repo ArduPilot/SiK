@@ -29,6 +29,7 @@
 #include "golay.h"
 #include "crc.h"
 #include "serial.h"
+#include "RCOComp.h"
 
 // ******************** defines and typedefs *************************
 #define TX_FIFO_TIMEOUT_MS	5000L																									// max time to transmit a fifo buffer
@@ -748,6 +749,7 @@ uint8_t radio_get_transmit_power(void)
 ///
 int16_t radio_temperature(void)
 {
+#if 0 																																					// since we are not using the radio IC RF POWER, we can check efm32 temp as it will be quicker
 	int32_t TempDegC;
 	ezradio_get_adc_reading(EZRADIO_CMD_GET_ADC_READING_ARG_ADC_EN_TEMPERATURE_EN_BIT,
 			0xA5,&ezradioReply );
@@ -757,6 +759,8 @@ int16_t radio_temperature(void)
 	TempDegC /= 4096L;
 	TempDegC -= 293;
 	return(TempDegC);
+#endif
+  return(ReadThermometer());
 }
 // maximum temperature we allow the radio to get to before
 // we start limiting the duty cycle

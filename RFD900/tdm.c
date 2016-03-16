@@ -120,13 +120,13 @@ static uint16_t wait_ticks;
 static uint16_t wait_end;
 
 /// the long term duty cycle we are aiming for
-uint16_t duty_cycle;
+int16_t duty_cycle;
 
 /// the average duty cycle we have been transmitting
 static float average_duty_cycle;
 
 /// duty cycle offset due to temperature
-uint16_t duty_cycle_offset;
+int16_t duty_cycle_offset;
 
 /// set to true if we need to wait for our duty cycle average to drop
 static bool duty_cycle_wait;

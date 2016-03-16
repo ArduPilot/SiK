@@ -53,7 +53,7 @@ static uint8_t    thermCalTemp;
 static uint16_t   thermCalValue;
 static int16_t 		DefTuningVal=0;
 // ******************** local function prototypes ********************
-static int8_t ReadThermometer(void);
+int8_t ReadThermometer(void);
 // ********************* Implementation ******************************
 void InitRCOCalibration(void)
 {
@@ -94,7 +94,7 @@ void UpdateRCOCalibration(void)
   CMU_OscillatorTuningSet(cmuOsc_HFRCO, Val);
 }
 
-static int8_t ReadThermometer(void)
+int8_t ReadThermometer(void)
 {
   uint32_t sample;
   double  temp;
