@@ -183,7 +183,8 @@ struct tdm_trailer trailer;
 
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
-static char remote_at_cmd[AT_CMD_MAXLEN + 1];
+static uint16_t remote_at_len;
+static char remote_at_cmd[((AT_CMD_MAXLEN+1)&0xf0)+16];
 static int16_t Set_tdm_state_remaining(int32_t val, uint16_t reltick);
 static int32_t tdm_state_remaining(uint16_t tn);
 static int16_t transmit_wait(void);
@@ -512,8 +513,16 @@ static void link_update(void)
 // dispatch an AT command to the remote system
 void tdm_remote_at(void)
 {
-	memcpy(remote_at_cmd, at_cmd, strlen(at_cmd) + 1);
-	send_at_command = true;
+	remote_at_len = strlen(at_cmd)+1;																							// length of string + terminator
+	if(aes_get_encryption_level() > 0)																						// if encryption enabled
+	{																																							// encrypt and copy into remote at buffer
+		aes_encrypt((uint8_t*)at_cmd,remote_at_len,(uint8_t*)remote_at_cmd,&remote_at_len,seqNo);
+	}
+	else																																					// else no encryption
+	{
+		memcpy(remote_at_cmd, at_cmd, remote_at_len);																// just copy into remote buffer
+	}
+	send_at_command = true;																												// set flag for serial loop to send
 }
 
 // handle an incoming at command from the remote radio
@@ -696,15 +705,20 @@ void tdm_serial_loop(void)
 					}
 				}
 
+				uint8_t out_len = len;
 				if (trailer.command == Data_AT)
 				{
-					handle_at_command(buffptr,len,sizeof(pbuf)-(buffptr-pbuf));
+					bool res=true;
+					if(aes_get_encryption_level() > 0)
+					{
+						res = !aes_decrypt(buffptr,len,buffptr,&out_len,lastSeqNo);
+					}
+					if(res){handle_at_command(buffptr,out_len,sizeof(pbuf)-(buffptr-pbuf));}
 				}
 				else if((Data_Data == trailer.command) &&
 						len != 0 && !packet_is_duplicate(len, buffptr, trailer.resend)
 						&& !at_mode_active)
 				{
-					uint8_t out_len = len;
 					bool send = true;
 					// its user data - send it out
 					// the serial port
@@ -871,10 +885,10 @@ void tdm_serial_loop(void)
 			len += (3+dlen);
 			trailer.command = Data_PPM;
 		}
-		else if (send_at_command && max_xmit >= strlen(remote_at_cmd))
+		else if (send_at_command && max_xmit >= remote_at_len)
 		{
 			// send a remote AT command
-			len = strlen(remote_at_cmd);
+			len = remote_at_len;
 			memcpy(pbuf, remote_at_cmd, len);
 			trailer.command = Data_AT;
 			send_at_command = false;

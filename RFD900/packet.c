@@ -227,13 +227,16 @@ uint8_t packet_get_next(register uint8_t max_xmit, uint8_t * buf, uint8_t SeqNo)
 {
 	register uint16_t slen;
 
-  // Encryption takes 1 byte and is in multiples of 16.
-  // 16, 32, 48 etc, lets not send anything above 32 bytes back
-  // If you change this increase the buffer in serial.c serial_write_buf()
-  if (aes_get_encryption_level() > 0) {
-    if(max_xmit <= 16) return 0;
-    if(max_xmit <= 32) max_xmit = 15;
-    if(max_xmit > 31 ) max_xmit = 31;
+  // Encryption takes 1 byte extra and is in multiples of 16.
+  // buffer size for encryption is (len&f0+16)
+  // buffer 0-15  max size is 0
+  // buffer 16-31 max size is 15
+  // buffer 32-47 max size is 31
+  if (aes_get_encryption_level() > 0)
+  {
+    max_xmit = (max_xmit&0xf0);
+    if(0 == max_xmit) return 0;
+    max_xmit--;
   }
 
 	if (injected_packet) {

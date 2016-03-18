@@ -65,6 +65,7 @@ static uint8_t long_flag = 0;
 static uint8_t string_flag = 0;
 static uint8_t char_flag = 0;
 static uint8_t unsigned_flag = 0;
+static int8_t pad_length = 0;
 static char *  str;
 static  long val;
 
@@ -75,7 +76,8 @@ static uint8_t *capture_buffer;
 static uint16_t capture_buffer_size;
 static uint16_t captured_size;
 // ******************** local function prototypes ********************
-static char *ultoa(unsigned long num, char *str, int radix); 										// non ansi c blurgh
+static char *ultoapad(unsigned long num, char *str, int radix,int8_t displaydigits);
+#define ultoa(num,str,radix) ultoapad(num,str,radix,0)
 static char *ltoa(long num, char *str, int radix);
 // ********************* Implementation ******************************
 
@@ -111,7 +113,7 @@ void vprintfl(const char * fmt, va_list ap)
 {
 	for (; *fmt; fmt++) {
 		if (*fmt == '%') {
-			long_flag = string_flag = char_flag = unsigned_flag = 0;
+			long_flag = string_flag = char_flag = unsigned_flag = pad_length = 0;
 			fmt++;
 			switch (*fmt) {
 			case 'l':
@@ -137,6 +139,11 @@ void vprintfl(const char * fmt, va_list ap)
 			case 'x':
 				radix = 16;
 				unsigned_flag = 1;
+				break;
+			case 'X':
+				radix = 16;
+				unsigned_flag = 1;
+				pad_length = (long_flag)?(8):(4);
 				break;
 			case 'c':
 				radix = 0;
@@ -178,7 +185,7 @@ void vprintfl(const char * fmt, va_list ap)
 				char * stri;
 
 				if (unsigned_flag) {
-					ultoa(val, buffer, radix);
+					ultoapad(val, buffer, radix,pad_length);
 				} else {
 					ltoa(val, buffer, radix);
 				}
@@ -205,7 +212,7 @@ void printfl(const char *fmt, ...)
 	vprintfl(fmt, ap);
 }
 
-static char *ultoa(unsigned long num, char *str, int radix)
+static char *ultoapad(unsigned long num, char *str, int radix,int8_t displaydigits)
 {
     char temp[33];  //an int can only be 16 bits long
                     //at radix 2 (binary) the string
@@ -225,11 +232,19 @@ static char *ultoa(unsigned long num, char *str, int radix)
     } while ((unsigned long)num > 0);
 
     temp_loc--;
-
-
-    //now reverse the string.
-    while ( temp_loc >=0 ) {// while there are still chars
-        str[str_loc++] = temp[temp_loc--];
+    displaydigits --;
+    if(displaydigits < temp_loc){displaydigits = temp_loc;}
+    while(displaydigits >= 0)
+    {
+    	if(displaydigits > temp_loc)
+    	{
+    		str[str_loc++] = '0';
+    	}
+    	else
+    	{
+    		str[str_loc++] = temp[displaydigits];
+    	}
+    	displaydigits--;
     }
     str[str_loc] = 0; // add null termination.
 

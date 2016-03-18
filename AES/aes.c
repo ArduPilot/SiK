@@ -17,7 +17,7 @@
 //#include "aes_cbc_128.h"
 
 // ******************** defines and typedefs *************************
-#define MAX_ENCRYPT_PACKET_LENGTH 32
+#define MAX_ENCRYPT_PACKET_LENGTH 256
 // ******************** local variables ******************************
 static uint8_t *EncryptionKey;																									// pointer to key
 static uint8_t Nonce[16];																												// Nonce

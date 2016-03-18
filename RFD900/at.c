@@ -382,6 +382,9 @@ static void at_i(void)
 	case '7':
 		tdm_show_rssi();
 		return;
+	case '8':
+		printf("0x%lX%lX\n",DEVINFO->UNIQUEH,DEVINFO->UNIQUEL);
+		return;
 	default:
 		at_error();
 		return;
