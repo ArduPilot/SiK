@@ -73,8 +73,8 @@ void ezradio_reset(void)
     ezradio_comm_ClearCTS();
     /* Deinit ustimer */
     USTIMER_DeInit();
-    GPIO_PinModeSet(PAEN_PORT, PAEN, gpioModePushPull, 1);
-    GPIO_PinModeSet(LNAEN_PORT, LNAEN  , gpioModePushPull, 0);
+    GPIO_PinModeSet(PAEN_PORT, PAEN, gpioModePushPull, 0);
+    GPIO_PinModeSet(LNAEN_PORT, LNAEN  , gpioModePushPull, 1);
 
 }
 
@@ -145,7 +145,7 @@ void ezradio_start_tx(uint8_t channel, uint8_t condition, uint16_t tx_len)
     // Don't repeat the packet, 
     // ie. transmit the packet only once
     ezradioCmd[6] = 0x00;
-    GPIO_PinOutClear(LNAEN_PORT, LNAEN);
+    GPIO_PinOutSet(LNAEN_PORT, LNAEN);
     GPIO_PinOutSet(PAEN_PORT, PAEN);
     ezradio_comm_SendCmd( EZRADIO_CMD_ARG_COUNT_START_TX, ezradioCmd );
 }
@@ -175,7 +175,7 @@ void ezradio_start_tx(uint8_t channel, uint8_t condition, uint16_t tx_len)
     ezradioCmd[7] = next_state3;
 
     GPIO_PinOutClear(PAEN_PORT, PAEN);
-    GPIO_PinOutSet(LNAEN_PORT, LNAEN);
+    GPIO_PinOutClear(LNAEN_PORT, LNAEN);
     ezradio_comm_SendCmd( EZRADIO_CMD_ARG_COUNT_START_RX, ezradioCmd );
 }
 
