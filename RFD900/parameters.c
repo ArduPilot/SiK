@@ -120,8 +120,8 @@ static const struct parameter_s_info {
 	const char	** nameList;
 } parameter_s_info[PARAM_S_MAX] = {
 	{"FORMAT",          PT_Int ,0     ,0xff  ,PARAM_FORMAT_CURRENT,NULL    },
-	{"SERIAL_SPEED",    PT_List,1     ,230   ,57                  ,SerList }, // match APM default of 57600
-	{"AIR_SPEED",       PT_List,4     ,250   ,64                  ,AirList }, // relies on MAVLink flow control
+	{"SERIAL_SPEED",    PT_List,1     ,460   ,57                  ,SerList }, // match APM default of 57600
+	{"AIR_SPEED",       PT_List,4     ,500   ,64                  ,AirList }, // relies on MAVLink flow control
 	{"NETID",           PT_Int ,0     ,0xff  ,25                  ,NULL    },
 	{"TXPOWER",         PT_Int ,0     ,30    ,30                  ,NULL    },
 	{"ECC",             PT_Bool,0     ,1     ,0                   ,BoolList},

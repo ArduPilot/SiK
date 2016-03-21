@@ -45,7 +45,7 @@
 #define RX_TIMEOUT_MS     100
 
 typedef struct {
-	uint8_t rate;
+	uint16_t rate;
 	uint32_t BAUD;
 } serial_rates_t;
 
@@ -54,8 +54,8 @@ typedef struct {
 #define RX_BUFF_MAX 2048			// must be a multiple of 2*RX_DMA_BUFF_SIZE
 #define TX_BUFF_MAX 1024			// must be a multiple of TX_DMA_BUFF_SIZE
 // threshold for considering the rx buffer full
-#define SERIAL_CTS_THRESHOLD_LOW  (64-1)	// must be a multiple of RX_DMA_BLOCK_SIZE
-#define SERIAL_CTS_THRESHOLD_HIGH (96-1)  // must be a multiple of RX_DMA_BLOCK_SIZE
+#define SERIAL_CTS_THRESHOLD_LOW  (96-1)	// must be a multiple of RX_DMA_BLOCK_SIZE
+#define SERIAL_CTS_THRESHOLD_HIGH (192-1)  // must be a multiple of RX_DMA_BLOCK_SIZE
 
 // FIFO insert/remove operations
 #define BUF_NEXT_INSERT(_b)	((_b##_insert + 1) == sizeof(_b##_buf)?0:(_b##_insert + 1))
@@ -93,6 +93,7 @@ static const serial_rates_t serial_rates[] =
 		{	57, 57600}, // 57600 - default
 		{	115, 115200}, // 115200
 		{	230, 230400}, // 230400
+		{	460, 460800}, // 460800
 	};
 //static const GPIO_Port_Pin_TypeDef CTS_PORT= SERIAL_CTS;
 static const GPIO_Port_Pin_TypeDef RTS_PORT= SERIAL_RTS;
@@ -110,8 +111,8 @@ static DMA_DESCRIPTOR_TypeDef *RxAltDescr;
 static uint16_t RXDMABlockCount;
 static uint16_t TxDmaData;
 // ******************** local function prototypes ********************
-static void Init_Serial(uint8_t speed);
-static uint8_t serial_device_set_speed(register uint8_t speed);
+static void Init_Serial(uint16_t speed);
+static uint8_t serial_device_set_speed(register uint16_t speed);
 static void serial_restart_fromISR(bool FromISR);
 #define serial_restart() serial_restart_fromISR(false);
 static void dmaTransferDone(unsigned int channel, bool prim,void *user);
@@ -121,7 +122,7 @@ static void setupRxDma(void);
 static void rxDmaComplete(unsigned int channel, bool primary, void *user);
 static void setupTxDma(void);
 // ********************* Implementation ******************************
-void serial_init(uint8_t speed)
+void serial_init(uint16_t speed)
 {
 	// setup tx dma channel on txdouble empty, call back to check flow control
 	// after each DMA_BLOCK_SIZE bytes
@@ -147,7 +148,7 @@ void serial_init(uint8_t speed)
 	//serial_write_buf((uint8_t*)hello, strlen(hello));
 }
 
-static void Init_Serial(uint8_t speed)
+static void Init_Serial(uint16_t speed)
 {
 	uint8_t idx;
 
@@ -333,7 +334,7 @@ void putChar(char c)
 //
 // check if a serial speed is valid
 //
-bool serial_device_valid_speed(register uint8_t speed)
+bool serial_device_valid_speed(register uint16_t speed)
 {
 	uint8_t i;
 	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
@@ -438,7 +439,7 @@ uint8_t serial_read_space(void)
 	return space;
 }
 
-static uint8_t serial_device_set_speed(register uint8_t speed)
+static uint8_t serial_device_set_speed(register uint16_t speed)
 {
 	uint8_t i;
 	uint8_t num_rates = ARRAY_LENGTH(serial_rates);

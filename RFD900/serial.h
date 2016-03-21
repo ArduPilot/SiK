@@ -45,13 +45,13 @@
 ///				to serial_device_set_speed at the appropriate
 ///				point during initialisation.
 ///
-extern void	serial_init(register uint8_t speed);
+extern void	serial_init(register uint16_t speed);
 
 /// check if a serial speed is valid
 ///
 /// @param	speed		The serial speed to configure
 ///
-extern bool serial_device_valid_speed(register uint8_t speed);
+extern bool serial_device_valid_speed(register uint16_t speed);
 
 /// Write a byte to the serial port.
 ///
