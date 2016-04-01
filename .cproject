@@ -315,8 +315,11 @@
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="com.silabs.ide.project.core.noToolChain.stockConfig#com.silabs.ide.project.core.noToolChain:0.0.0 - EZR32LG330F128R63">
+		<scannerConfigBuildInfo instanceId="com.silabs.ide.si32.gcc.release#com.silabs.ide.si32.gcc:4.8.3.20131129;com.silabs.ide.si32.gcc.release#com.silabs.ide.si32.gcc:4.8.3.20131129.;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.base.158258586;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input.2072391287">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.silabs.ide.si32.iar.release#com.silabs.ide.si32.iar:7.40.7.9843 - EZR32LG330F128R63;com.silabs.ide.si32.iar.release#com.silabs.ide.si32.iar:7.40.7.9843 - EZR32LG330F128R63.;iar.arm.toolchain.compiler.v5.4.1.786012571;iar.arm.toolchain.compiler.inputType.v5.4.1.730535409">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.iar.cdt.arm.scanner.IAR_ARM_PerProjectProfile"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="com.silabs.ide.si32.gcc.debug#com.silabs.ide.si32.gcc:4.8.3.20131129;com.silabs.ide.si32.gcc.debug#com.silabs.ide.si32.gcc:4.8.3.20131129.;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.base.493092358;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input.953337">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
@@ -324,7 +327,7 @@
 		<scannerConfigBuildInfo instanceId="com.silabs.ide.project.core.noToolChain.stockConfig#com.silabs.ide.project.core.noToolChain:0.0.0 - EZR32LG330F256R63">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="com.silabs.ide.si32.gcc.release#com.silabs.ide.si32.gcc:4.8.3.20131129;com.silabs.ide.si32.gcc.release#com.silabs.ide.si32.gcc:4.8.3.20131129.;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.base.158258586;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input.2072391287">
+		<scannerConfigBuildInfo instanceId="com.silabs.ide.project.core.noToolChain.stockConfig#com.silabs.ide.project.core.noToolChain:0.0.0 - EZR32LG330F128R63">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
