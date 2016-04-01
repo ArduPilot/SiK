@@ -428,6 +428,7 @@ bool serial_read_buf(uint8_t * buf, uint8_t len)
 
 uint16_t serial_read_available(void)
 {
+	if (at_mode_active)	return(0);
 	return (BUF_USED_SAFE(rx));
 }
 
@@ -489,45 +490,49 @@ static void rxDmaComplete(unsigned int channel, bool primary, void *user)
 void Serial_Check(void)																													// save a timer and check serial port for inactivity every 100mS
 {
 	static bool primary;
-	static uint16_t LastBlockCount=0;
+	static uint16_t LastBlockCount=1;
 	static uint16_t NMinus1,lastNMinus1 = 0;
+	static uint16_t lastRxInsert;
+	uint8_t c;
 	static DMA_DESCRIPTOR_TypeDef *currDescr;
 	primary = ((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary;
 	currDescr = (((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary)?(RxPrimDescr):(RxAltDescr);
 	NMinus1 = ((currDescr->CTRL&_DMA_CTRL_N_MINUS_1_MASK)>>_DMA_CTRL_N_MINUS_1_SHIFT);
-	if((LastBlockCount == RXDMABlockCount)&&(lastNMinus1 == NMinus1))
+	if((LastBlockCount == RXDMABlockCount)&&(lastNMinus1 == NMinus1))							// if block and count same, no DMA complete occurred since last time
 	{
-		uint8_t c;
-		static uint16_t lastRxInsert;
-		rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;
-		if(rx_insert >= sizeof(rx_buf))
+		if(rx_insert != rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1)				// if the insert position does not match dma position
 		{
-			rx_insert = 0;
-		}
-		if (at_mode_active)																												// if AT mode is active, the AT processor owns the byte
-		{
-			while(BUF_NOT_EMPTY(rx))																								// if any data available
+			rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;					// set the new position, data must not have come in time yet
+			if(rx_insert >= sizeof(rx_buf))
 			{
-				BUF_REMOVE(rx,c);																											// remove last data from queue
-				if (!at_cmd_ready)																										// If an AT command is ready/being processed, we would ignore this byte
-				{
-					at_input(c);																												// parse at byte
-				}
+				rx_insert = 0;
 			}
 		}
-		else																																			// else not at mode
-		{
-			if(lastRxInsert != rx_insert)																						// if another byte has been inserted
-			{
-				if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
-				else							{c = rx_buf[rx_insert-1];}
-				at_plus_detector(c);																									// run the last byte past the +++ detector
-			}
-		}
-		lastRxInsert = rx_insert;
 	}
 	lastNMinus1 = NMinus1;
 	LastBlockCount = RXDMABlockCount;
+	// need to check at cmds now for all bytes rx'd
+	if (at_mode_active)																												// if AT mode is active, the AT processor owns the byte
+	{
+		while(BUF_NOT_EMPTY(rx))																								// if any data available
+		{
+			BUF_REMOVE(rx,c);																											// remove last data from queue
+			if (!at_cmd_ready)																										// If an AT command is ready/being processed, we would ignore this byte
+			{
+				at_input(c);																												// parse at byte
+			}
+		}
+	}
+	else																																			// else not at mode
+	{
+		if(lastRxInsert != rx_insert)																						// if another byte has been inserted
+		{
+			if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
+			else							{c = rx_buf[rx_insert-1];}
+			at_plus_detector(c);																									// run the last byte past the +++ detector
+			lastRxInsert = rx_insert;
+		}
+	}
 }
 /**************************************************************************//**
  * @brief  TIMER? Interrupt handler
