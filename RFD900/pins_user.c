@@ -23,16 +23,6 @@ typedef struct {
   GPIO_Port_Pin_TypeDef   GpioData;
 } PINS_USER_Config_t;
 
-typedef enum {
-  PINS_USER_P1_0				,
-  PINS_USER_P1_1				,
-  PINS_USER_P1_2				,
-  PINS_USER_P1_3				,
-  PINS_USER_P3_3				,
-  PINS_USER_P3_4				,
-  PINS_USER_LAST
-} PINS_USER_TypeDef;
-
 
 GPIO_Config_t gpioValues[GPIO_LAST] =
 {   {LED_RED	   ,gpioModePushPull,0},
@@ -95,7 +85,7 @@ bool pins_user_get_io(uint8_t pin)
 bool pins_user_set_value(uint8_t pin, bool high_low)
 {
 	pin_values[pin].pin_dir = high_low;
-	if(PIN_MAX > pin && pin_values[pin].pin_mirror == PIN_NULL)
+	if(PIN_MAX > pin && pin_values[pin].output && pin_values[pin].pin_mirror == PIN_NULL)
 	{
 		if(high_low)
 		{
@@ -112,7 +102,14 @@ bool pins_user_set_value(uint8_t pin, bool high_low)
 
 bool pins_user_get_value(uint8_t pin)
 {
+	if(pin_values[pin].output)
+	{
 	return pin_values[pin].pin_dir;
+	}
+	else
+	{
+		return(GPIO_PinInGet(pins_user_map[pin].GpioData.Port,pins_user_map[pin].GpioData.Pin));
+	}
 }
 
 uint8_t pins_user_get_adc(uint8_t pin)

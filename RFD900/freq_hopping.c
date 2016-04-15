@@ -120,17 +120,28 @@ fhop_receive_channel(void)
 void 
 fhop_window_change(void)
 {
+	static uint8_t loop=0;
 	transmit_channel = (transmit_channel + 1) % num_channels;
-	if (have_radio_lock) {
-		// when we have lock, the receive channel follows the
-		// transmit channel
-		receive_channel = transmit_channel;
-	} else if (transmit_channel == 0) {
-		// when we don't have lock, the receive channel only
-		// changes when the transmit channel wraps
-		receive_channel = (receive_channel + 1) % num_channels;
+	if (have_radio_lock)
+	{
+		receive_channel = transmit_channel;																					// when we have lock, the receive channel follows the transmit channel
+		loop = 0;
+	}
+	else if (transmit_channel == 0)																								// if transmit channels looped around
+	{
+		if(++loop >= 4)																															// if have looped around transmit channel sequence 4 times
+		{
+			loop = 0;
+			receive_channel++; 																												// increment receive channel
+			if( ((num_channels-1)     == receive_channel)||														// if it is the duplicate channel
+					(((num_channels-1)>>1)== receive_channel) )
+			{
+				receive_channel++;																											// skip this channel, do not sync on a duplicate
+			}
+			receive_channel = (receive_channel % num_channels);												// reset if looped
 		debug("Trying RCV on channel %d\n", (int)receive_channel);
 	}
+}
 }
 
 // called when we get or lose radio lock
@@ -142,15 +153,17 @@ fhop_set_locked(bool locked)
 		debug("FH lock\n");
 	}
 #endif
-	have_radio_lock = locked;
-	if (have_radio_lock) {
+	if (locked) {
 		// we have just received a packet, so we know the
 		// other radios transmit channel must be our receive
 		// channel
 		transmit_channel = receive_channel;
-	} else {
-		// try the next receive channel
-		receive_channel = (receive_channel+1) % num_channels;
+	} else {																																			// else lost lock
+		if(have_radio_lock)																													// if locked last time
+		{
+			receive_channel = 0;																											// reset back to first channel
 	}
+	}
+	have_radio_lock = locked;
 }
 

@@ -40,7 +40,7 @@
 #include "parameters.h"
 
 // Flash memory map
-#define FLASH_APP_START		0x2000					// 2 pages reserved for bootloader
+#define FLASH_APP_START		0x2000					// 4 pages reserved for bootloader
 
 
 // pages are always 2048 bytes, size can be 64,128,or 256K

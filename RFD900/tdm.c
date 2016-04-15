@@ -440,9 +440,10 @@ static void link_update(void)
 	{
 		unlock_count++;
 	}
-	if (unlock_count < 6)
+	if (unlock_count < 1)
 	{
 		LED_RADIO(LED_ON);
+		blink_state = 0;
 	}
 	else
 	{
@@ -451,6 +452,7 @@ static void link_update(void)
 #endif // TDM_SYNC_LOGIC
 		LED_RADIO(blink_state);
 		blink_state = !blink_state;
+		fhop_set_locked(false);
 	}
 	if (unlock_count > 20)
 	{
@@ -482,7 +484,6 @@ static void link_update(void)
 		{
 			printf("TDM: scanning\n");
 		}
-		fhop_set_locked(false);
 	}
 
 	if (unlock_count != 0)

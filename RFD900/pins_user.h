@@ -43,6 +43,16 @@
 //#elif defined BOARD_rfd900p
 #define PINS_USER_MAX 6
 
+typedef enum {
+  PINS_USER_P1_0				=0,
+  PINS_USER_P1_1				,
+  PINS_USER_P1_2				,
+  PINS_USER_P1_3				,
+  PINS_USER_P3_3				,
+  PINS_USER_P3_4				,
+  PINS_USER_LAST
+} PINS_USER_TypeDef;
+
 #define PINS_ABS_MAX 10
 #define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
 
