@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/com.silabs.ide.si32.iar.release\#com.silabs.ide.si32.iar\:7.40.7.9843\ -\ EZR32LG330F128R63/PATH/delimiter=;
+environment/project/com.silabs.ide.si32.iar.release\#com.silabs.ide.si32.iar\:7.40.7.9843\ -\ EZR32LG330F128R63/PATH/operation=prepend
+environment/project/com.silabs.ide.si32.iar.release\#com.silabs.ide.si32.iar\:7.40.7.9843\ -\ EZR32LG330F128R63/PATH/value=C\:\\SiliconLabs\\SimplicityStudio\\v3\\developer\\msys\\1.0\\bin
+environment/project/com.silabs.ide.si32.iar.release\#com.silabs.ide.si32.iar\:7.40.7.9843\ -\ EZR32LG330F128R63/append=true
+environment/project/com.silabs.ide.si32.iar.release\#com.silabs.ide.si32.iar\:7.40.7.9843\ -\ EZR32LG330F128R63/appendContributed=true
