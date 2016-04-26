@@ -104,8 +104,8 @@ typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
 // Check to make sure we dont overflow off the page
 typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
 
-static const char * SerList[] = {"1200","2400","4800","9600","19200","38400","57600","115200","230400",NULL};
-static const char * AirList[] = {"4","64","125","250",NULL};
+static const char * SerList[] = {"1200","2400","4800","9600","19200","38400","57600","115200","230400","460800",NULL};
+static const char * AirList[] = {"4","64","125","250","500","1000",NULL};
 static const char * EncList[] = {"None","128b",NULL};
 static const char * BoolList[] = {"Off","On",NULL};
 // ******************** local constants ******************************
@@ -121,7 +121,7 @@ static const struct parameter_s_info {
 } parameter_s_info[PARAM_S_MAX] = {
 	{"FORMAT",          PT_Int ,0     ,0xff  ,PARAM_FORMAT_CURRENT,NULL    },
 	{"SERIAL_SPEED",    PT_List,1     ,460   ,57                  ,SerList }, // match APM default of 57600
-	{"AIR_SPEED",       PT_List,4     ,500   ,64                  ,AirList }, // relies on MAVLink flow control
+	{"AIR_SPEED",       PT_List,4     ,1000  ,64                  ,AirList }, // relies on MAVLink flow control
 	{"NETID",           PT_Int ,0     ,0xff  ,25                  ,NULL    },
 	{"TXPOWER",         PT_Int ,0     ,30    ,30                  ,NULL    },
 	{"ECC",             PT_Bool,0     ,1     ,0                   ,BoolList},

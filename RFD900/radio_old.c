@@ -488,7 +488,7 @@ bool radio_receiver_on(void)
 bool radio_initialise(uint16_t air_rate)
 {
 	InitPWM();
-
+	if(128 == air_rate){air_rate=125;}                                            // hack to allow old  frequency setting to work
   appRadioInitData.packetRx.userCallback = &appPacketReceivedCallback;					// Configure packet received buffer and callback.
   appRadioInitData.packetRx.pktBuf = radioRxPkt;																// set the dest buffer
   appRadioInitData.packetRx.pktBufLen = sizeof(radioRxPkt);											// set the dest buffer size
@@ -627,6 +627,7 @@ uint8_t radio_get_channel(void)
 bool radio_RateValid(uint16_t air_rate)
 {
 	uint8_t RateIdx = 0;
+  if(128 == air_rate){air_rate=125;}                                            // hack to allow old  frequency setting to work
 	while ((RateIdx < NUM_DATA_RATES) && (air_rate != RFParams[RateIdx].air_rate))
 	{
 		RateIdx++;
