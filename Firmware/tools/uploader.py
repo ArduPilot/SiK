@@ -321,10 +321,17 @@ class uploader(object):
                 self.port.write(s)
                 sys.stdout.write(s)                        
 
+        def setBaudrate(self, baudrate):
+                try:
+                        self.port.setBaudrate(baudrate)
+                except Exception:
+                        # for pySerial 3.0, which doesn't have setBaudrate()
+                        self.port.baudrate = baudrate
+
 	def autosync(self):
 		'''use AT&UPDATE to put modem in update mode'''
 		if self.atbaudrate != 115200:
-			self.port.setBaudrate(self.atbaudrate)
+			self.setBaudrate(self.atbaudrate)
 		print("Trying autosync")
 		self.send('\r\n')
 		time.sleep(1.0)
@@ -342,11 +349,11 @@ class uploader(object):
                         time.sleep(0.7)
                         self.port.flushInput()
                         if self.atbaudrate != 115200:
-                                self.port.setBaudrate(115200)
+                                self.setBaudrate(115200)
                         print("Sent update command")
                         return True
 		if self.atbaudrate != 115200:
-			self.port.setBaudrate(115200)
+			self.setBaudrate(115200)
 		return False
 
 
