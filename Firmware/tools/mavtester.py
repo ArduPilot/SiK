@@ -17,8 +17,13 @@ parser.add_option("--rate", default=4, type='float', help="initial stream rate")
 parser.add_option("--override-rate", default=1, type='float', help="RC_OVERRIDE rate")
 parser.add_option("--show", action='store_true', default=False, help="show messages")
 parser.add_option("--rtscts", action='store_true', default=False, help="enable RTSCTS hardware flow control")
+parser.add_option("--mav20", action='store_true', default=False, help="enable MAVLink2")
+parser.add_option("--key", default=None, help="MAVLink2 signing key")
 
 (opts, args) = parser.parse_args()
+
+if opts.mav20:
+    os.environ['MAVLINK20'] = '1'
 
 from pymavlink import mavutil
 
@@ -32,9 +37,25 @@ gcs.setup_logfile('gcs.tlog')
 vehicle = mavutil.mavlink_connection(opts.port2, baud=opts.baudrate, input=False)
 vehicle.setup_logfile('vehicle.tlog')
 
+print("Draining ports")
+gcs.port.timeout = 1
+vehicle.port.timeout = 1
+while gcs.port.read(1024):
+    time.sleep(0.01)
+while vehicle.port.read(1024):
+    time.sleep(0.01)
+
 if opts.rtscts:
     gcs.set_rtscts(True)
     vehicle.set_rtscts(True)
+
+if opts.mav20 and opts.key is not None:
+    import hashlib
+    h = hashlib.new('sha256')
+    h.update(opts.key)
+    key = h.digest()
+    gcs.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=None)
+    vehicle.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=None)
 
 # we use thread based receive to avoid problems with serial buffer overflow in the Linux kernel. 
 def receive_thread(mav, q):
