@@ -53,7 +53,7 @@ enum ParamID {
         PARAM_TXPOWER,			// transmit power (dBm)
         PARAM_ECC,			// ECC using golay encoding
 	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
-	PARAM_OPPRESEND,		// opportunistic resend
+	PARAM_OPPRESEND,		// opportunistic resend // DISABLED
 	PARAM_MIN_FREQ,			// min frequency in MHz
 	PARAM_MAX_FREQ,			// max frequency in MHz
 	PARAM_NUM_CHANNELS,		// number of hopping channels

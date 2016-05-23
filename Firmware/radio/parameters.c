@@ -57,7 +57,7 @@ __code const struct parameter_info {
 	{"TXPOWER",		0},
 	{"ECC",			1},
 	{"MAVLINK",		1},
-	{"OPPRESEND",		1},
+	{"OPPRESEND",		0}, // disabled
 	{"MIN_FREQ",		0},
 	{"MAX_FREQ",		0},
 	{"NUM_CHANNELS",	0},
@@ -171,8 +171,6 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 
 	case PARAM_OPPRESEND:
-		feature_opportunistic_resend = value?true:false;
-		value = feature_opportunistic_resend?1:0;
 		break;
 
 	case PARAM_RTSCTS:

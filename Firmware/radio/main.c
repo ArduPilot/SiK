@@ -89,7 +89,6 @@ __pdata struct statistics statistics, remote_statistics;
 
 /// optional features
 bool feature_golay;
-bool feature_opportunistic_resend;
 uint8_t feature_mavlink_framing;
 bool feature_rtscts;
 
@@ -111,7 +110,6 @@ main(void)
 
 	// setup boolean features
 	feature_mavlink_framing = param_get(PARAM_MAVLINK);
-	feature_opportunistic_resend = param_get(PARAM_OPPRESEND)?true:false;
 	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
 

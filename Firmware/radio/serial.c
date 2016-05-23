@@ -351,18 +351,6 @@ serial_peek(void)
 }
 
 uint8_t
-serial_peek2(void)
-{
-	register uint8_t c;
-
-	ES0_SAVE_DISABLE;
-	c = BUF_PEEK2(rx);
-	ES0_RESTORE;
-
-	return c;
-}
-
-uint8_t
 serial_peekx(uint16_t offset)
 {
 	register uint8_t c;

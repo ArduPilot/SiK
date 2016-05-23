@@ -40,9 +40,6 @@
 extern __xdata uint8_t pbuf[MAX_PACKET_LENGTH];
 static __pdata uint8_t seqnum;
 
-#define MAVLINK_MSG_ID_RADIO 166
-#define MAVLINK_RADIO_CRC_EXTRA 21
-
 // new RADIO_STATUS common message
 #define MAVLINK_MSG_ID_RADIO_STATUS 109
 #define MAVLINK_RADIO_STATUS_CRC_EXTRA 185
@@ -124,6 +121,7 @@ static void swap_bytes(__pdata uint8_t ofs, __pdata uint8_t len)
 }
 
 /// send a MAVLink status report packet
+/// we always send as MAVLink1 and let the recipient sort it out.
 void MAVLink_report(void)
 {
         struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
@@ -132,7 +130,7 @@ void MAVLink_report(void)
 	pbuf[2] = seqnum++;
 	pbuf[3] = RADIO_SOURCE_SYSTEM;
 	pbuf[4] = RADIO_SOURCE_COMPONENT;
-	pbuf[5] = MAVLINK_MSG_ID_RADIO;
+	pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
 
         m->rxerrors = errors.rx_errors;
         m->fixed    = errors.corrected_packets;
@@ -141,17 +139,6 @@ void MAVLink_report(void)
         m->remrssi  = remote_statistics.average_rssi;
         m->noise    = statistics.average_noise;
         m->remnoise = remote_statistics.average_noise;
-	mavlink_crc(MAVLINK_RADIO_CRC_EXTRA);
-
-	if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
-		// don't cause an overflow
-		return;
-	}
-
-	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
-
-        // now the new RADIO_STATUS common message
-	pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
 	mavlink_crc(MAVLINK_RADIO_STATUS_CRC_EXTRA);
 
 	if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
