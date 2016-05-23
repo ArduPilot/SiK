@@ -49,13 +49,23 @@ if opts.rtscts:
     gcs.set_rtscts(True)
     vehicle.set_rtscts(True)
 
+def allow_unsigned(mav, msgId):
+    '''see if an unsigned packet should be allowed'''
+    allow = {
+        mavutil.mavlink.MAVLINK_MSG_ID_RADIO : True,
+        mavutil.mavlink.MAVLINK_MSG_ID_RADIO_STATUS : True 
+    }
+    if msgId in allow:
+        return True
+    return False
+
 if opts.mav20 and opts.key is not None:
     import hashlib
     h = hashlib.new('sha256')
     h.update(opts.key)
     key = h.digest()
-    gcs.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=None)
-    vehicle.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=None)
+    gcs.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=allow_unsigned)
+    vehicle.setup_signing(key, sign_outgoing=True, allow_unsigned_callback=allow_unsigned)
 
 # we use thread based receive to avoid problems with serial buffer overflow in the Linux kernel. 
 def receive_thread(mav, q):
@@ -177,6 +187,7 @@ def recv_vehicle():
         print(m)
     stats.vehicle_received += 1
     if m.get_type() in ['RADIO','RADIO_STATUS']:
+        #print('VRADIO: ', str(m))
         stats.vehicle_radio_received += 1
         stats.vehicle_txbuf = m.txbuf
         stats.vehicle_fixed = m.fixed
@@ -206,6 +217,7 @@ def recv_GCS():
         print(m)
     stats.gcs_received += 1        
     if m.get_type() in ['RADIO','RADIO_STATUS']:
+        #print('GRADIO: ', str(m))
         stats.gcs_radio_received += 1            
         stats.gcs_txbuf = m.txbuf
         stats.gcs_fixed = m.fixed
