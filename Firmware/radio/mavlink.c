@@ -110,16 +110,6 @@ struct mavlink_RADIO_v10 {
 	uint8_t remnoise;
 };
 
-static void swap_bytes(__pdata uint8_t ofs, __pdata uint8_t len)
-{
-	register uint8_t i;
-	for (i=ofs; i<ofs+len; i+=2) {
-		register uint8_t tmp = pbuf[i];
-		pbuf[i] = pbuf[i+1];
-		pbuf[i+1] = tmp;
-	}
-}
-
 /// send a MAVLink status report packet
 /// we always send as MAVLink1 and let the recipient sort it out.
 void MAVLink_report(void)
