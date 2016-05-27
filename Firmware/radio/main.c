@@ -112,7 +112,17 @@ main(void)
 	feature_mavlink_framing = param_get(PARAM_MAVLINK);
 	feature_golay = param_get(PARAM_ECC)?true:false;
 	feature_rtscts = param_get(PARAM_RTSCTS)?true:false;
-
+	g_board_frequency= param_get(PARAM_MAIN_FREQUENCY);
+	switch (g_board_frequency)
+	{
+	case  FREQ_433:
+	case  FREQ_470:
+        case  FREQ_868:
+        case  FREQ_915:
+        	break;
+        default:
+        	g_board_frequency = FREQ_433;
+	}
 	// Do hardware initialisation.
 	hardware_init();
 
