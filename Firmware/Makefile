@@ -77,12 +77,10 @@ all:		build
 #
 # Composite targets for handling actions.
 #
-build:		$(filter build~%,$(TARGETS)) check_code
+build:		$(filter build~%,$(TARGETS))
 install:	$(filter install~%,$(TARGETS))
 clean:		$(filter clean~%,$(TARGETS))
 
-check_code:
-	@./tools/check_code.py
 
 #
 # Composite target for handling the generic actions for each possible combination
@@ -97,7 +95,7 @@ $(TARGETS):
 	@make -f $(product)/product.mk $(action) \
 		BOARD=$(board)
 
-.PHONY:	$(ACTIONS) $(TARGETS) check_code
+.PHONY:	$(ACTIONS) $(TARGETS)
 
 help:
 	@echo ""
@@ -177,6 +175,7 @@ FMT		+= --exclude=obj
 
 # ignore various files we want to be able to diff with upstream providers
 FMT		+= --exclude=Si1000_defs.h
+FMT		+= --exclude=Si1020_defs.h
 FMT		+= --exclude=compiler_defs.h
 FMT		+= --exclude=rtPhy.c
 FMT		+= --exclude=rtPhy.h

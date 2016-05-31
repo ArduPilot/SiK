@@ -46,12 +46,12 @@
 ///   parameters.c:param_check()
 ///
 enum ParamID {
-        PARAM_FORMAT = 0,		// Must always be parameter 0
-        PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
-        PARAM_AIR_SPEED,		// over the air baud rate
-        PARAM_NETID,			// network ID
-        PARAM_TXPOWER,			// transmit power (dBm)
-        PARAM_ECC,			// ECC using golay encoding
+	PARAM_FORMAT = 0,		// Must always be parameter 0
+	PARAM_SERIAL_SPEED,		// BAUD_RATE_* constant
+	PARAM_AIR_SPEED,		// over the air baud rate
+	PARAM_NETID,			// network ID
+	PARAM_TXPOWER,			// transmit power (dBm)
+	PARAM_ECC,				// ECC using golay encoding
 	PARAM_MAVLINK,			// MAVLink framing, 0=ignore, 1=use, 2=rc-override
 	PARAM_OPPRESEND,		// opportunistic resend // DISABLED
 	PARAM_MIN_FREQ,			// min frequency in MHz
@@ -62,10 +62,13 @@ enum ParamID {
 	PARAM_MANCHESTER,		// enable manchester encoding
 	PARAM_RTSCTS,			// enable hardware flow control
 	PARAM_MAX_WINDOW,		// The maximum window size allowed
-	PARAM_MAX			// must be last
+#ifdef INCLUDE_AES
+  PARAM_ENCRYPTION,     // no Enycryption (0), 128 or 256 bit key
+#endif
+	PARAM_MAX				// must be last
 };
 
-#define PARAM_FORMAT_CURRENT	0x19UL				///< current parameter format ID
+#define PARAM_FORMAT_CURRENT	0x1aUL				///< current parameter format ID
 
 /// Parameter type.
 ///
@@ -126,8 +129,23 @@ extern void param_default(void);
 /// convenient routine to constrain parameter values
 uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t max);
 
-#ifdef BOARD_rfd900a
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 extern bool calibration_set(uint8_t idx, uint8_t value) __reentrant;
 extern uint8_t calibration_get(uint8_t level) __reentrant;
+extern uint8_t calibration_force_get(uint8_t idx) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
+
+#ifdef INCLUDE_AES
+/// get the encryption key
+///
+extern __xdata uint8_t *param_get_encryption_key();
+
+/// set the encryption key
+///
+extern bool param_set_encryption_key(__xdata unsigned char *key);
+
+/// Print hex codes
+///
+extern void print_encryption_key();
+#endif // INCLUDE_AES

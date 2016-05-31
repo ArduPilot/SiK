@@ -28,4 +28,7 @@
 #
 # Configuration options for the RFD900A board.
 #
-FREQUENCIES			= 915
+FREQUENCIES			 = 915
+XRAM_SIZE			 = 4096
+LDFLAGS				+= --model-large --iram-size 256 --xram-size $(XRAM_SIZE) --code-loc 0x400 --code-size 0x00f400 --stack-size 64
+BOOTLDFLAGS			 = --iram-size 256 --xram-size $(XRAM_SIZE) --stack-size 64 --nostdlib -Wl -bHIGHCSEG=0xf800

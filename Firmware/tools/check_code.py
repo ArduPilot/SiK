@@ -4,13 +4,31 @@ check the radio code for prototype consistency
 Andrew Tridgell, February 2012
 '''
 
-import re, glob, sys
+import re, glob, sys, os
 
 header_protos = {}
 code_protos = {}
 
 hmatch = re.compile(r'^extern\s+.*\s+(\w+)\(.*\)');
 cmatch = re.compile(r'^(\w+)\(.*\)');
+
+if len(sys.argv) < 2:
+    print("ERROR: board not defined")
+    print sys.argv
+    sys.exit(1)
+
+if len(sys.argv) < 3:
+    print("ERROR: xram size not defined")
+    print sys.argv
+    sys.exit(1)
+
+if int(sys.argv[-1]) < 4096:
+    print("ERROR: xram invalid")
+    sys.exit(1)
+
+board     = sys.argv[1].split('.')[0]
+xram_size = int(sys.argv[-1])
+
 
 def extract_header_functions(h, d):
     '''extract extern functions from a header'''
@@ -44,18 +62,18 @@ def check_xiseg():
     '''check that XISEG has not overflowed'''
     global error_count
     xmatch = re.compile(r'^XISEG\s*(\w+)\s*(\w+)');
-    for map in glob.glob("obj/*/radio*/*map"):
+    for map in glob.glob("%s.map"%board):
         f = open(map)
         for line in f:
             m = xmatch.match(line)
             if m:
                 ofs1 = int(m.group(1),16)
                 ofs2 = int(m.group(2),16)
-                if ofs1 + ofs2 >= 4096:
+                print os.popen("tail -n5 %s.mem"%board).read()
+                print('XISEG %s - %u bytes available' % (map, xram_size-(ofs1+ofs2)))
+                if ofs1 + ofs2 >= xram_size:
                     print('ERROR: XISEG overflow %u in %s' % (ofs1+ofs2, map))
                     error_count += 1
-                else:
-                    print('XISEG %s - %u bytes available' % (map, 4096-(ofs1+ofs2)))
 
 
 # go through all the headers looking for extern declarations of functions

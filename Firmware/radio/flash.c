@@ -60,10 +60,19 @@ void
 flash_erase_scratch(void)
 __critical {
 	// erase the scratch page
-	flash_load_keys();		// unlock flash for one operation
-	PSCTL = 0x07;			// enable flash erase of the scratch page
-	*(uint8_t __xdata *)0 = 0xff;	// trigger the erase
-	PSCTL = 0x00;			// disable flash write & scratch access
+#ifdef CPU_SI1030 // Part of memory no seperate scratch section
+	__pdata uint8_t	bank_state = PSBANK;
+	PSBANK = ((bank_state & 0x03) | 0x30); // Select Bank 3
+#endif // CPU_SI1030
+	
+	flash_load_keys();				// unlock flash for one operation
+	PSCTL = FLASH_ERASE_SCRATCH;	// enable flash erase of the scratch page
+	*(uint8_t __xdata *)FLASH_SCRATCH = 0xff;	// trigger the erase
+	PSCTL = FLASH_DISABLE;			// disable flash write & scratch access
+	
+#ifdef CPU_SI1030
+	PSBANK = bank_state;
+#endif // CPU_SI1030
 }
 
 uint8_t
@@ -71,17 +80,35 @@ flash_read_scratch(__pdata uint16_t address)
 __critical {
 	uint8_t	d;
 
-	PSCTL = 0x04;
-	d = *(uint8_t __code *)address;
-	PSCTL = 0x00;
+#ifdef CPU_SI1030 // Part of memory no seperate scratch section
+	__pdata uint8_t	bank_state = PSBANK;
+	PSBANK = ((bank_state & 0x03) | 0x30); // Select Bank 3
+#endif // CPU_SI1030
+	
+	PSCTL = FLASH_READ_SCRATCH;
+	d = *(uint8_t __code *)(FLASH_SCRATCH | address);
+	PSCTL = FLASH_DISABLE;
+	
+#ifdef CPU_SI1030
+	PSBANK = bank_state;
+#endif // CPU_SI1030
 	return d;
 }
 
 void
 flash_write_scratch(__pdata uint16_t address, __pdata uint8_t c)
 __critical {
+#ifdef CPU_SI1030 // Part of memory no seperate scratch section
+	__pdata uint8_t	bank_state = PSBANK;
+	PSBANK = ((bank_state & 0x03) | 0x30); // Select Bank 3
+#endif // CPU_SI1030
+	
 	flash_load_keys();
 	PSCTL = 0x05;
-	*(uint8_t __xdata *)address = c;
-	PSCTL = 0x00;
+	*(uint8_t __xdata *)(FLASH_SCRATCH | address) = c;
+	
+#ifdef CPU_SI1030
+	PSBANK = bank_state;
+#endif // CPU_SI1030
+	PSCTL = FLASH_DISABLE;
 }

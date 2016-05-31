@@ -117,7 +117,7 @@
 // SDCC - Small Device C Compiler
 // http://sdcc.sourceforge.net
 
-#if defined SDCC
+#if defined SDCC || defined __SDCC
 
 # define SEG_GENERIC
 # define SEG_FAR   __xdata

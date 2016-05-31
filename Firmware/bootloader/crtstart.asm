@@ -92,6 +92,14 @@ __offset = 0x400		; XXX would be nice to get this from somewhere
 	.ds	5
 	ljmp	. + __offset	; SPI1
 	.ds	5
+	ljmp	. + __offset	; Pulse Counter
+	.ds	5
+	ljmp	. + __offset	; DMA0
+	.ds	5
+	ljmp	. + __offset	; Encoder0
+	.ds	5
+	ljmp	. + __offset	; AES
+	.ds	5
 
 	;; bootloader entry
 	.globl	_bl_main

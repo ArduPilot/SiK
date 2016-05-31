@@ -66,7 +66,27 @@ extern bool	serial_write(register uint8_t c);
 /// @param	buf		Pointer to the data to write.
 /// @param	count		The number of bytes to write.
 ///
-extern void	serial_write_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
+extern void	serial_write_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+
+#ifdef INCLUDE_AES
+extern void serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count);
+
+/// Encryption ring buffer checks. Is it getting too full?
+//
+extern bool encrypt_buffer_getting_full();
+
+/// Encryption ring buffer checks. Is it getting empty now?
+//
+extern bool encrypt_buffer_getting_empty();
+
+/// Get space left in encrypt buffer
+//
+extern uint16_t encrypt_buffer_write_space();
+#endif // INCLUDE_AES
+
+/// Decrypt any packets in the buffer and push to the serial layer
+///
+extern bool decryptPackets(void);
 
 /// Check for space in the write FIFO
 ///
@@ -111,7 +131,7 @@ extern uint8_t	serial_peekx(uint16_t offset);
 ///				to satisfy the request (no bytes are read
 ///				in this case).
 ///
-extern bool	serial_read_buf(__xdata uint8_t * __data buf, __pdata uint8_t count);
+extern bool	serial_read_buf(__xdata uint8_t * buf, __pdata uint8_t count);
 
 /// Check for bytes in the read FIFO
 ///

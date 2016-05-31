@@ -32,6 +32,14 @@
 /// golay 23/12 encoding and decoding tables
 ///
 
+#ifndef _GOLAY23_H_
+#define _GOLAY23_H_
+
+#ifndef INCLUDE_AES
+#define INCLUDE_GOLAY
+#endif
+
+#ifdef INCLUDE_GOLAY
 
 static const __code uint16_t golay23_encode[4096] = {
 0x0000U, 0x0475U, 0x049fU, 0x00eaU, 0x054bU, 0x013eU, 0x01d4U, 0x05a1U, 
@@ -807,3 +815,5 @@ static const __code uint16_t golay23_decode[2048] = {
 0x0022U, 0x0022U, 0x0100U, 0x0022U, 0x0200U, 0x0022U, 0x0408U, 0x0050U
 };
 
+#endif // INCLUDE_GOLAY
+#endif // _GOLAY23_H_

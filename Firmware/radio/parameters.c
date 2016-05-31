@@ -39,10 +39,14 @@
 /// with an 8-bit XOR checksum appended to the end of the flash range.
 ///
 
-
 #include "radio.h"
 #include "tdm.h"
+#include "crc.h"
 #include <flash_layout.h>
+
+#ifdef INCLUDE_AES
+#include "AES/aes.h"
+#endif // INCLUDE_AES
 
 /// In-ROM parameter info table.
 ///
@@ -50,22 +54,25 @@ __code const struct parameter_info {
 	const char	*name;
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
-	{"FORMAT", 		PARAM_FORMAT_CURRENT},
-	{"SERIAL_SPEED",	57}, // match APM default of 57600
-	{"AIR_SPEED",		64}, // relies on MAVLink flow control
-	{"NETID",		25},
-	{"TXPOWER",		0},
-	{"ECC",			1},
-	{"MAVLINK",		1},
-	{"OPPRESEND",		0}, // disabled
-	{"MIN_FREQ",		0},
-	{"MAX_FREQ",		0},
-	{"NUM_CHANNELS",	0},
-	{"DUTY_CYCLE",		100},
-	{"LBT_RSSI",		0},
-	{"MANCHESTER",		0},
-	{"RTSCTS",		0},
-	{"MAX_WINDOW",		131}
+	{"FORMAT",         PARAM_FORMAT_CURRENT},
+	{"SERIAL_SPEED",   57}, // match APM default of 57600
+	{"AIR_SPEED",      64}, // relies on MAVLink flow control
+	{"NETID",          25},
+	{"TXPOWER",        20},
+	{"ECC",             0},
+	{"MAVLINK",         1},
+	{"OPPRESEND",       0},
+	{"MIN_FREQ",        0},
+	{"MAX_FREQ",        0},
+	{"NUM_CHANNELS",    0},
+	{"DUTY_CYCLE",    100},
+	{"LBT_RSSI",        0},
+	{"MANCHESTER",      0},
+	{"RTSCTS",          0},
+	{"MAX_WINDOW",    131},
+#ifdef INCLUDE_AES
+	{"ENCRYPTION_LEVEL", 0}, // no Enycryption (0), 128 or 256 bit key
+#endif
 };
 
 /// In-RAM parameter store.
@@ -74,11 +81,43 @@ __code const struct parameter_info {
 /// hold all the parameters when we're rewriting the scratchpad
 /// page anyway.
 ///
-union param_private {
-	param_t		val;
-	uint8_t		bytes[4];
-};
-__xdata union param_private	parameter_values[PARAM_MAX];
+__xdata param_t	parameter_values[PARAM_MAX];
+
+// Three extra bytes, 1 for the number of params and 2 for the checksum
+#define PARAM_FLASH_START   0
+#define PARAM_FLASH_END     (PARAM_FLASH_START + sizeof(parameter_values) + 3)
+
+#if PIN_MAX > 0
+__code const pins_user_info_t pins_defaults = PINS_USER_INFO_DEFAULT;
+__xdata pins_user_info_t pin_values[PIN_MAX];
+
+// Place the start away from the other params to allow for expantion 2<<7 = 256
+#define PIN_FLASH_START       (2<<7)
+#define PIN_FLASH_END         (PIN_FLASH_START + sizeof(pin_values) + 3)
+
+// Check to make sure the End of the r and the beginning of pins dont overlap
+typedef char r2pCheck[(PARAM_FLASH_END < PIN_FLASH_START) ? 0 : -1];
+#else // PIN_MAX
+#define PIN_FLASH_END PARAM_FLASH_END
+#endif // PIN_MAX
+
+// Place the start away from the other params to allow for expantion 2<<7 +128 = 384
+#ifdef INCLUDE_AES
+// Holds the encrpytion string
+__xdata uint8_t encryption_key[32];
+
+#define PARAM_E_FLASH_START   (2<<7) + 128
+#define PARAM_E_FLASH_END     (PARAM_E_FLASH_START + sizeof(encryption_key) + 3)
+
+// Check to make sure the End of the pins and the beginning of encryption dont overlap
+typedef char p2eCheck[(PIN_FLASH_END < PARAM_E_FLASH_START) ? 0 : -1];
+#else
+#define PARAM_E_FLASH_END PIN_FLASH_END
+#endif // INCLUDE_AES
+
+
+// Check to make sure we dont overflow off the page
+typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
 
 static bool
 param_check(__pdata enum ParamID id, __data uint32_t val)
@@ -127,7 +166,7 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		if (val > 131)
 			return false;
 		break;
-				
+
 	default:
 		// no sanity check for this value
 		break;
@@ -182,7 +221,7 @@ param_set(__data enum ParamID param, __pdata param_t value)
 		break;
 	}
 
-	parameter_values[param].val = value;
+	parameter_values[param] = value;
 
 	return true;
 }
@@ -192,42 +231,53 @@ param_get(__data enum ParamID param)
 {
 	if (param >= PARAM_MAX)
 		return 0;
-	return parameter_values[param].val;
+	return parameter_values[param];
+}
+
+bool read_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
+{
+	uint16_t		i;
+	
+	for (i = start; i < start+size; i ++)
+		input[i-start] = flash_read_scratch(i);
+	
+	// verify checksum
+	if (crc16(size, input) != ((uint16_t) flash_read_scratch(i+1)<<8 | flash_read_scratch(i)))
+		return false;
+	return true;
+}
+
+void write_params(__xdata uint8_t * __data input, uint16_t start, uint8_t size)
+{
+	uint16_t	i, checksum;
+
+	// save parameters to the scratch page
+	for (i = start; i < start+size; i ++)
+		flash_write_scratch(i, input[i-start]);
+	
+	// write checksum
+	checksum = crc16(size, input);
+	flash_write_scratch(i, checksum&0xFF);
+	flash_write_scratch(i+1, checksum>>8);
 }
 
 bool
 param_load(void)
 __critical {
-	__pdata uint8_t		d;
-	__pdata uint8_t		i;
-	__pdata uint8_t		sum;
-	__pdata uint8_t         count;
+	__pdata uint8_t	i, expected;
 
-	// start with defaults
-	for (i = 0; i < sizeof(parameter_values); i++) {
-		parameter_values[i].val = parameter_info[i].default_value;
-	}
-
-	// initialise checksum
-	sum = 0;
-	count = flash_read_scratch(0);
-	if (count > sizeof(parameter_values) ||
-	    count < 12*sizeof(param_t)) {
-		return false;
-	}
-
+	// Start with default values
+	param_default();
+	
 	// loop reading the parameters array
-	for (i = 0; i < count; i ++) {
-		d = flash_read_scratch(i+1);
-		parameter_values[0].bytes[i] = d;
-		sum ^= d;
-	}
-
-	// verify checksum
-	d = flash_read_scratch(i+1);
-	if (sum != d)
+	expected = flash_read_scratch(PARAM_FLASH_START);
+	if (expected > sizeof(parameter_values) || expected < 12*sizeof(param_t))
 		return false;
-
+	
+	// read and verify params
+	if(!read_params((__xdata uint8_t *)parameter_values, PARAM_FLASH_START+1, expected))
+		return false;
+	
 	// decide whether we read a supported version of the structure
 	if (param_get(PARAM_FORMAT) != PARAM_FORMAT_CURRENT) {
 		debug("parameter format %lu expecting %lu", parameters[PARAM_FORMAT], PARAM_FORMAT_CURRENT);
@@ -235,40 +285,53 @@ __critical {
 	}
 
 	for (i = 0; i < sizeof(parameter_values); i++) {
-		if (!param_check(i, parameter_values[i].val)) {
-			parameter_values[i].val = parameter_info[i].default_value;
+		if (!param_check(i, parameter_values[i])) {
+			parameter_values[i] = parameter_info[i].default_value;
 		}
 	}
+	
+	// read and verify pin params
+#if PIN_MAX > 0
+	if(!read_params((__xdata uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values)))
+		return false;
+#endif
 
+  // read and verify encryption params
+#ifdef INCLUDE_AES
+  if(!read_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key)))
+    return false;
+#endif // INCLUDE_AES
 	return true;
 }
 
 void
 param_save(void)
-{
-	register uint8_t d;
-	register uint8_t i;
-	register uint8_t sum;
+__critical {
 
 	// tag parameters with the current format
-	parameter_values[PARAM_FORMAT].val = PARAM_FORMAT_CURRENT;
+	parameter_values[PARAM_FORMAT] = PARAM_FORMAT_CURRENT;
 
-        // erase the scratch space
-        flash_erase_scratch();
+	// erase the scratch space
+	flash_erase_scratch();
 
-	// initialise checksum
-	sum = 0;
-        flash_write_scratch(0, sizeof(parameter_values));
+	// write param array length
+	flash_write_scratch(PARAM_FLASH_START, sizeof(parameter_values));
 
-	// save parameters to the scratch page
-	for (i = 0; i < sizeof(parameter_values); i++) {
-		d = parameter_values[0].bytes[i];	// byte we are going to write
-		sum ^= d;
-                flash_write_scratch(i+1, d);
-	}
+	// write params
+	write_params((__xdata uint8_t *)parameter_values, PARAM_FLASH_START+1, sizeof(parameter_values));
 
-	// write checksum
-        flash_write_scratch(i+1, sum);
+	// write pin params
+#if PIN_MAX > 0
+  flash_write_scratch(PIN_FLASH_START, sizeof(pin_values));
+	write_params((__xdata uint8_t *)pin_values, PIN_FLASH_START+1, sizeof(pin_values));
+#endif
+
+  // write encryption params
+#ifdef INCLUDE_AES
+  flash_write_scratch(PARAM_E_FLASH_START, sizeof(encryption_key));
+  write_params((__xdata uint8_t *)encryption_key, PARAM_E_FLASH_START+1, sizeof(encryption_key));
+#endif // INCLUDE_AES
+
 }
 
 void
@@ -278,8 +341,16 @@ param_default(void)
 
 	// set all parameters to their default values
 	for (i = 0; i < PARAM_MAX; i++) {
-		parameter_values[i].val = parameter_info[i].default_value;
+		parameter_values[i] = parameter_info[i].default_value;
 	}
+	
+#if PIN_MAX > 0
+	for (i = 0; i < PIN_MAX; i ++) {
+		pin_values[i].output = pins_defaults.output;
+		pin_values[i].pin_dir = pins_defaults.pin_dir;
+		pin_values[i].pin_mirror = pins_defaults.pin_mirror;
+	}
+#endif // PIN_MAX
 }
 
 enum ParamID
@@ -312,7 +383,8 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 }
 
 // rfd900a calibration stuff
-#ifdef BOARD_rfd900a
+// Change for next rfd900 revision
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
 static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
 
@@ -336,6 +408,10 @@ flash_read_byte(uint16_t address) __reentrant
 bool
 calibration_set(uint8_t idx, uint8_t value) __reentrant
 {
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
 	// if level is valid
 	if (idx <= BOARD_MAXTXPOWER && value != 0xFF)
 	{
@@ -355,6 +431,11 @@ calibration_get(uint8_t level) __reentrant
 	uint8_t idx;
 	uint8_t crc = 0;
 
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
+	// Change for next board revision
 	for (idx = 0; idx < FLASH_CALIBRATION_AREA_SIZE; idx++)
 	{
 		crc ^= calibration[idx];
@@ -367,12 +448,22 @@ calibration_get(uint8_t level) __reentrant
 	return 0xFF;
 }
 
+uint8_t
+calibration_force_get(uint8_t idx) __reentrant
+{
+  return flash_read_byte(FLASH_CALIBRATION_AREA_HIGH + idx);
+}
+
 bool
 calibration_lock() __reentrant
 {
 	uint8_t idx;
 	uint8_t crc = 0;
 
+#ifdef CPU_SI1030
+  PSBANK = 0x33;
+#endif
+  
 	// check that all entries are written
 	if (flash_read_byte(FLASH_CALIBRATION_CRC_HIGH) == 0xFF)
 	{
@@ -396,4 +487,111 @@ calibration_lock() __reentrant
 	}
 	return false;
 }
-#endif
+#endif // BOARD_rfd900a/p
+
+#ifdef INCLUDE_AES
+// Used to convert individial Hex digits into Integers
+//
+uint8_t read_hex_nibble(const uint8_t c) __reentrant
+{
+	if ((c >='0') && (c <= '9'))
+	{
+		return c - '0';
+	}
+	else if ((c >='A') && (c <= 'F'))
+	{
+		return c - 'A' + 10;
+	}
+	else if ((c >='a') && (c <= 'f'))
+	{
+		return c - 'a' + 10;
+	}
+	else
+	{
+		// printf("[%u] read_hex_nibble: Error char not in supported range",nodeId);
+		return 0;
+	}
+}
+
+
+/// Convert string to hex codes
+///
+void convert_to_hex(__xdata unsigned char *str_in, __xdata unsigned char *str_out,	__pdata uint8_t key_length)
+{
+	__pdata uint8_t i, num;
+
+	for (i=0;i<key_length;i++) {
+		num = read_hex_nibble(str_in[2 * i])<<4;
+		num += read_hex_nibble(str_in[2 * i + 1]);
+		str_out[i] = num;
+	}
+}
+
+/// Set default encryption key
+//
+void param_set_default_encryption_key(__pdata uint8_t key_length)
+{
+	__pdata uint8_t i;
+	__xdata uint8_t b[] = {0x62};
+
+	for (i=0;i< key_length;i++) {
+		// Set default key to b's
+		memcpy(&encryption_key[i], &b, 1);
+	}
+}
+
+/// set the encryption key
+///
+/// Note: There is a reliance on the encryption level as this determines
+///       how many characters we need. So we need to set ATS16 first, THEN
+///       save and then Set the encryption key.
+///
+bool
+param_set_encryption_key(__xdata unsigned char *key)
+{
+	__pdata uint8_t len, key_length;
+
+  // Use the new encryption level to help with key changes before reboot
+  // Deduce key length (bytes) from level 1 -> 16, 2 -> 24, 3 -> 32
+  key_length = AES_KEY_LENGTH(param_get(PARAM_ENCRYPTION));
+  len = strlen(key);
+  // If not enough characters (2 char per byte), then set default
+  if (len < 2 * key_length ) {
+    param_set_default_encryption_key(key_length);
+    //printf("%s\n",key);
+    printf("ERROR - Key length:%u, Required %u\n",len, 2 * key_length);
+    return true;
+  } else {
+    // We have sufficient characters for the encryption key.
+    // If too many characters, then it will just ignore extra ones
+    printf("key len %d\n",key_length);
+    convert_to_hex(key, encryption_key, key_length);
+  }
+  
+  return true;
+}
+
+/// Print hex codes for given string
+///
+void
+print_encryption_key()
+{
+  __pdata uint8_t i;
+  __pdata uint8_t key_length = AES_KEY_LENGTH(param_get(PARAM_ENCRYPTION));
+  
+  for (i=0; i<key_length; i++) {
+    if (0xF >= encryption_key[i]) {
+      printf("0");
+    }
+		printf("%x",encryption_key[i]);
+	}
+	printf("\n");
+}
+
+/// get the encryption key
+///
+__xdata uint8_t* param_get_encryption_key()
+{
+	return encryption_key;
+}
+#endif // INCLUDE_AES

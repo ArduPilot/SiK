@@ -59,6 +59,23 @@ void	flash_erase_app(void);
 ///
 void	flash_erase_scratch(void);
 
+// If we have banking support, change to 24bit addressing..
+#ifdef FLASH_BANKS
+/// Writes a byte to flash.
+///
+/// @param	address		The address at which to write the byte
+/// @param	c		The byte to write
+/// @returns			True if the byte can be written
+///
+void	flash_write_byte(uint32_t address, uint8_t c);
+
+/// Reads a byte from flash
+///
+/// @param	address		The address from which to read the byte.
+/// @returns			The byte that was read.
+///
+uint8_t	flash_read_byte(uint32_t address);
+#else // FLASH_BANKS
 /// Writes a byte to flash.
 ///
 /// @param	address		The address at which to write the byte
@@ -73,8 +90,8 @@ void	flash_write_byte(uint16_t address, uint8_t c);
 /// @returns			The byte that was read.
 ///
 uint8_t	flash_read_byte(uint16_t address);
-
-#ifdef BOARD_rfd900a
+#endif // FLASH_BANKS
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 void flash_transfer_calibration();
 #endif
 

@@ -42,6 +42,10 @@
 #include "timer.h"
 #include "freq_hopping.h"
 
+#ifdef INCLUDE_AES
+#include "AES/aes.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @name	Interrupt vector prototypes
 ///
@@ -59,17 +63,21 @@ extern void	Receiver_ISR(void)	__interrupt(INTERRUPT_INT0);
 
 /// Timer2 tick interrupt handler
 ///
-extern void    T2_ISR(void)            __interrupt(INTERRUPT_TIMER2);
+extern void    T2_ISR(void)     __interrupt(INTERRUPT_TIMER2);
 
 /// Timer3 tick interrupt handler
 ///
 /// @todo switch this and everything it calls to use another register bank?
 ///
-extern void    T3_ISR(void)            __interrupt(INTERRUPT_TIMER3);
+extern void    T3_ISR(void)     __interrupt(INTERRUPT_TIMER3);
+
+#ifdef INCLUDE_AES
+extern void    DMA_ISR(void)    __interrupt(INTERRUPT_DMA0);
+#endif // INCLUDE_AES
 
 //@}
 
-__code const char g_banner_string[] = "SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
+__code const char g_banner_string[] = "RFD SiK " stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW) " on " BOARD_NAME;
 __code const char g_version_string[] = stringify(APP_VERSION_HIGH) "." stringify(APP_VERSION_LOW);
 
 __pdata enum BoardFrequency	g_board_frequency;	///< board info from the bootloader
@@ -95,16 +103,18 @@ bool feature_rtscts;
 void
 main(void)
 {
+#ifdef CPU_SI1030
+	PSBANK = 0x33;
+#endif
+	
 	// Stash board info from the bootloader before we let anything touch
 	// the SFRs.
 	//
 	g_board_frequency = BOARD_FREQUENCY_REG;
 	g_board_bl_version = BOARD_BL_VERSION_REG;
 
-	// try to load parameters; set them to defaults if that fails.
+	// Load parameters from flash or defaults
 	// this is done before hardware_init() to get the serial speed
-	// XXX default parameter selection should be based on board info
-	//
 	if (!param_load())
 		param_default();
 
@@ -123,6 +133,18 @@ main(void)
 	if (!radio_receiver_on()) {
 		panic("failed to enable receiver");
 	}
+
+	// Init user pins
+#if PIN_MAX > 0
+	pins_user_init();
+#endif
+	
+#ifdef INCLUDE_AES
+	// Initialise Encryption
+	if (! aes_init(param_get(PARAM_ENCRYPTION))) {
+		panic("failed to initialise aes");
+	}
+#endif // INCLUDE_AES
 
 	tdm_serial_loop();
 }
@@ -151,14 +173,18 @@ panic(char *fmt, ...)
 static void
 hardware_init(void)
 {
-	__pdata uint16_t	i;
+	__xdata uint16_t	i;
 
 	// Disable the watchdog timer
 	PCA0MD	&= ~0x40;
 
 	// Select the internal oscillator, prescale by 1
-	FLSCL	 =  0x40;
+#ifdef CPU_SI1030
+	OSCICN	|=  0x80;
+#else
 	OSCICN	 =  0x8F;
+#endif
+	FLSCL	 =  0x40;
 	CLKSEL	 =  0x00;
 
 	// Configure the VDD brown out detector
@@ -166,38 +192,60 @@ hardware_init(void)
 	for (i = 0; i < 350; i++);	// Wait 100us for initialization
 	RSTSRC	 =  0x06;		// enable brown out and missing clock reset sources
 
-#ifdef _BOARD_RFD900A			// Redefine port skips to override bootloader defs
-	P0SKIP  =  0xCF;                // P0 UART avail on XBAR
-	P1SKIP  =  0xF8;                // P1 SPI1, CEX0 avail on XBAR 
-	P2SKIP  =  0x01;                // P2 CEX3 avail on XBAR, rest GPIO
+#if defined CPU_SI1030
+	P0SKIP  =  0xCF;
+	P1SKIP  =  0xFF;
+	P2SKIP  =  0x28;
+#elif defined BOARD_rfd900a		// Redefine port skips to override bootloader defs
+	P0SKIP  =  0xCF;				// P0 UART avail on XBAR
+	P1SKIP  =  0xF8;				// P1 SPI1 avail on XBAR
+	P2SKIP  =  0xCF;				// P2 CEX0 avail on XBAR P2.4, rest GPIO
 #endif
 
 	// Configure crossbar for UART
-	P0MDOUT	 =  0x10;		// UART Tx push-pull
-	SFRPAGE	 =  CONFIG_PAGE;
-	P0DRV	 =  0x10;		// UART TX
-	SFRPAGE	 =  LEGACY_PAGE;
-	XBR0	 =  0x01;		// UART enable
+	P0MDOUT   =  0x10;		// UART Tx push-pull
+	SFRPAGE   =  CONFIG_PAGE;
+	P0DRV     =  0x10;		// UART TX
+	SFRPAGE   =  LEGACY_PAGE;
+	XBR0      =  0x01;		// UART enable
 
 	// SPI1
-#ifdef _BOARD_RFD900A
-	XBR1	|= 0x44;	// enable SPI in 3-wire mode
-	P1MDOUT	|= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
-	P2MDOUT	|= 0xFF;	// SCK1, MOSI1, MISO1 push-pull
+#if defined CPU_SI1030
+	XBR1    |= 0x41;	// Enable SPI1 (3 wire mode) + CEX0
+	P2MDOUT |= 0xFD;	// SCK1, MOSI1, & NSS1,push-pull
+#elif defined BOARD_rfd900a		// Redefine port skips to override bootloader defs
+	XBR1    |= 0x41;	// enable SPI in 3-wire mode + CEX0
+	P1MDOUT |= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
+	P2MDOUT |= 0xFF;	// SCK1, MOSI1, MISO1 push-pull
 #else
-	XBR1	|= 0x40;	// enable SPI in 3-wire mode
-	P1MDOUT	|= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
+	XBR1    |= 0x40;	// enable SPI in 3-wire mode
+	P1MDOUT |= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
 #endif	
+	
+	/* ------------ Config Parameters ------------ */
 	SFRPAGE	 = CONFIG_PAGE;
 	P1DRV	|= 0xF5;	// SPI signals use high-current mode, LEDs and PAEN High current drive
-	P2DRV	|= 0xFF;	
-	SFRPAGE	 = LEGACY_PAGE;
-	SPI1CFG	 = 0x40;	// master mode
-	SPI1CN	 = 0x00;	// 3 wire master mode
-	SPI1CKR	 = 0x00;	// Initialise SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
-	SPI1CN	|= 0x01;	// enable SPI
-	NSS1	 = 1;		// set NSS high
+	
+#ifdef CPU_SI1030
+	P2DRV	 = 0xFD; // MOSI1, SCK1, NSS1, high-drive mode
+	
+	P3MDOUT |= 0xC0;		/* Leds */
+	P3DRV   |= 0xC0;		/* Leds */
+#else
+	P2DRV	|= 0xFF;
+#endif
+	
+	/* ------------ Change to radio page ------------ */
+	RADIO_PAGE();
+	SPI1CFG  = 0x40;  // master mode
+	SPI1CN   = 0x00;  // 3 wire master mode
+	SPI1CKR  = 0x00;  // Initialise SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
+	SPI1CN  |= 0x01;  // enable SPI
+	NSS1     = 1;     // set NSS high
 
+	/* ------------ END of Config Parameters ------------ */
+	SFRPAGE	 = LEGACY_PAGE;
+	
 	// Clear the radio interrupt state
 	IE0	 = 0;
 
@@ -212,9 +260,9 @@ hardware_init(void)
 
 	// global interrupt enable
 	EA = 1;
-
-	// Turn on the 'radio running' LED and turn off the bootloader LED
-	LED_RADIO = LED_ON;
+	
+	// Turn off the 'radio running' LED and turn off the bootloader LED
+	LED_RADIO = LED_OFF;
 	LED_BOOTLOADER = LED_OFF;
 
 	// ADC system initialise for temp sensor
@@ -224,12 +272,12 @@ hardware_init(void)
 	ADC0MX = 0x1B;	// Set ADC0MX to temp sensor
 	REF0CN = 0x07;	// Define reference and enable temp sensor
 
-#ifdef _BOARD_RFD900A
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 	// PCA0, CEX0 setup and enable.
 	PCA0MD = 0x88;
 	PCA0PWM = 0x00;
-	PCA0CPH3 = 0x80;
-	PCA0CPM3 = 0x42;
+	PCA0CPM0 = 0x42;
+	PCA0CPH0 = 0x80;
 	PCA0CN = 0x40;
 #endif
 	XBR2	 =  0x40;		// Crossbar (GPIO) enable
@@ -238,9 +286,9 @@ hardware_init(void)
 static void
 radio_init(void)
 {
-	__pdata uint32_t freq_min, freq_max;
-	__pdata uint32_t channel_spacing;
-	__pdata uint8_t txpower;
+	__xdata uint32_t freq_min, freq_max;
+	__xdata uint32_t channel_spacing;
+	__xdata uint8_t txpower;
 
 	// Do generic PHY initialisation
 	if (!radio_initialise()) {
@@ -262,7 +310,7 @@ radio_init(void)
 		break;
 	case FREQ_868:
 		freq_min = 868000000UL;
-		freq_max = 869000000UL;
+		freq_max = 870000000UL;
 		txpower = 10;
 		num_fh_channels = 10;
 		break;
@@ -394,7 +442,7 @@ radio_init(void)
 #endif
 
 	// initialise frequency hopping system
-	fhop_init(param_get(PARAM_NETID));
+	fhop_init();
 
 	// initialise TDM system
 	tdm_init();

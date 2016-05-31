@@ -34,6 +34,7 @@
 #include "timer.h"
 #include "golay.h"
 #include "crc.h"
+#include "pins_user.h"
 
 __xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
 __pdata uint8_t receive_packet_length;
@@ -76,10 +77,12 @@ static void	clear_status_registers(void);
 bool
 radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 {
+#ifdef INCLUDE_GOLAY
 	__xdata uint8_t gout[3];
 	__data uint16_t crc1, crc2;
 	__data uint8_t errcount = 0;
 	__data uint8_t elen;
+#endif
 
 	if (!packet_received) {
 		return false;
@@ -97,15 +100,20 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		goto failed;		
 	}
 #endif
+  
+#ifdef INCLUDE_GOLAY
+	if (!feature_golay)
+#endif // INCLUDE_GOLAY
+  {
+	*length = receive_packet_length;
+	memcpy(buf, radio_buffer, receive_packet_length);
 
-	if (!feature_golay) {
 		// simple unencoded packets
-		*length = receive_packet_length;
-		memcpy(buf, radio_buffer, receive_packet_length);
 		radio_receiver_on();
 		return true;
 	}
 
+#ifdef INCLUDE_GOLAY
 	// decode it in the callers buffer. This relies on the
 	// in-place decode properties of the golay code. Decoding in
 	// this way allows us to overlap decoding with the next receive
@@ -173,7 +181,8 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 		}
 	}
 
-	return true;
+  return true;
+#endif // INCLUDE_GOLAY
 
 failed:
 	if (errors.rx_errors != 0xFFFF) {
@@ -188,6 +197,8 @@ failed:
 static void
 radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 {
+	RADIO_PAGE();
+	
 	NSS1 = 0;
 	SPIF1 = 0;
 	SPI1DAT = (0x80 | EZRADIOPRO_FIFO_ACCESS);
@@ -202,6 +213,8 @@ radio_write_transmit_fifo(register uint8_t n, __xdata uint8_t * __pdata buffer)
 
 	SPIF1 = 0;
 	NSS1 = 1;
+	
+	SFRPAGE = LEGACY_PAGE;
 }
 
 // check if a packet is being received
@@ -210,7 +223,7 @@ bool
 radio_receive_in_progress(void)
 {
 	if (packet_received ||
-	    partial_packet_length != 0) {
+		partial_packet_length != 0) {
 		return true;
 	}
 
@@ -327,7 +340,10 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 
 	// start TX
 	register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_TXON | EZRADIOPRO_XTON);
-
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 |=  0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	// wait for transmit complete or timeout
 	tstart = timer2_tick();
 	while ((uint16_t)(timer2_tick() - tstart) < timeout_ticks) {
@@ -372,6 +388,9 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 			if (errors.tx_errors != 0xFFFF) {
 				errors.tx_errors++;
 			}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+      P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
 			return false;
 		}
 
@@ -391,19 +410,28 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 				if (errors.tx_errors != 0xFFFF) {
 					errors.tx_errors++;
 				}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+        P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
 				return false;
 			}
-			return true;			
+#ifdef DEBUG_PINS_RADIO_TX_RX
+      P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+			return true;
 		}
 
 	}
-
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x01;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	// transmit timeout ... clear the FIFO
 	debug("TX timeout %u ts=%u tn=%u len=%u\n",
-	       timeout_ticks,
-	       tstart,
-	       timer2_tick(),
-	       (unsigned)length);
+		timeout_ticks,
+		tstart,
+		timer2_tick(),
+		(unsigned)length);
 	if (errors.tx_errors != 0xFFFF) {
 		errors.tx_errors++;
 	}
@@ -411,7 +439,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 	return false;
 }
 
-
+#ifdef INCLUDE_GOLAY
 // start transmitting a packet from the transmit FIFO
 //
 // @param length		number of data bytes to send
@@ -425,7 +453,7 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 {
 	__pdata uint16_t crc;
 	__xdata uint8_t gin[3];
-	__data uint8_t elen, rlen;
+	__pdata uint8_t elen, rlen;
 
 	if (length > (sizeof(radio_buffer)/2)-6) {
 		debug("golay packet size %u\n", (unsigned)length);
@@ -461,6 +489,7 @@ radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint
 
 	return radio_transmit_simple(elen, radio_buffer, timeout_ticks);
 }
+#endif // INCLUDE_GOLAY
 
 // start transmitting a packet from the transmit FIFO
 //
@@ -474,18 +503,24 @@ bool
 radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
 {
 	bool ret;
+
 	EX0_SAVE_DISABLE;
 
-#ifdef _BOARD_RFD900A
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
 #endif
-	
+
+#ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
 		ret = radio_transmit_simple(length, buf, timeout_ticks);
 	} else {
 		ret = radio_transmit_golay(length, buf, timeout_ticks);
 	}
-#ifdef _BOARD_RFD900A
+#else
+  ret = radio_transmit_simple(length, buf, timeout_ticks);
+#endif // INCLUDE_GOLAY
+  
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
 	PA_ENABLE = 0;		// Set PA_Enable to off the PA after TX cycle
 #endif
 	EX0_RESTORE;
@@ -539,7 +574,10 @@ radio_initialise(void)
 		return false;
 	}
 
-	status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
+	// Reset the radio and setup all the registers
+	software_reset();
+	
+	status = register_read(EZRADIOPRO_DEVICE_VERSION);
 
 	if ((status & EZRADIOPRO_IPOR) == 0) {
 		// it hasn't powered up cleanly, reset it
@@ -550,21 +588,7 @@ radio_initialise(void)
 		// already ready
 		return true;
 	}
-
-	// enable chip ready interrupt
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0);
-	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, EZRADIOPRO_ENCHIPRDY);
-
-	// wait for the chip ready bit for 10ms
-	delay_set(50);
-	while (!delay_expired()) {
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
-		status = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
-		if (status & EZRADIOPRO_ICHIPRDY) {
-			return true;
-		}
-	}
-
+	
 	return false;
 }
 
@@ -735,9 +759,9 @@ radio_configure(__pdata uint8_t air_rate)
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x15);	// RX data (output)
 	register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x12);	// RX data (output)
 #if RFD900_DIVERSITY
-	radio_set_diversity(true);
+	radio_set_diversity(DIVERSITY_ENABLED);
 #else
-	radio_set_diversity(false);
+	radio_set_diversity(DIVERSITY_DISABLED);
 #endif
 #else
 	//set GPIOx to GND
@@ -857,23 +881,17 @@ radio_configure(__pdata uint8_t air_rate)
 	return true;
 }
 
-#ifdef _BOARD_RFD900
+#ifdef BOARD_rfd900
 	#define NUM_POWER_LEVELS 5
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 17, 20, 27, 29, 30 };
-#endif
-#ifdef _BOARD_RFD900A
+#elif defined BOARD_rfd900a  || defined BOARD_rfd900p
 	#define NUM_POWER_LEVELS 16
 	#define POWER_LEVEL_STEP 2
 	// the power_levels array define 8 bit PWM values for each respective power level starting at 0dBm
 	// PWM=240 gives TXout=0dBm
 	//run1 __code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 240, 234, 226, 221, 214, 209, 204, 199, 193, 187, 180, 174, 165, 153, 137, 50 };
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 235, 230, 224, 218, 211, 206, 201, 196, 190, 184, 178, 171, 164, 150, 136, 80 };
-#endif
-#ifdef _BOARD_HM_TRP_H_
-	#define NUM_POWER_LEVELS 8
-	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
-#endif
-#ifdef _BOARD_RF50_H
+#elif defined BOARD_hm_trp || defined BOARD_rf50 || defined BOARD_rfd900u
 	#define NUM_POWER_LEVELS 8
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
 #endif
@@ -885,18 +903,18 @@ radio_set_transmit_power(uint8_t power)
 {
 	uint8_t i;
 
-#ifdef _BOARD_RFD900A
-	register_write(EZRADIOPRO_TX_POWER, 6); // Set output power of Si1002 to 6 = +10dBm as a nominal level
+#if defined BOARD_rfd900a || defined BOARD_rfd900p
+	register_write(EZRADIOPRO_TX_POWER, RFD900_INT_TX_POW); // Set output power of Si1002 to 6 = +10dBm as a nominal level
 	i = calibration_get(power);
 	if (i != 0xFF)
 	{
-		PCA0CPH3 = i;     // Set PWM for PA to correct duty cycle
+		PCA0CPH0 = i;     // Set PWM for PA to correct duty cycle
 		settings.transmit_power = power;
 	}
 	else
 	{
 		i = power / POWER_LEVEL_STEP;
-		PCA0CPH3 = power_levels[i];     // Set PWM for PA to correct duty cycle
+		PCA0CPH0 = power_levels[i];     // Set PWM for PA to correct duty cycle
 		settings.transmit_power = i * POWER_LEVEL_STEP;
 	}
 #else
@@ -947,6 +965,7 @@ register_write(uint8_t reg, uint8_t value) __reentrant
 {
 	EX0_SAVE_DISABLE;
 
+	RADIO_PAGE();
 	NSS1 = 0;                           // drive NSS low
 	SPIF1 = 0;                          // clear SPIF
 	SPI1DAT = (reg | 0x80);             // write reg address
@@ -957,7 +976,8 @@ register_write(uint8_t reg, uint8_t value) __reentrant
 
 	SPIF1 = 0;                          // leave SPIF cleared
 	NSS1 = 1;                           // drive NSS high
-
+	SFRPAGE = LEGACY_PAGE;
+	
 	EX0_RESTORE;
 }
 
@@ -972,7 +992,8 @@ register_read(uint8_t reg) __reentrant
 {
 	register uint8_t value;
 	EX0_SAVE_DISABLE;
-
+	
+	RADIO_PAGE();
 	NSS1 = 0;				// dsrive NSS low
 	SPIF1 = 0;				// clear SPIF
 	SPI1DAT = (reg);			// write reg address
@@ -983,7 +1004,8 @@ register_read(uint8_t reg) __reentrant
 	value = SPI1DAT;			// read value
 	SPIF1 = 0;				// leave SPIF cleared
 	NSS1 = 1;				// drive NSS high
-
+	SFRPAGE = LEGACY_PAGE;
+	
 	EX0_RESTORE;
 
 	return value;
@@ -995,6 +1017,7 @@ register_read(uint8_t reg) __reentrant
 static void
 read_receive_fifo(register uint8_t n, __xdata uint8_t * buf) __reentrant
 {
+	RADIO_PAGE();
 	NSS1 = 0;				// drive NSS low
 	SPIF1 = 0;				// clear SPIF
 	SPI1DAT = EZRADIOPRO_FIFO_ACCESS;
@@ -1010,6 +1033,7 @@ read_receive_fifo(register uint8_t n, __xdata uint8_t * buf) __reentrant
 
 	SPIF1 = 0;				// leave SPIF cleared
 	NSS1 = 1;				// drive NSS high
+	SFRPAGE = LEGACY_PAGE;
 }
 
 /// clear interrupts by reading the two status registers
@@ -1081,7 +1105,7 @@ static void
 set_frequency_registers(__pdata uint32_t frequency)
 {
 	uint8_t band;
-	__pdata uint16_t carrier;
+	__xdata uint16_t carrier;
 
 	if (frequency > 480000000UL) {
 		frequency -= 480000000UL;
@@ -1114,37 +1138,61 @@ set_frequency_registers(__pdata uint32_t frequency)
 int16_t
 radio_temperature(void)
 {
-	register int16_t temp_local;
+#ifdef TEMP_OFFSET
+	register int16_t temp_local, temp_offset;
 
+  SFRPAGE	 = TOFF_PAGE;
+  temp_offset = (TOFFH << 2) | (TOFFL >> 6);
+  SFRPAGE	 = LEGACY_PAGE;
+  
 	AD0BUSY = 1;		// Start ADC conversion
 	while (AD0BUSY) ;  	// Wait for completion of conversion
 
 	temp_local = (ADC0H << 8) | ADC0L;
-	temp_local *= 1.64060;  // convert reading into mV ( (val/1024) * 1680 )  vref=1680mV
-	temp_local = 25.0 + (temp_local - 1025) / 3.4; // convert mV reading into degC.
-
+	temp_local = TEMP_OFFSET + (temp_local - temp_offset) / 2; // convert reading into degC.
+#else
+  register int16_t temp_local;
+  
+  AD0BUSY = 1;		// Start ADC conversion
+  while (AD0BUSY) ;  	// Wait for completion of conversion
+  
+  temp_local = (ADC0H << 8) | ADC0L;
+  temp_local *= 1.64060;  // convert reading into mV ( (val/1024) * 1680 )  vref=1680mV
+  temp_local = 25.0 + (temp_local - 1025) / 3.4; // convert mV reading into degC.
+#endif
 	return temp_local;
 }
 
 /// Turn off radio diversity
 ///
 void
-radio_set_diversity(bool enable)
+radio_set_diversity(enum DIVERSITY_Enum state)
 {
-	if (enable)
-	{
-		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
-		// see table 23.8, page 279
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
-	}
-	else
-	{
-		// see table 23.8, page 279
-		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
-
-		register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 (ANT1) output set high fixed
-		register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
-	}
+  switch (state) {
+    case DIVERSITY_ENABLED:
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
+      break;
+      
+    case DIVERSITY_ANT2:
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x20);
+      
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
+      register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x00);	// GPIO2 output set low (fixed on ant 2)
+      break;
+      
+    case DIVERSITY_DISABLED:
+    case DIVERSITY_ANT1:
+    default:
+      // see table 23.8, page 279
+      register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
+      
+      register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
+      register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
+      break;
+  }
 }
 
 /// the receiver interrupt
@@ -1159,6 +1207,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
 	__data uint8_t status, status2;
 
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 |=  0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
+  
 	status2 = register_read(EZRADIOPRO_INTERRUPT_STATUS_2);
 	status  = register_read(EZRADIOPRO_INTERRUPT_STATUS_1);
 
@@ -1205,6 +1257,9 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		// go into tune mode
 		register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_1, EZRADIOPRO_PLLON);
 	}
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
 	return;
 
 rxfail:
@@ -1212,5 +1267,8 @@ rxfail:
 		errors.rx_errors++;
 	}
 	radio_receiver_on();
+#ifdef DEBUG_PINS_RADIO_TX_RX
+  P1 &= ~0x02;
+#endif // DEBUG_PINS_RADIO_TX_RX
 }
 
