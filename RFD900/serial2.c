@@ -498,11 +498,14 @@ void Serial_Check(void)																													// save a timer and check se
 	primary = ((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary;
 	currDescr = (((DMA_CB_TypeDef *)(RxPrimDescr->USER))->primary)?(RxPrimDescr):(RxAltDescr);
 	NMinus1 = ((currDescr->CTRL&_DMA_CTRL_N_MINUS_1_MASK)>>_DMA_CTRL_N_MINUS_1_SHIFT);
+	lastRxInsert = rx_insert;                                                     // assume no changes
 	if((LastBlockCount == RXDMABlockCount)&&(lastNMinus1 == NMinus1))							// if block and count same, no DMA complete occurred since last time
 	{
-		if(rx_insert != rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1)				// if the insert position does not match dma position
+    uint16_t end = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;
+		if(rx_insert != end)				                                              // if the insert position does not match dma position
 		{
-			rx_insert = rxDmaDst[primary]+RX_DMA_BLOCK_SIZE-rx_buf-NMinus1-1;					// set the new position, data must not have come in time yet
+		  lastRxInsert = rx_insert;
+		  rx_insert = end;					                                              // set the new position, data must not have come in time yet
 			if(rx_insert >= sizeof(rx_buf))
 			{
 				rx_insert = 0;
@@ -525,12 +528,22 @@ void Serial_Check(void)																													// save a timer and check se
 	}
 	else																																			// else not at mode
 	{
-		if(lastRxInsert != rx_insert)																						// if another byte has been inserted
+		if(lastRxInsert != rx_insert)																						    // if another byte has been inserted, and no dma has completed
 		{
-			if(0 == rx_insert){c = rx_buf[sizeof(rx_buf)-1];}											// get last byte, don't dequeue
-			else							{c = rx_buf[rx_insert-1];}
-			at_plus_detector(c);																									// run the last byte past the +++ detector
-			lastRxInsert = rx_insert;
+		  while(lastRxInsert != rx_insert)
+		  {
+		    lastRxInsert++;
+		    if(lastRxInsert >= sizeof(rx_buf))
+		    {
+		        lastRxInsert = 0;
+		        c = rx_buf[sizeof(rx_buf)-1];
+		    }
+	      else
+	      {
+	        c = rx_buf[lastRxInsert-1];
+	      }
+	      at_plus_detector(c);                                                  // run the last byte past the +++ detector
+			}
 		}
 	}
 }
