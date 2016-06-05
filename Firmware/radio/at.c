@@ -339,7 +339,7 @@ at_i(void)
     printf("%u\n", g_board_bl_version);
     return;
   case '5':
-    print_ID_vals(' ', PARAM_MAX, param_name, param_get);
+    print_ID_vals('S', PARAM_MAX, param_name, param_get);
     return;
   case '6':
     tdm_report_timing();
