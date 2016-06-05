@@ -390,13 +390,13 @@ class uploader(object):
 if __name__ == '__main__':
         # Parse commandline arguments
         parser = argparse.ArgumentParser(description="Firmware uploader for the SiK radio system.")
-        parser.add_argument('--port', action="store", help="port to upload to")
         parser.add_argument('--resetparams', action="store_true", help="reset all parameters to defaults")
         parser.add_argument("--baudrate", type=int, default=57600, help='baud rate')
 	parser.add_argument('--forceBanking', action="store_true", help="force the programmer to use 24bit addressing")
         parser.add_argument("--mavlink", action='store_true', default=False, help='update over MAVLink')
         parser.add_argument("--mavport", type=int, default=0, help='MAVLink port number')
         parser.add_argument("--debug", type=int, default=0, help='debug level')
+        parser.add_argument('--port', required=True, action="store", help="port to upload to")
         parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
         args = parser.parse_args()
 
