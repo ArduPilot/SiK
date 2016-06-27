@@ -48,6 +48,7 @@
 #include "aes.h"
 #include "ppm.h"
 
+// ******************** defines and typedefs *************************
 #define USE_TICK_YIELD 1
 #define TIMECODE 0
 
@@ -62,11 +63,35 @@ res = (tdelta > res) ? (tdelta) : (res)
 #define TimeFunction(res,fn) fn;
 #endif
 
+#define PACKET_OVERHEAD (sizeof(trailer))
 
 /// the state of the tdm system
 enum tdm_state {
 	TDM_TRANSMIT = 0, TDM_SILENCE1 = 1, TDM_RECEIVE = 2, TDM_SILENCE2 = 3
 };
+typedef enum{
+  Data_Data = 0,
+  Data_AT,
+  Data_PPM
+} DataCmd_t;
+
+#define SEQNOBITS 4
+#define SEQNMASK  ((1<<SEQNOBITS)-1)
+struct __attribute__ ((__packed__)) tdm_trailer {
+  uint16_t window;                                                        //:13;
+  uint8_t  seqNo  :SEQNOBITS;
+  uint8_t command :2;
+  uint8_t bonus   :1;
+  uint8_t resend  :1;
+};
+struct tdm_trailer trailer;
+
+#define TEMPTEST 0
+// ******************** local variables ******************************
+#if TEMPTEST
+static bool SetActive;
+static uint16_t tickClear,tickSet;
+#endif
 static enum tdm_state tdm_state;
 
 /// a packet buffer for the TDM code
@@ -163,34 +188,17 @@ static uint16_t maxTicksOn = 0;
 static uint8_t  seqNo;
 /// set when we should send a MAVLink report pkt
 extern bool seen_mavlink;
-typedef enum{
-	Data_Data = 0,
-	Data_AT,
-	Data_PPM
-} DataCmd_t;
-
-#define SEQNOBITS 4
-#define SEQNMASK  ((1<<SEQNOBITS)-1)
-struct __attribute__ ((__packed__)) tdm_trailer {
-	uint16_t window;																												//:13;
-	uint8_t  seqNo	:SEQNOBITS;
-	uint8_t command :2;
-	uint8_t bonus  	:1;
-	uint8_t resend 	:1;
-};
-struct tdm_trailer trailer;
-
 
 /// buffer to hold a remote AT command before sending
 static bool send_at_command;
 static uint16_t remote_at_len;
+// ******************** local function prototypes ********************
 static char remote_at_cmd[((AT_CMD_MAXLEN+1)&0xf0)+16];
 static int16_t Set_tdm_state_remaining(int32_t val, uint16_t reltick);
 static int32_t tdm_state_remaining(uint16_t tn);
 static int16_t transmit_wait(void);
 static void Set_transmit_wait(uint16_t val, uint16_t reltick);
-
-#define PACKET_OVERHEAD (sizeof(trailer))
+// ********************* Implementation ******************************
 
 /// display RSSI output
 ///
@@ -416,11 +424,19 @@ static void temperature_update(void)
 		// slightly over temperature
 		duty_cycle_offset += 1;
 	}
+  if(duty_cycle_offset > 100) {duty_cycle_offset = 100;}
+  if(duty_cycle_offset < -100){duty_cycle_offset = -100;}
 	// limit to minimum of 20% duty cycle to ensure link stays up OK
 	if ((duty_cycle - duty_cycle_offset) < 20)
 	{
 		duty_cycle_offset = duty_cycle - 20;
 	}
+#if	TEMPTEST
+  pins_user_set_value(PINS_USER_P1_1, 1);
+  tickSet = timer2_tick();
+  SetActive = true;
+  tickClear = (((duty_cycle_offset+100)*250)/4);
+#endif
 }
 
 /// blink the radio LED if we have not received any packets
@@ -607,7 +623,16 @@ void tdm_serial_loop(void)
 			display_test_output();
 			test_display = 0;
 		}
-
+#if TEMPTEST
+		if(SetActive)
+	  {
+      if(((uint16_t) (timer2_tick() - tickSet)) >= tickClear)
+      {
+        pins_user_set_value(PINS_USER_P1_1, 0);
+        SetActive = false;
+      }
+	  }
+#endif
 		if (seen_mavlink && feature_mavlink_framing && !at_mode_active)
 		{
 			seen_mavlink = false;

@@ -73,7 +73,8 @@ extern void packet_set_serial_speed(uint16_t speed);
 ///			
 extern void packet_inject(uint8_t * buf, uint16_t len);
 
-// mavlink 1.0 marker
+// mavlink 1.0 and 2.0 markers
 #define MAVLINK10_STX 254
+#define MAVLINK20_STX 253
 
 #endif
