@@ -66,8 +66,6 @@ static __pdata uint16_t mav_pkt_max_time;
 
 static __pdata uint8_t mav_max_xmit;
 
-__xdata uint8_t mav_pkt_sent;
-
 // true if we have a injected packet to send
 static bool injected_packet;
 
@@ -126,13 +124,11 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
 	while (slen >= 8) {
 		register uint8_t c = serial_peekx(0);
                 register uint8_t extra_len = 8;
-                register uint8_t msgid = serial_peekx(5);
 		if (c != MAVLINK10_STX && c != MAVLINK20_STX) {
 			// its not a MAVLink packet
 			return last_sent_len;			
 		}
                 if (c == MAVLINK20_STX) {
-                        msgid = serial_peekx(7);
                         extra_len += 4;
                         if (serial_peekx(2) & 1) {
                                 // signed packet
@@ -160,8 +156,6 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
                 
                 check_heartbeat(buf+last_sent_len);
                         
-                mav_pkt_sent++;
-
 		last_sent_len += c;
 		slen -= c;
 	}
