@@ -113,8 +113,8 @@ statistics_t statistics, remote_statistics;
 error_counts_t errors={0};
 
 // Board infop
-const char 		g_version_string[]= "2.3";	///< printable version string
-const char 		g_banner_string[] ="RFD SiK 2.3 on RFD900xR1.1";
+const char 		g_version_string[]= "2.4";	///< printable version string
+const char 		g_banner_string[] ="RFD SiK 2.4 on RFD900xR1.1";
 enum BoardFrequency	g_board_frequency;	///< board RF frequency from the cal table
 uint8_t			g_board_bl_version;	///< bootloader version
 

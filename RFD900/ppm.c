@@ -188,7 +188,7 @@ bool ReadPPM(uint8_t *Data, uint16_t* Len,uint16_t max_len)										  // read a
 
 bool PPMRecordDefault(void)																											// record the default signal to send now
 {
-	if(PPMModeIn != PPMMode) return(false);
+	if(PPMModeOut != PPMMode) return(false);
 	memcpy(DataLossData,DMABuffer[1],PPMTxLen<<1);
 	DataLossDataLen = PPMTxLen;
 	param_set_PPMDefaults(DataLossData,DataLossDataLen);
