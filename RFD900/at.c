@@ -559,6 +559,12 @@ static void at_p (void)
 			pins_user_set_io(pinId, PIN_INPUT);
 			break;
 			
+      // Set pin to mirror input
+    case 'M':
+      if(!pins_user_set_mirror(pinId, PIN_MIRROR))
+      {at_error();}
+      break;
+
 		case 'R':
 			if(pins_user_get_io(pinId) == PIN_INPUT)
 				printf("val:%u\n", pins_user_get_adc(pinId));

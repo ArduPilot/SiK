@@ -10,6 +10,8 @@
 #include "parameters.h"
 #include "em_gpio.h"
 #include "em_timer.h"
+#include "at.h"
+#include "tdm.h"
 
 #if PIN_MAX > 0
 
@@ -68,7 +70,7 @@ bool pins_user_set_io(uint8_t pin, bool in_out)
 	if (PIN_MAX > pin)
 	{
 		pin_values[pin].output = in_out;
-		pin_values[pin].pin_mirror = PIN_NULL;
+		//pin_values[pin].pin_mirror = PIN_NULL;
 		
 		GPIO_PinModeSet(pins_user_map[pin].GpioData.Port,pins_user_map[pin].GpioData.Pin,
 				(in_out)?(gpioModePushPull):(gpioModeInputPull),(in_out)?(0):(1));
@@ -76,6 +78,17 @@ bool pins_user_set_io(uint8_t pin, bool in_out)
 	}
 	return false;
 }
+
+bool pins_user_set_mirror(uint8_t pin, uint8_t val)
+{
+  if((PIN_MAX > pin)&&(false == pin_values[pin].output))                        // must be an input
+  {
+    pin_values[pin].pin_mirror = val;
+    return true;
+  }
+  return false;
+}
+
 
 bool pins_user_get_io(uint8_t pin)
 {
@@ -123,25 +136,43 @@ uint8_t pins_user_get_adc(uint8_t pin)
 
 void pins_user_check()
 {
-//	static uint8_t p, p_count;
-//	if (pins_user_get_adc(5) != p || p_count != 0) {
-//		if(pins_user_get_adc(5) != p)
-//		{
-//			p = pins_user_get_adc(5);
-//			p_count = 100;
-//		}
-//		at_cmd[0] = 'R';
-//		at_cmd[1] = 'T';
-//		at_cmd[2] = 'P';
-//		at_cmd[3] = 'C';
-//		at_cmd[4] = '=';
-//		at_cmd[5] = '4';
-//		at_cmd[6] = ',';
-//		at_cmd[7] = '0'+(p?1:0);
-//		at_cmd[8] = 0;
-//		tdm_remote_at();
-//		p_count --;
-//	}
+	static uint8_t resync,repeat[PIN_MAX],pin,lastAdc[PIN_MAX]={0xff,0xff,0xff,0xff,0xff,0xff};
+	if(++pin>=PIN_MAX)
+	{
+	  if(++resync > 50)
+	  {
+	    resync = 0;
+	    for(pin=0;pin<PIN_MAX;pin++)
+	    {
+	      if(PIN_MIRROR == pin_values[pin].pin_mirror){repeat[pin] = 1;}
+	    }
+	  }
+    pin=0;
+	}
+  if(PIN_MIRROR == pin_values[pin].pin_mirror)
+  {
+    uint8_t adc = pins_user_get_adc(pin);
+    if((adc != lastAdc[pin])||(repeat[pin] != 0))
+    {
+      if(adc != lastAdc[pin])
+      {
+        if(0xff == lastAdc[pin]){repeat[pin] = 50;}                             // do lots on start up
+        else                    {repeat[pin] = 3; }                             // not too many as we will re sync anyways
+        lastAdc[pin] = adc;
+      }
+      at_cmd[0] = 'X';
+      at_cmd[1] = 'T';
+      at_cmd[2] = 'P';
+      at_cmd[3] = 'C';
+      at_cmd[4] = '=';
+      at_cmd[5] = '0'+pin;
+      at_cmd[6] = ',';
+      at_cmd[7] = '0'+(adc?1:0);
+      at_cmd[8] = 0;
+      tdm_remote_at();
+      repeat[pin]--;
+    }
+  }
 }
 
 uint8_t GPIOGet(GPIO_SELECT_TypeDef select)

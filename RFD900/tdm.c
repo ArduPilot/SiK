@@ -545,7 +545,7 @@ void tdm_remote_at(void)
 // handle an incoming at command from the remote radio
 static void handle_at_command(uint8_t *pbuff, uint16_t len,uint16_t bufflen)
 {
-	if (len < 2 || len > AT_CMD_MAXLEN || pbuff[0] != (uint8_t) 'R'
+	if (len < 2 || len > AT_CMD_MAXLEN || (pbuff[0] != (uint8_t) 'R'&&pbuff[0] != (uint8_t)'X')
 			|| pbuff[1] != (uint8_t) 'T')
 	{
 		// assume its an AT command reply
@@ -563,14 +563,14 @@ static void handle_at_command(uint8_t *pbuff, uint16_t len,uint16_t bufflen)
 	at_cmd[0] = 'A'; // replace 'R'
 	at_cmd_len = len;
 	at_cmd_ready = true;
-
+	uint8_t cmd = pbuff[0];
 	// run the AT command, capturing any output to the packet
 	// buffer
 	// this reply buffer will be sent at the next opportunity
 	printf_start_capture(pbuff, bufflen);
 	at_command();
 	len = printf_end_capture();
-	if (len > 0)
+	if ((len > 0)&&('X' != cmd))
 	{
 		packet_inject(pbuff, len);
 	}
@@ -890,7 +890,12 @@ void tdm_serial_loop(void)
 
 #if PIN_MAX > 0
 		// Check to see if any pins have changed state
-		pins_user_check();
+		static uint16_t last_pin_update;
+    if ((uint16_t)(timer2_tick() - last_pin_update) > 200000UL/(16UL*PIN_MAX))  // update every 200mS/number of pins
+    {
+      pins_user_check();
+      last_pin_update = timer2_tick();
+    }
 #endif
 
 		// ask the packet system for the next packet to send

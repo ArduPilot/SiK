@@ -58,7 +58,7 @@ typedef enum {
 
 enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
 				 PIN_HIGH=true,   PIN_LOW=false,
-				 PIN_NULL=0xFF,   PIN_MIRROR_NULL=0xFFFFFFFF,
+				 PIN_NULL=0xFF,   PIN_MIRROR=0x80,
 				 PIN_ERROR=0x7F };
 
 /// In-ROM parameter info table. Changed by ATP commands
@@ -75,6 +75,7 @@ typedef struct pins_user_info {
 //#if PIN_MAX > 0
 extern void pins_user_init(void);
 extern bool pins_user_set_io(uint8_t pin, bool in_out);
+extern bool pins_user_set_mirror(uint8_t pin, uint8_t val);
 extern bool pins_user_get_io(uint8_t pin);
 extern bool pins_user_set_value(uint8_t pin, bool high_low);
 extern bool pins_user_get_value(uint8_t pin);
