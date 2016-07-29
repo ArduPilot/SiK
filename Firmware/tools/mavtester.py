@@ -40,15 +40,27 @@ vehicle.setup_logfile('vehicle.tlog')
 print("Draining ports")
 gcs.port.timeout = 1
 vehicle.port.timeout = 1
-while gcs.port.read(1024):
+while True:
+    r = gcs.port.read(1024)
+    if not r:
+        break
+    print("Drained %u bytes from gcs" % len(r))
     time.sleep(0.01)
-while vehicle.port.read(1024):
+while True:
+    r = vehicle.port.read(1024)
+    if not r:
+        break
+    print("Drained %u bytes from vehicle" % len(r))
     time.sleep(0.01)
 
 if opts.rtscts:
+    print("Enabling RTSCTS")
     gcs.set_rtscts(True)
     vehicle.set_rtscts(True)
-
+else:
+    gcs.set_rtscts(False)
+    vehicle.set_rtscts(False)
+    
 def allow_unsigned(mav, msgId):
     '''see if an unsigned packet should be allowed'''
     allow = {
@@ -70,12 +82,15 @@ if opts.mav20 and opts.key is not None:
 # we use thread based receive to avoid problems with serial buffer overflow in the Linux kernel. 
 def receive_thread(mav, q):
     '''continuously receive packets are put them in the queue'''
+    last_pkt = time.time()
     while True:
-        m = mav.recv_match(blocking=True)
+        m = mav.recv_match(blocking=False)
         if m is not None:
             q.put(m)
+            last_pkt = time.time()
 
 # start receive threads for the 
+print("Starting threads")
 gcs_queue = Queue.Queue()
 gcs_thread = threading.Thread(target=receive_thread, args=(gcs, gcs_queue))
 gcs_thread.daemon = True
@@ -112,7 +127,11 @@ def send_telemetry():
     vehicle.mav.heartbeat_send(1, 3, 217, 10, 4, 3)
     vehicle.mav.global_position_int_send(time_ms, vehicle_lat, 1491642131, 737900, 140830, 2008, -433, 224, 35616)
     vehicle.mav.rc_channels_scaled_send(time_boot_ms=time_ms, port=0, chan1_scaled=280, chan2_scaled=3278, chan3_scaled=-3023, chan4_scaled=0, chan5_scaled=0, chan6_scaled=0, chan7_scaled=0, chan8_scaled=0, rssi=0)
-    vehicle.mav.servo_output_raw_send(time_usec=time_usec, port=0, servo1_raw=1470, servo2_raw=1628, servo3_raw=1479, servo4_raw=1506, servo5_raw=1500, servo6_raw=1556, servo7_raw=1500, servo8_raw=1500)
+    if opts.mav20:
+        vehicle.mav.servo_output_raw_send(time_usec=time_usec, port=0, servo1_raw=1470, servo2_raw=1628, servo3_raw=1479, servo4_raw=1506, servo5_raw=1500, servo6_raw=1556, servo7_raw=1500, servo8_raw=1500,
+                                          servo9_raw=1500, servo10_raw=1500, servo11_raw=1500, servo12_raw=1500, servo13_raw=1500, servo14_raw=1500, servo15_raw=1500, servo16_raw=1500)
+    else:
+        vehicle.mav.servo_output_raw_send(time_usec=time_usec, port=0, servo1_raw=1470, servo2_raw=1628, servo3_raw=1479, servo4_raw=1506, servo5_raw=1500, servo6_raw=1556, servo7_raw=1500, servo8_raw=1500)
     vehicle.mav.rc_channels_raw_send(time_boot_ms=time_ms, port=0, chan1_raw=1470, chan2_raw=1618, chan3_raw=1440, chan4_raw=1509, chan5_raw=1168, chan6_raw=1556, chan7_raw=1224, chan8_raw=994, rssi=0)
     vehicle.mav.raw_imu_send(time_usec, 562, 382, -3917, -3330, 3445, 35, -24, 226, -523)
     vehicle.mav.scaled_pressure_send(time_boot_ms=time_ms, press_abs=950.770019531, press_diff=-0.0989062488079, temperature=463)
