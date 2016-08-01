@@ -41,6 +41,7 @@
 #include "printfl.h"
 #include "aes.h"
 
+#define MAVPKTOFFSET 625
 static bool last_sent_is_resend;
 static bool last_sent_is_injected;
 static bool last_recv_is_resend;
@@ -314,7 +315,7 @@ uint8_t packet_get_next(register uint8_t max_xmit, uint8_t * buf, uint8_t SeqNo)
 					// give us the length
 					mav_pkt_len = 1;
 					mav_pkt_start_time = timer2_tick();
-					mav_pkt_max_time = serial_rate;
+					mav_pkt_max_time = serial_rate + MAVPKTOFFSET;
 					return 0;
 				}
 				break;
@@ -345,13 +346,13 @@ uint8_t packet_get_next(register uint8_t max_xmit, uint8_t * buf, uint8_t SeqNo)
 				// and send the MAVLink payload
 				// in the next packet
 				mav_pkt_start_time = timer2_tick();
-				mav_pkt_max_time = mav_pkt_len * serial_rate;
+				mav_pkt_max_time = MAVPKTOFFSET + (mav_pkt_len * serial_rate);
 				return encryptReturn(buf, last_sent, last_sent_len,SeqNo);
 			} else if (mav_pkt_len > slen) {
 				// the whole MAVLink packet isn't in
 				// the serial buffer yet. 
 				mav_pkt_start_time = timer2_tick();
-				mav_pkt_max_time = mav_pkt_len * serial_rate;
+				mav_pkt_max_time = MAVPKTOFFSET+ (mav_pkt_len * serial_rate);
 				return 0;					
 			} else {
 				// TODO FIX THIS FOR ENCRYPT
@@ -405,7 +406,7 @@ packet_set_serial_speed(uint16_t speedbps)
 	// convert to 16usec/byte to match timer2_tick()
   // ft2 = 62500, 10 bits per byte on serial
   speedbps = speedbps/10;
-	serial_rate = ((62500UL+(speedbps>>1))/speedbps) + 3;
+	serial_rate = ((62500UL+(speedbps>>1))/speedbps) + 5;
 }
 
 // determine if a received packet is a duplicate
