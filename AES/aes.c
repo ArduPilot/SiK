@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "em_cmu.h"
-#include "aes_defs.H"
+#include "AES_defs.h"
 #include "aes_ctr_128.h"
 #include "parameters.h"
 #include "crc.h"

@@ -13,7 +13,7 @@
 #include "em_gpio.h"
 #include "em_system.h"
 #include "em_timer.h"
-#include "pwm.h"
+#include "PWM.h"
 #include "timer_config.h"
 // ******************** defines and typedefs *************************
 
