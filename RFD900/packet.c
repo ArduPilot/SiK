@@ -400,10 +400,12 @@ packet_set_max_xmit(uint8_t max)
 
 // set the serial speed in bytes/s
 void
-packet_set_serial_speed(uint16_t speed)
+packet_set_serial_speed(uint16_t speedbps)
 {
 	// convert to 16usec/byte to match timer2_tick()
-	serial_rate = (65536UL / speed) + 1;
+  // ft2 = 62500, 10 bits per byte on serial
+  speedbps = speedbps/10;
+	serial_rate = ((62500UL+(speedbps>>1))/speedbps) + 3;
 }
 
 // determine if a received packet is a duplicate

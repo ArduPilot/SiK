@@ -118,7 +118,7 @@ static void mSTimer_Init(void)
 	CMU_ClockDivSet(MSTIMER_cmuClock, cmuClkDiv_1);
 	CMU_ClockEnable(MSTIMER_cmuClock, true);
 
-	uint32_t Count = CMU_ClockFreqGet(MSTIMER_cmuClock)/10;
+	uint32_t Count = CMU_ClockFreqGet(MSTIMER_cmuClock)/100;
 	LETIMER_CompareSet(LETIMER0, 0, Count);
 
 	const LETIMER_Init_TypeDef letimerInit =
@@ -143,13 +143,18 @@ static void mSTimer_Init(void)
 
 void LETIMER0_IRQHandler(void)
 {
+  static uint16_t tick10mS;
   LETIMER_IntClear(LETIMER0, LETIMER_IF_UF);
 	// call the AT parser tick
-	at_timer();
+  if(++tick10mS >= 10)
+  {
+    at_timer();
+    // update the delay counter
+    if (delay_counter > 0)
+      delay_counter--;
+    tick10mS = 0;
+  }
 	Serial_Check();
-	// update the delay counter
-	if (delay_counter > 0)
-		delay_counter--;
 }
 Ecode_t USTIMER_Init( void )
 {

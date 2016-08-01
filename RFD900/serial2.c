@@ -459,7 +459,7 @@ static uint8_t serial_device_set_speed(register uint16_t speed)
 
 	// tell the packet layer how fast the serial link is. This is
 	// needed for packet framing timeouts
-	packet_set_serial_speed(speed * 125UL);
+	packet_set_serial_speed(serial_rates[i].BAUD);
 	return (i);
 }
 // ********************* serial2.c ***********************************
