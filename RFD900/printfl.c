@@ -210,6 +210,7 @@ void printfl(const char *fmt, ...)
 
 	va_start(ap,fmt);
 	vprintfl(fmt, ap);
+        va_end(ap);
 }
 
 static char *ultoapad(unsigned long num, char *str, int radix,int8_t displaydigits)
