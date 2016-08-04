@@ -70,6 +70,7 @@ enum Param_S_ID {
 	PARAM_ENCRYPTION,     	// no Enycryption (0), 128 or 256 bit key
 	PARAM_RCIN,     				// enable RC PPM Input
 	PARAM_RCOUT,     				// enable RC PPM Output
+	PARAM_NODEID,
 	PARAM_S_MAX             // must be last
 };
 

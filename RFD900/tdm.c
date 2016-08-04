@@ -75,14 +75,14 @@ typedef enum{
   Data_PPM
 } DataCmd_t;
 
-#define SEQNOBITS 4
-#define SEQNMASK  ((1<<SEQNOBITS)-1)
 struct __attribute__ ((__packed__)) tdm_trailer {
   uint16_t window;                                                        //:13;
-  uint8_t  seqNo  :SEQNOBITS;
   uint8_t command :2;
   uint8_t bonus   :1;
   uint8_t resend  :1;
+  uint8_t relayed :1; // packet has been relayed by node0
+  uint8_t oddeven :1; // is this an odd or even window
+  uint8_t nodeId  :2; // source nodeId
 };
 struct tdm_trailer trailer;
 
@@ -146,6 +146,15 @@ static uint16_t wait_end;
 
 /// the long term duty cycle we are aiming for
 int16_t duty_cycle;
+
+// this nodeId
+uint8_t nodeId;
+
+/*
+  odd/even state. Node1 can only transmit in odd state. Node2 can only
+  transmit in even state. Node0 can transmit in either state
+*/
+uint8_t odd_even;
 
 /// the average duty cycle we have been transmitting
 static float average_duty_cycle;
@@ -252,7 +261,7 @@ static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 {
 	enum tdm_state old_state = tdm_state;
 	//uint16_t old_remaining = tdm_state_remaining(timer2_tick());
-  int16_t delta =0;
+        int16_t delta =0;
 	if (trailer.bonus)
 	{
 		// the other radio is using our transmit window
@@ -298,6 +307,11 @@ static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 	{
 		transmit_yield = 0;
 	}
+
+        if (nodeId == 0 && tdm_state == TDM_TRANSMIT && old_state != TDM_TRANSMIT) {
+            // node0 has changed to transmit state, flip odd/even bit
+            odd_even ^= 1;
+        }
 
 	if(at_testmode & AT_TEST_TDM) {
 		uint16_t remaining = tdm_state_remaining(timer2_tick());
@@ -382,7 +396,20 @@ static void tdm_state_update(void)
 
 		// no longer waiting for a packet
 		Set_transmit_wait(0,0);
-	}
+
+                if (nodeId == 0 && tdm_state == TDM_TRANSMIT) {
+                    // node0 has changed to transmit state, flip odd/even bit
+                    odd_even ^= 1;
+                }
+
+                if (nodeId != 0 && tdm_state == TDM_RECEIVE) {
+                    // lose our odd/even bit
+                    odd_even = !(nodeId&1);
+#if 0
+                    printf("force odd_even=%d\n", odd_even);
+#endif
+                }
+        }
 }
 
 /// change tdm phase
@@ -674,17 +701,17 @@ void tdm_serial_loop(void)
 			// extract control bytes from end of packet
 			memcpy(&trailer, &pbuf[len - sizeof(trailer)], sizeof(trailer));
 			len -= sizeof(trailer);
-			if(lastSeqNo == trailer.seqNo)																					// if packet is repeated
-			{
-				errors.rx_errors++;
-				//printf("duplicate\n");																								// make it easy to see faults
-			}
-			else if(trailer.seqNo != ((uint8_t)(lastSeqNo+1)&SEQNMASK))
-			{
-				errors.rx_errors++;
-				//printf("missed x%u e%u\n",trailer.seqNo,lastSeqNo+1);																								// make it easy to see faults
-			}
-			lastSeqNo = trailer.seqNo;
+
+                        if (trailer.nodeId != 0 && nodeId != 0) {
+                            // we don't process packets between node1 and node2
+                            continue;
+                        }
+
+                        // when receiving packets from nodeID 0 the other nodes slave their odd_even bit
+                        if (trailer.nodeId == 0) {
+                            odd_even = trailer.oddeven;
+                        }
+                                                
 			if (trailer.window == 0 && len != 0)
 			{
 				// its a control packet
@@ -702,14 +729,13 @@ void tdm_serial_loop(void)
 				// received header
 				int16_t delt;
 				uint16_t old = tdm_state_remaining(timer2_tick());
-				delt = sync_tx_windows(len, RxTick);
+                                delt = sync_tx_windows(len, RxTick);
 				last_t = tnow;
 #if 0
 				uint16_t remaining = tdm_state_remaining(timer2_tick());
 				// need to see tick count when rxed,tx.window value, old&new remaining,
-				printf("RX%u seq%u rem%u remo%u win%u del%d\n",
+				printf("RX%u rem%u remo%u win%u del%d\n",
 						(unsigned )timer2_tick(),
-						(unsigned )trailer.seqNo,
 						(unsigned )remaining,
 						(unsigned )old,
 						(unsigned )trailer.window,
@@ -818,6 +844,11 @@ void tdm_serial_loop(void)
 		}
 #endif
 
+                if (nodeId != 0 && (nodeId&1) != odd_even) {
+                    // we are not in our allowed odd/even cycle
+                    continue;
+                }
+                
 		if (transmit_yield != 0)
 		{
 			// we've give up our window
@@ -998,8 +1029,15 @@ void tdm_serial_loop(void)
 				trailer.window = remaining - val;// set window remaining to estimated time
 			}
 		}
-		trailer.seqNo = seqNo++;
-		seqNo &= SEQNMASK;
+                trailer.nodeId = nodeId;
+                trailer.oddeven = odd_even;
+                trailer.relayed = 0;
+#if 0
+                printf("nodeId=%u odd_even=%u command=%u\n",
+                       (unsigned)trailer.nodeId,
+                       (unsigned)trailer.oddeven,
+                       (unsigned)trailer.command);
+#endif
 		memcpy(&pbuf[len], &trailer, sizeof(trailer));
 		bool res;
 		if (!(res = radio_transmit(len + sizeof(trailer), pbuf,
@@ -1024,9 +1062,8 @@ void tdm_serial_loop(void)
 		tdelta = (uint16_t) (timer2_tick() - tickStart);
 		maxTicksTx = (tdelta > maxTicksTx) ? (tdelta) : (maxTicksTx);
 #if 0
-		printf("TX%u seq%u rem%u remo%u fli%u win%u\n",
+		printf("TX%u rem%u remo%u fli%u win%u\n",
 				(unsigned )res,
-				(unsigned )trailer.seqNo,
 				(unsigned )tdm_state_remaining(timer2_tick()),
 				(unsigned )remaining,
 				(unsigned )val,
@@ -1253,6 +1290,9 @@ void tdm_init(void)
 		freq_max = freq_min + 1000000UL;
 	}
 
+        // get our nodeId
+	nodeId = param_s_get(PARAM_NODEID);
+        
 	// get the duty cycle we will use
 	duty_cycle = param_s_get(PARAM_DUTY_CYCLE);
 	duty_cycle = constrain(duty_cycle, 0, 100);

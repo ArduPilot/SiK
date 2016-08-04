@@ -72,5 +72,8 @@ extern uint16_t duty_cycle;
 /// the LBT threshold
 extern uint8_t lbt_rssi;
 
+// this nodeId
+extern uint8_t nodeId;
+
 
 #endif // _TDM_H_

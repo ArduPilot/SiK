@@ -135,9 +135,11 @@ static const struct parameter_s_info {
 	//{"MANCHESTER",      PT_Bool,0     ,1     ,0                   ,BoolList},
 	{"RTSCTS",          PT_Bool,0     ,1     ,0                   ,BoolList},
 	{"MAX_WINDOW",      PT_Int ,20    ,400   ,131                 ,NULL    },
-  {"ENCRYPTION_LEVEL",PT_List,0     ,1     ,0                   ,EncList }, // no Enycryption (0), 128 or 256 bit key
-  {"GPI1_1R/CIN",     PT_Bool,0     ,1     ,0                   ,BoolList},
-  {"GPO1_1R/COUT",    PT_Bool,0     ,1     ,0                   ,BoolList},
+        {"ENCRYPTION_LEVEL",PT_List,0     ,1     ,0                   ,EncList }, // no Enycryption (0), 128 or 256 bit key
+        {"GPI1_1R/CIN",     PT_Bool,0     ,1     ,0                   ,BoolList},
+        {"GPO1_1R/COUT",    PT_Bool,0     ,1     ,0                   ,BoolList},
+	{"NODEID",          PT_Int ,0     ,2     ,1                   ,NULL    },
+        
 };
 
 static const struct parameter_r_info {
@@ -339,6 +341,12 @@ bool param_s_set(enum Param_S_ID param, param_t value)
 	case PARAM_ENCRYPTION:
 		 aes_init(value);
 		break;
+
+	case PARAM_NODEID:
+		value = constrain(value, 0, 2);
+		nodeId = value;
+		break;
+                
 	default:
 		break;
 	}
