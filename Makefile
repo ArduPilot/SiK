@@ -14,7 +14,7 @@ CFLAGS=$(OPTFLAGS) $(CPUFLAGS) $(EZRFLAGS) $(INCFLAGS) $(DEPFLAGS)
 
 UTILSRC=src/PWM.c src/RCOComp.c src/main.c src/xprintf.c
 EMLIBSRC=SDK/emlib/src/em_adc.c SDK/emlib/src/em_assert.c SDK/emlib/src/em_cmu.c SDK/emlib/src/em_dma.c SDK/emlib/src/em_emu.c SDK/emlib/src/em_gpio.c SDK/emlib/src/em_int.c emlib/em_letimer.c emlib/em_msc.c SDK/emlib/src/em_pcnt.c SDK/emlib/src/em_prs.c SDK/emlib/src/em_rtc.c SDK/emlib/src/em_system.c SDK/emlib/src/em_timer.c emlib/em_usart.c SDK/emlib/src/em_wdog.c
-RFD900SRC=RFD900/at.c RFD900/crc.c RFD900/flash.c RFD900/freq_hopping.c RFD900/golay.c RFD900/mavlink.c RFD900/packet.c RFD900/parameters.c RFD900/pins_user.c RFD900/printfl.c RFD900/radio_old.c RFD900/serial2.c RFD900/tdm.c RFD900/timer.c RFD900/ppm.c
+RFD900SRC=RFD900/at.c RFD900/crc.c RFD900/flash.c RFD900/freq_hopping.c RFD900/golay.c RFD900/mavlink.c RFD900/packet.c RFD900/parameters.c RFD900/pins_user.c RFD900/printfl.c RFD900/radio_old.c RFD900/serial2.c RFD900/tdm.c RFD900/timer.c RFD900/ppm.c RFD900/relay.c
 DRIVERSSRC=DriversLocal/dmactrl.c DriversLocal/dmadrv.c DriversLocal/ezradio_api_lib.c DriversLocal/ezradio_auto_ack_plugin.c DriversLocal/ezradio_comm.c DriversLocal/ezradio_crcerror_plugin.c DriversLocal/ezradio_direct_receive_plugin.c DriversLocal/ezradio_direct_transmit_plugin.c DriversLocal/ezradio_hal.c DriversLocal/ezradio_plugin_manager.c DriversLocal/ezradio_pn9_plugin.c DriversLocal/ezradio_receive_plugin.c DriversLocal/ezradio_transmit_plugin.c DriversLocal/ezradio_unmod_carrier_plugin.c DriversLocal/gpiointerrupt.c DriversLocal/rtcdriver.c DriversLocal/spidrv.c DriversLocal/udelay.c DriversLocal/si4x6x/ezradio_api_lib_add.c
 SYSTEMSRC=SDK/EZR32LG/Source/system_ezr32lg.c
 AESSRC=AES/aes.c AES/aes_ctr_128.c

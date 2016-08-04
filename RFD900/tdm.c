@@ -47,6 +47,7 @@
 #include "printfl.h"
 #include "aes.h"
 #include "ppm.h"
+#include "relay.h"
 
 // ******************** defines and typedefs *************************
 #define USE_TICK_YIELD 1
@@ -702,10 +703,16 @@ void tdm_serial_loop(void)
 			memcpy(&trailer, &pbuf[len - sizeof(trailer)], sizeof(trailer));
 			len -= sizeof(trailer);
 
-                        if (trailer.nodeId != 0 && nodeId != 0) {
-                            // we don't process packets between node1 and node2
+                        if (trailer.nodeId != 0 && nodeId != 0 && !trailer.relayed) {
+                            // we don't process packets between node1
+                            // and node2 unless they have been relayed
                             LED_ACTIVITY(LED_OFF);
                             continue;
+                        }
+                        if (trailer.relayed && trailer.nodeId == nodeId) {
+                            // it is a relayed packet from ourselves. discard
+                            LED_ACTIVITY(LED_OFF);
+                            continue;                            
                         }
 
                         // when receiving packets from nodeID 0 the other nodes slave their odd_even bit
@@ -781,7 +788,13 @@ void tdm_serial_loop(void)
 					{
 						send = !aes_decrypt(buffptr,len,buffptr,&out_len,lastSeqNo);
 					}
-					if(send){serial_write_buf(buffptr,out_len);}
+					if (send) {
+                                            serial_write_buf(buffptr,out_len);
+                                            if (nodeId == 0) {
+                                                // also queue for retransmit
+                                                relay_store_packet(buffptr, out_len, trailer.nodeId);
+                                            }
+                                        }
 					//LED_ACTIVITY(LED_OFF);
 					//printf("]\n");
 				}
@@ -930,6 +943,12 @@ void tdm_serial_loop(void)
     }
 #endif
 
+                // default to a non-relayed packet
+                trailer.relayed = 0;
+
+                // default to packet coming from our own nodeId
+                trailer.nodeId = nodeId;
+    
 		// ask the packet system for the next packet to send
 		if(ReadPPM(&pbuf[1],&len,max_xmit-2))
 		{
@@ -956,6 +975,16 @@ void tdm_serial_loop(void)
 			trailer.command = Data_AT;
 			send_at_command = false;
 		}
+                else if (nodeId == 0 && serial_read_available() <= relay_bytes_pending())
+                {
+                        uint8_t src_nodeId;
+                        len = relay_get_packet(pbuf, max_xmit, &src_nodeId);
+                        if (len > 0) {
+                            trailer.nodeId = src_nodeId;
+                            trailer.command = Data_Data;
+                            trailer.relayed = 1;
+                        }
+                }
 		else
 		{
 			// get a packet from the serial port
@@ -1030,9 +1059,7 @@ void tdm_serial_loop(void)
 				trailer.window = remaining - val;// set window remaining to estimated time
 			}
 		}
-                trailer.nodeId = nodeId;
                 trailer.oddeven = odd_even;
-                trailer.relayed = 0;
 #if 0
                 printf("nodeId=%u odd_even=%u command=%u\n",
                        (unsigned)trailer.nodeId,
