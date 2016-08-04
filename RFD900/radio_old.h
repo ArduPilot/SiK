@@ -261,6 +261,8 @@ extern bool radio_receive_in_progress(void);
 /// send a MAVLink status report packet
 void MAVLink_report(void);
 
+void MAVLink_statustext(const char *fmt, ...);
+
 /// return temperature in degrees C
 ///
 /// @return		temperature in degrees C, from 0 to 127

@@ -37,6 +37,7 @@
 #include "packet.h"
 #include "timer.h"
 #include "serial.h"
+#include "printfl.h"
 
 
 // new RADIO_STATUS common message
@@ -119,8 +120,8 @@ void MAVLink_report(void)
 	pbuf[2] = seqnum++;
 	pbuf[3] = RADIO_SOURCE_SYSTEM;
 	pbuf[4] = RADIO_SOURCE_COMPONENT;
-  pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
-
+        pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
+  
 	m->rxerrors = errors.rx_errors;
 	m->fixed    = errors.corrected_packets;
 	m->txbuf    = serial_read_space();
@@ -136,4 +137,43 @@ void MAVLink_report(void)
 	}
 
 	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
+}
+
+#define MAVLINK_MSG_ID_STATUSTEXT 253
+#define MAVLINK_STATUSTEXT_CRC_EXTRA 83
+
+struct __attribute__ ((__packed__)) mavlink_STATUSTEXT_v10 {
+    uint8_t severity;
+    char text[50];
+};
+
+void MAVLink_statustext(const char *fmt, ...)
+{
+        static uint8_t pbuf[6 + sizeof(struct mavlink_STATUSTEXT_v10)+5];
+        static uint8_t seqnum=0;
+        struct mavlink_STATUSTEXT_v10 *m = (struct mavlink_STATUSTEXT_v10 *)&pbuf[6];
+	va_list ap;
+        
+        pbuf[0] = MAVLINK10_STX;
+        pbuf[1] = sizeof(struct mavlink_STATUSTEXT_v10);
+        pbuf[2] = seqnum++;
+        pbuf[3] = RADIO_SOURCE_SYSTEM;
+	pbuf[4] = RADIO_SOURCE_COMPONENT;
+        pbuf[5] = MAVLINK_MSG_ID_STATUSTEXT;
+
+	m->severity = 0;
+        memset(m->text, 0, sizeof(m->text));
+        printf_start_capture((uint8_t*)m->text, sizeof(m->text));
+        va_start(ap, fmt);
+        vprintfl(fmt, ap);
+        va_end(ap);
+        printf_end_capture();
+	mavlink_crc(MAVLINK_STATUSTEXT_CRC_EXTRA,pbuf);
+
+	if (serial_write_space() < sizeof(struct mavlink_STATUSTEXT_v10)+8) {
+		// don't cause an overflow
+		return;
+	}
+
+	serial_write_buf(pbuf, sizeof(struct mavlink_STATUSTEXT_v10)+8);
 }
