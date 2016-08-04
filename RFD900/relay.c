@@ -9,8 +9,14 @@
 #include <stdbool.h>
 #include "radio_old.h"
 
-#define RELAY_BUFF_MAX 2048
+#define RELAY_BUFF_MAX 4096
 static uint8_t r_buf[RELAY_BUFF_MAX] = {0};
+
+struct {
+    uint8_t buf[256];
+    uint8_t len;
+    uint8_t src_nodeId;
+} saved;
 
 // FIFO insert/remove pointers
 static volatile uint16_t r_insert, r_remove;
@@ -52,6 +58,15 @@ void relay_store_packet(const uint8_t *p, uint8_t len, uint8_t src_nodeId)
 uint8_t relay_get_packet(uint8_t *p, uint8_t max_len, uint8_t *src_nodeId)
 {
     uint8_t len, i;
+
+    if (saved.len) {
+        len = saved.len;
+        *src_nodeId = saved.src_nodeId;
+        memcpy(p, saved.buf, len);
+        saved.len = 0;
+        return len;
+    }
+
     if (BUF_EMPTY(r)) {
         // no packet
         return 0;
@@ -75,4 +90,14 @@ uint8_t relay_get_packet(uint8_t *p, uint8_t max_len, uint8_t *src_nodeId)
 uint16_t relay_bytes_pending(void)
 {
     return BUF_USED(r);
+}
+
+/*
+  save a relayed packet that has failed to transmit
+ */
+void relay_save_pkt(const uint8_t *p, uint8_t len, uint8_t src_nodeId)
+{
+    saved.len = len;
+    saved.src_nodeId = src_nodeId;
+    memcpy(saved.buf, p, len);
 }

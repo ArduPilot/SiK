@@ -76,12 +76,19 @@ typedef enum{
   Data_PPM
 } DataCmd_t;
 
+// nodeId values for OBC'2016 special case
+enum Node_Type {
+    NODE_RELAY=0,
+    NODE_GCS=1,
+    NODE_RETRIEVAL=2
+};
+
 struct __attribute__ ((__packed__)) tdm_trailer {
   uint16_t window;                                                        //:13;
   uint8_t command :2;
   uint8_t bonus   :1;
   uint8_t resend  :1;
-  uint8_t relayed :1; // packet has been relayed by node0
+  uint8_t relayed :1; // packet has been relayed by NODE_RELAY
   uint8_t oddeven :1; // is this an odd or even window
   uint8_t nodeId  :2; // source nodeId
 };
@@ -309,8 +316,8 @@ static int16_t sync_tx_windows(uint16_t packet_length, uint16_t Tick)
 		transmit_yield = 0;
 	}
 
-        if (nodeId == 0 && tdm_state == TDM_TRANSMIT && old_state != TDM_TRANSMIT) {
-            // node0 has changed to transmit state, flip odd/even bit
+        if (nodeId == NODE_RELAY && tdm_state == TDM_TRANSMIT && old_state != TDM_TRANSMIT) {
+            // relay node has changed to transmit state, flip odd/even bit
             odd_even ^= 1;
         }
 
@@ -398,12 +405,12 @@ static void tdm_state_update(void)
 		// no longer waiting for a packet
 		Set_transmit_wait(0,0);
 
-                if (nodeId == 0 && tdm_state == TDM_TRANSMIT) {
+                if (nodeId == NODE_RELAY && tdm_state == TDM_TRANSMIT) {
                     // node0 has changed to transmit state, flip odd/even bit
                     odd_even ^= 1;
                 }
 
-                if (nodeId != 0 && tdm_state == TDM_RECEIVE) {
+                if (nodeId != NODE_RELAY && tdm_state == TDM_RECEIVE) {
                     // lose our odd/even bit
                     odd_even = !(nodeId&1);
 #if 0
@@ -703,9 +710,9 @@ void tdm_serial_loop(void)
 			memcpy(&trailer, &pbuf[len - sizeof(trailer)], sizeof(trailer));
 			len -= sizeof(trailer);
 
-                        if (trailer.nodeId != 0 && nodeId != 0 && !trailer.relayed) {
-                            // we don't process packets between node1
-                            // and node2 unless they have been relayed
+                        if (trailer.nodeId != NODE_RELAY && nodeId != NODE_RELAY && !trailer.relayed) {
+                            // we don't process packets between GCS
+                            // and retrieval unless they have been relayed
                             LED_ACTIVITY(LED_OFF);
                             continue;
                         }
@@ -716,7 +723,7 @@ void tdm_serial_loop(void)
                         }
 
                         // when receiving packets from nodeID 0 the other nodes slave their odd_even bit
-                        if (trailer.nodeId == 0) {
+                        if (trailer.nodeId == NODE_RELAY) {
                             odd_even = trailer.oddeven;
                         }
                                                 
@@ -789,8 +796,21 @@ void tdm_serial_loop(void)
 						send = !aes_decrypt(buffptr,len,buffptr,&out_len,lastSeqNo);
 					}
 					if (send) {
-                                            serial_write_buf(buffptr,out_len);
-                                            if (nodeId == 0) {
+                                            // as a OBC relay special
+                                            // we do not send serial
+                                            // bytes from the
+                                            // retrieval aircraft to
+                                            // the serial port on the
+                                            // relay aircraft. This is
+                                            // not strictly necessary
+                                            // but it does lower the
+                                            // load on the relay
+                                            // aircraft pixhawk
+                                            bool retrieval_to_relay = (trailer.nodeId == NODE_RETRIEVAL && nodeId == NODE_RELAY);
+                                            if (!retrieval_to_relay) {
+                                                serial_write_buf(buffptr,out_len);
+                                            }
+                                            if (nodeId == NODE_RELAY) {
                                                 // also queue for retransmit
                                                 relay_store_packet(buffptr, out_len, trailer.nodeId);
                                             }
@@ -858,7 +878,7 @@ void tdm_serial_loop(void)
 		}
 #endif
 
-                if (nodeId != 0 && (nodeId&1) != odd_even) {
+                if (nodeId != NODE_RELAY && (nodeId&1) != odd_even) {
                     // we are not in our allowed odd/even cycle
                     continue;
                 }
@@ -975,7 +995,7 @@ void tdm_serial_loop(void)
 			trailer.command = Data_AT;
 			send_at_command = false;
 		}
-                else if (nodeId == 0 && serial_read_available() <= relay_bytes_pending())
+                else if (nodeId == NODE_RELAY && serial_read_available() <= relay_bytes_pending())
                 {
                         uint8_t src_nodeId;
                         len = relay_get_packet(pbuf, max_xmit, &src_nodeId);
@@ -1072,7 +1092,11 @@ void tdm_serial_loop(void)
 				remaining ,&tickEnd)) && len != 0
 				&& trailer.window != 0 && trailer.command == Data_Data)
 		{
-			packet_force_resend();
+                    if (trailer.relayed) {
+                        relay_save_pkt(pbuf, len, trailer.nodeId);
+                    } else {
+                        packet_force_resend();
+                    }
 		}
 		// after sending a packet leave a bit of time before
 		// sending the next one. The receivers don't cope well
