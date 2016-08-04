@@ -704,6 +704,7 @@ void tdm_serial_loop(void)
 
                         if (trailer.nodeId != 0 && nodeId != 0) {
                             // we don't process packets between node1 and node2
+                            LED_ACTIVITY(LED_OFF);
                             continue;
                         }
 
