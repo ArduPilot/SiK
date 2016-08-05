@@ -136,6 +136,7 @@ static bool transmit_yield;
 // not.
 static bool blink_state;
 static bool received_packet;
+static uint32_t last_received_tick;
 
 /// the latency in 16usec timer2 ticks for sending a zero length packet
 static uint16_t packet_latency;
@@ -503,7 +504,19 @@ static void link_update(void)
 #endif // TDM_SYNC_LOGIC
 		LED_RADIO(blink_state);
 		blink_state = !blink_state;
-		fhop_set_locked(false);
+                if (nodeId != NODE_RELAY) {
+                    // don't unlock the relay radio
+                    fhop_set_locked(false);
+                }
+#if 0
+                uint32_t now = timer32_tick();
+                uint32_t tdiff = now - last_received_tick;
+                MAVLink_statustext("%u unlocked diff=%u last=%u now=%u",
+                                   (unsigned)nodeId,
+                                   (unsigned)tdiff,
+                                   (unsigned)last_received_tick,
+                                   (unsigned)now);
+#endif
 	}
 	if (unlock_count > 20)
 	{
@@ -688,6 +701,7 @@ void tdm_serial_loop(void)
 
 			// update the activity indication
 			received_packet = true;
+                        last_received_tick = timer32_tick();
 			fhop_set_locked(true);
 
 			// update filtered RSSI value and packet stats
@@ -1014,7 +1028,8 @@ void tdm_serial_loop(void)
 
 		if (len > max_data_packet_length)
 		{
-			panic("oversized tdm packet");
+			MAVLink_statustext("oversized tdm packet");
+                        continue;
 		}
 
 		trailer.bonus = (tdm_state == TDM_RECEIVE);
@@ -1072,7 +1087,7 @@ void tdm_serial_loop(void)
 			if (remaining <= (int32_t)val)			// if no time left, whoopsie problem!
 			{
 				trailer.window = 1;
-				panic("no time left!");
+				MAVLink_statustext("no time left!");
 			}
 			else
 			{
@@ -1532,6 +1547,8 @@ void tdm_init(void)
 	// tdm_test_timing();
 
 	// golay_test();
+
+        MAVLink_statustext("node %u booted", nodeId);
 }
 
 /// report tdm timings

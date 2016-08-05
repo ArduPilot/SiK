@@ -34,17 +34,15 @@
 #include "em_timer.h"
 #include "timer_config.h"
 
+/*
+  16 bit timer in 16 usec units
+ */
+extern uint16_t timer2_tick(void);
 
-/// return a 16 bit value that rolls over in approximately
-/// one second intervals
-///
-/// @return		16 bit value in units of 16 microseconds
-///
-__STATIC_INLINE uint16_t timer2_tick(void)
-{
-	return(TIMER_CounterGet(TDMTIMER2));
-}
-//extern uint16_t timer2_tick(void);
+/*
+  32 bit timer in 16 usec units
+ */
+extern uint32_t timer32_tick(void);
 
 
 /// initialise timers

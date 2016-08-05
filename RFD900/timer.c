@@ -35,6 +35,34 @@ void delay_msec(register uint16_t msec)
 		;
 }
 
+static uint32_t rollover_counter;
+static uint16_t last_timer2;
+
+/// return a 16 bit value that rolls over in approximately
+/// one second intervals
+///
+/// @return		16 bit value in units of 16 microseconds
+///
+uint16_t timer2_tick(void)
+{
+    uint16_t ret = TIMER_CounterGet(TDMTIMER2);
+    if (ret < last_timer2) {
+        rollover_counter += 0x10000;
+    }
+    last_timer2 = ret;
+    return ret;
+}
+
+/*
+  32 bit timer in 16 usec units
+ */
+uint32_t timer32_tick(void)
+{
+    uint32_t ret = timer2_tick();
+    ret += rollover_counter;
+    return ret;
+}
+
 // initialise timers
 void timer_init(void)
 {

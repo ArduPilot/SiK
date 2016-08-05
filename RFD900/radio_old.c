@@ -156,6 +156,8 @@ void panic(char *fmt, ...)
 {
 	va_list ap;
 
+        MAVLink_statustext(fmt);
+
 	puts("\n**PANIC**");
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
