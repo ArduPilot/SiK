@@ -508,10 +508,7 @@ static void link_update(void)
 #endif // TDM_SYNC_LOGIC
 		LED_RADIO(blink_state);
 		blink_state = !blink_state;
-                if (nodeId != NODE_RELAY) {
-                    // don't unlock the relay radio
-                    fhop_set_locked(false);
-                }
+                fhop_set_locked(false);
 #if 0
                 uint32_t now = timer32_tick();
                 uint32_t tdiff = now - last_received_tick;
