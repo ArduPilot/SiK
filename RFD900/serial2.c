@@ -51,8 +51,8 @@ typedef struct {
 
 #define RX_DMA_BLOCK_SIZE	32
 #define TX_DMA_BLOCK_SIZE	32
-#define RX_BUFF_MAX 2048			// must be a multiple of 2*RX_DMA_BUFF_SIZE
-#define TX_BUFF_MAX 1024			// must be a multiple of TX_DMA_BUFF_SIZE
+#define RX_BUFF_MAX 8192			// must be a multiple of 2*RX_DMA_BUFF_SIZE
+#define TX_BUFF_MAX 4096			// must be a multiple of TX_DMA_BUFF_SIZE
 // threshold for considering the rx buffer full
 #define SERIAL_CTS_THRESHOLD_LOW  (96-1)	// must be a multiple of RX_DMA_BLOCK_SIZE
 #define SERIAL_CTS_THRESHOLD_HIGH (192-1)  // must be a multiple of RX_DMA_BLOCK_SIZE
