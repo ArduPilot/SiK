@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include "radio_old.h"
 
-#define RELAY_BUFF_MAX 4096
+#define RELAY_BUFF_MAX 8192
 static uint8_t r_buf[RELAY_BUFF_MAX] = {0};
 
 struct {
