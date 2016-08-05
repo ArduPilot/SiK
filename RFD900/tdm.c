@@ -196,6 +196,10 @@ uint16_t test_display;
 /// set when we should send a statistics packet on the next round
 static bool send_statistics;
 
+// time in ticks of last pkt received from node0 (relay)
+static uint32_t last_node0_packet;
+static bool relay_node_active;
+
 static uint16_t maxtdelta = 0;
 static uint16_t maxTicksR = 0;
 static uint16_t maxTicksX = 0;
@@ -573,6 +577,17 @@ static void link_update(void)
 		temperature_update();
 		temperature_count = 0;
 	}
+
+        if (nodeId != NODE_RELAY && timer32_tick() - last_node0_packet > 0xA0000) {
+            // relay has not been seen for 10 seconds, go into normal
+            // mode
+            if (relay_node_active) {
+                MAVLink_statustext("relay node dead");
+            }
+            relay_node_active = false;
+        } else {
+            relay_node_active = true;
+        }
 }
 
 // dispatch an AT command to the remote system
@@ -724,7 +739,12 @@ void tdm_serial_loop(void)
 			memcpy(&trailer, &pbuf[len - sizeof(trailer)], sizeof(trailer));
 			len -= sizeof(trailer);
 
-                        if (trailer.nodeId != NODE_RELAY && nodeId != NODE_RELAY && !trailer.relayed) {
+                        if (trailer.nodeId == NODE_RELAY) {
+                            last_node0_packet = last_received_tick;
+                            relay_node_active = true;
+                        }
+                        
+                        if (relay_node_active && trailer.nodeId != NODE_RELAY && nodeId != NODE_RELAY && !trailer.relayed) {
                             // we don't process packets between GCS
                             // and retrieval unless they have been relayed
                             LED_ACTIVITY(LED_OFF);
@@ -821,7 +841,7 @@ void tdm_serial_loop(void)
                                             // it does lower the load
                                             // on the aircraft pixhawks
                                             bool retrieval_to_relay = nodeId != NODE_GCS && trailer.nodeId != NODE_GCS;
-                                            if (!retrieval_to_relay) {
+                                            if (!relay_node_active || !retrieval_to_relay) {
                                                 serial_write_buf(buffptr,out_len);
                                             }
                                             if (nodeId == NODE_RELAY) {
@@ -892,7 +912,7 @@ void tdm_serial_loop(void)
 		}
 #endif
 
-                if (nodeId != NODE_RELAY && (nodeId&1) != odd_even) {
+                if (relay_node_active && nodeId != NODE_RELAY && (nodeId&1) != odd_even) {
                     // we are not in our allowed odd/even cycle
                     continue;
                 }
