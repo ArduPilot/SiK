@@ -8,11 +8,16 @@ import xmodem
 
 class uploader(object):
 	'''Uploads a firmware file to the SiK900x bootloader'''
-	def __init__(self, portname, atbaudrate=57600, debug=0):
+	def __init__(self, portname, atbaudrate=57600, use_mavlink=False, mavport=0, debug=0):
 		print("Connecting to %s" % portname)
 		self.atbaudrate = atbaudrate
                 self._debug = debug
-                self.port = serial.Serial(portname, atbaudrate, timeout=3)
+                if use_mavlink:
+                        from pymavlink import mavutil
+                        self.port = mavutil.MavlinkSerialPort(portname, 115200, devnum=mavport,
+                                                              timeout=3, debug=debug)
+                else:
+                        self.port = serial.Serial(portname, atbaudrate, timeout=3)
                 self.set_rtscts(False)
                 self.setBaudrate(atbaudrate)
                 self.fw_size = 0
@@ -131,7 +136,7 @@ class uploader(object):
 		return False
 
         def putc(self, c, timeout=1):
-                return self.port.write(c)
+                return self.port.write(str(c))
 
         def getc(self, size, timeout=1):
                 try:
@@ -178,6 +183,8 @@ if __name__ == '__main__':
         parser.add_argument('--port', action="store", help="port to upload to")
         parser.add_argument("--baudrate", type=int, default=57600, help='baud rate')
         parser.add_argument("--debug", type=int, default=0, help='debug level')
+        parser.add_argument("--mavlink", action='store_true', default=False, help='update over MAVLink')
+        parser.add_argument("--mavport", type=int, default=0, help='MAVLink port number')
         parser.add_argument('firmware', action="store", help="Firmware file to be uploaded")
         args = parser.parse_args()
 
@@ -191,7 +198,10 @@ if __name__ == '__main__':
         # Connect to the device and identify it
         for port in glob.glob(args.port):
                 print("uploading to port %s" % port)
-                up = uploader(port, atbaudrate=args.baudrate, debug=args.debug)
+                up = uploader(port, atbaudrate=args.baudrate,
+                              use_mavlink=args.mavlink,
+                              mavport=args.mavport,
+                              debug=args.debug)
                 if not up.check():
                         print("Failed to contact bootloader")
                         sys.exit(1)
