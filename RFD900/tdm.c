@@ -827,20 +827,7 @@ void tdm_serial_loop(void)
 						send = !aes_decrypt(buffptr,len,buffptr,&out_len,lastSeqNo);
 					}
 					if (send) {
-                                            // as a OBC relay special
-                                            // we do not send serial
-                                            // bytes from the
-                                            // retrieval or relay
-                                            // aircraft to the serial
-                                            // port on the other
-                                            // aircraft. This is not
-                                            // strictly necessary but
-                                            // it does lower the load
-                                            // on the aircraft pixhawks
-                                            bool retrieval_to_relay = nodeId != NODE_GCS && trailer.nodeId != NODE_GCS;
-                                            if (!relay_node_active || !retrieval_to_relay) {
-                                                serial_write_buf(buffptr,out_len);
-                                            }
+                                            serial_write_buf(buffptr,out_len);
                                             if (nodeId == NODE_RELAY) {
                                                 // also queue for retransmit
                                                 relay_store_packet(buffptr, out_len, trailer.nodeId);
