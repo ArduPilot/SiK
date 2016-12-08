@@ -358,7 +358,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 			// it seems that this gives us an occasional
 			// fifo overflow error, so put in just 4 bytes
 			// at a time
-			n = 4;
+			n = 1;
 			if (n > length) {
 				n = length;
 			}
@@ -371,7 +371,7 @@ radio_transmit_simple(__data uint8_t length, __xdata uint8_t * __pdata buf, __pd
 			// the FIFO is below the high threshold. See
 			// comment above on how many bytes we add to
 			// the FIFO
-			n = 4;
+			n = 1;
 			if (n > length) {
 				n = length;
 			}
