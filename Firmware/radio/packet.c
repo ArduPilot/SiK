@@ -70,7 +70,7 @@ static __pdata uint8_t mav_max_xmit;
 static bool injected_packet;
 
 // have we seen a mavlink packet?
-bool seen_mavlink;
+uint8_t seen_mavlink;
 
 #define PACKET_RESEND_THRESHOLD 32
 
@@ -78,12 +78,27 @@ bool seen_mavlink;
 // is used to determine if we will inject RADIO status MAVLink
 // messages into the serial stream for ground station and aircraft
 // monitoring of link quality
-static void check_heartbeat(__xdata uint8_t * __pdata buf)
+static void check_response(__xdata uint8_t * __pdata buf)
 {
-        if ((buf[1] == 9 && buf[0] == MAVLINK10_STX && buf[5] == 0) ||
-            (buf[1] <= 9 && buf[0] == MAVLINK20_STX && buf[7] == 0 && buf[8] == 0 && buf[9] == 0)) {
-		// looks like a MAVLink heartbeat
-		seen_mavlink = true;
+	if (buf[1] == 9 && buf[0] == MAVLINK10_STX && buf[5] == 0) {
+		// looks like a MAVLink 1.x heartbeat
+		// do not overwrite a protocol version request
+		if (seen_mavlink < 3) {
+			seen_mavlink = 1;
+		}
+
+	} else if (buf[1] <= 9 && buf[0] == MAVLINK20_STX && (buf[7] == 0) && buf[8] == 0 && buf[9] == 0) {
+		// looks like a MAVLink 2.x heartbeat
+		// do not overwrite a protocol version request
+		if (seen_mavlink < 3) {
+			seen_mavlink = 2;
+		}
+
+	} else if ((((buf[1] == 35 && buf[5] == 75) || (buf[1] == 33 && buf[5] == 76)) && buf[0] == MAVLINK10_STX && buf[28] == 0x07 && buf[29] == 0x20)) {
+		// looks like a MAVLink 1.x command int/long requesting PROTOCOL_VERSION as part of the handshake:
+		// https://mavlink.io/en/mavlink-version.html#version-handshaking
+		seen_mavlink = 3;
+
 	}
 }
 
@@ -142,7 +157,7 @@ uint8_t mavlink_frame(uint8_t max_xmit, __xdata uint8_t * __pdata buf)
                 serial_read_buf(&last_sent[last_sent_len], c);
                 memcpy(&buf[last_sent_len], &last_sent[last_sent_len], c);
                 
-                check_heartbeat(buf+last_sent_len);
+                check_response(buf+last_sent_len);
                         
 		last_sent_len += c;
 		slen -= c;
