@@ -272,7 +272,7 @@ extern uint8_t radio_get_transmit_power(void);
 extern bool radio_receive_in_progress(void);
 
 /// send a MAVLink status report packet
-void MAVLink_report(void);
+bool MAVLink_report(void);
 
 struct radio_settings {
 	uint32_t frequency;
