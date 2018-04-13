@@ -145,7 +145,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="DriversLocal/ustimer.c|RFD900/serial.c|SDK/emdrv/config/nvm_config.c|SDK/emlib/src/em_vcmp.c|SDK/emlib/src/em_pcnt.c|SDK/emlib/src/em_opamp.c|SDK/emlib/src/em_mpu.c|SDK/emlib/src/em_lesense.c|SDK/emlib/src/em_lcd.c|SDK/emlib/src/em_idac.c|SDK/emlib/src/em_i2c.c|SDK/emlib/src/em_ebi.c|SDK/emlib/src/em_dac.c|SDK/emlib/src/em_burtc.c|SDK/emlib/src/em_acmp.c|RFD900/Copy of tdm.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="CMSIS/ezr32lg/system_ezr32lg.c|CMSIS/ezr32lg/startup_gcc_ezr32lg.s|DriversLocal/ustimer.c|RFD900/serial.c|SDK/emdrv/config/nvm_config.c|SDK/emlib/src/em_vcmp.c|SDK/emlib/src/em_pcnt.c|SDK/emlib/src/em_opamp.c|SDK/emlib/src/em_mpu.c|SDK/emlib/src/em_lesense.c|SDK/emlib/src/em_lcd.c|SDK/emlib/src/em_idac.c|SDK/emlib/src/em_i2c.c|SDK/emlib/src/em_ebi.c|SDK/emlib/src/em_dac.c|SDK/emlib/src/em_burtc.c|SDK/emlib/src/em_acmp.c|RFD900/Copy of tdm.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -291,7 +291,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="DriversLocal/ustimer.c|RFD900/serial.c|SDK/emdrv/config/nvm_config.c|SDK/emlib/src/em_vcmp.c|SDK/emlib/src/em_pcnt.c|SDK/emlib/src/em_opamp.c|SDK/emlib/src/em_mpu.c|SDK/emlib/src/em_lesense.c|SDK/emlib/src/em_lcd.c|SDK/emlib/src/em_idac.c|SDK/emlib/src/em_i2c.c|SDK/emlib/src/em_ebi.c|SDK/emlib/src/em_dac.c|SDK/emlib/src/em_burtc.c|SDK/emlib/src/em_acmp.c|RFD900/Copy of tdm.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="CMSIS/ezr32lg/system_ezr32lg.c|CMSIS/ezr32lg/startup_gcc_ezr32lg.s|DriversLocal/ustimer.c|RFD900/serial.c|SDK/emdrv/config/nvm_config.c|SDK/emlib/src/em_vcmp.c|SDK/emlib/src/em_pcnt.c|SDK/emlib/src/em_opamp.c|SDK/emlib/src/em_mpu.c|SDK/emlib/src/em_lesense.c|SDK/emlib/src/em_lcd.c|SDK/emlib/src/em_idac.c|SDK/emlib/src/em_i2c.c|SDK/emlib/src/em_ebi.c|SDK/emlib/src/em_dac.c|SDK/emlib/src/em_burtc.c|SDK/emlib/src/em_acmp.c|RFD900/Copy of tdm.c|src/ATCmds.c|src/Serial.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
