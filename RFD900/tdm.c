@@ -742,9 +742,13 @@ void tdm_serial_loop(void)
                         }
                         
                         if (relay_node_active && trailer.nodeId != NODE_RELAY && nodeId != NODE_RELAY && !trailer.relayed) {
-                            // we don't process packets between GCS
-                            // and retrieval unless they have been relayed
+                            // we will send dup packets between GCS and retrieval, special for OBC-2018
                             LED_ACTIVITY(LED_OFF);
+                            if (trailer.window != 0 && (Data_Data == trailer.command) &&
+                                len != 0 && !packet_is_duplicate(len, buffptr, trailer.resend)
+                                && !at_mode_active) {
+                                serial_write_buf(buffptr, len);
+                            }
                             continue;
                         }
                         if (trailer.relayed && trailer.nodeId == nodeId) {
