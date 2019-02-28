@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # set air data rate
 
-import serial, sys, optparse, time, fdpexpect
+import serial, sys, optparse, time, pexpect
+from pexpect import fdpexpect
 
 parser = optparse.OptionParser("set_speed")
 parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
