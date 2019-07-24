@@ -44,11 +44,14 @@
 
 #include <ctype.h>
 #include <stdint.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
+
+extern void putchar(char c) __reentrant;
+//extern void puts(char *str);
 
 // the biggest packet length we will allow. To allow for golay
 // encoding this needs to be a multiple of 6
@@ -80,7 +83,7 @@ extern bool feature_rtscts;
 #define SYSCLK	24500000UL
 
 #if DEBUG
-# define debug(fmt, args...)	printf_small(fmt "\n", ##args)
+# define debug(fmt, args...)	printfl(fmt "\n", ##args)
 #else
 # define debug(fmt, args...)
 #endif
