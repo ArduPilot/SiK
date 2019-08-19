@@ -190,18 +190,14 @@ extern bool radio_receiver_on(void);
 extern bool radio_initialise(void);
 
 /// set the nominal radio transmit/receive frequencies
+/// and channel spacing
 ///
-/// This is the frequency of channel zero.
+/// The base frequency is the frequency of channel zero.
 ///
-/// @param value		The frequency in Hz
+/// @param base		The base frequency in Hz
+/// @param spacing	The channel spacing in Hz
 ///
-extern bool radio_set_frequency(__pdata uint32_t value);
-
-/// set the channel spacing used by the channel offset control
-///
-/// @param value		The channel spacing in Hz
-///
-extern bool radio_set_channel_spacing(__pdata uint32_t value);
+extern bool radio_set_frequency(__pdata uint32_t base, __pdata uint32_t spacing);
 
 /// set the channel for transmit/receive
 ///
