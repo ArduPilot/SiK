@@ -114,6 +114,8 @@
 #define INCLUDE_AES
 #define BOARD_rfd900u
 # include "board_rfd900u.h"
+#elif defined(BOARD_ism01a)
+# include "board_ism01a.h"
 #else
 # error Must define a BOARD_ value before including this file.
 #endif

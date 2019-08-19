@@ -413,10 +413,7 @@ radio_init(void)
 
 	// set the frequency and channel spacing
 	// change base freq based on netid
-	radio_set_frequency(freq_min);
-
-	// set channel spacing
-	radio_set_channel_spacing(channel_spacing);
+	radio_set_frequency(freq_min, channel_spacing);
 
 	// start on a channel chosen by network ID
 	radio_set_channel(param_get(PARAM_NETID) % num_fh_channels);
@@ -451,4 +448,3 @@ radio_init(void)
 	// initialise TDM system
 	tdm_init();
 }
-
