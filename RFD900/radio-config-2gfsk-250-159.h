@@ -1012,8 +1012,8 @@
 #endif // __RADIO_2G250159_CONFIG_WDS__
 
 
-//        _  _                          
-//       | )/ )         Wireless        
-//    \\ |//,' __       Application     
-//    (")(_)-"()))=-    Software        
-//       (\\            Platform        
+//        _  _
+//       | )/ )         Wireless
+//    \\ |//,' __       Application
+//    (")(_)-"()))=-    Software
+//       (\\            Platform

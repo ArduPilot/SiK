@@ -32,7 +32,7 @@
 ///
 /// Board-specific definitions and documentation for the RFD900P,
 /// Version 1.2 onwards.
-/// 
+///
 /// The RFD900 board provides pads for programming
 /// the Si1000 via the debug port.
 /// The pads are on the single horizontal header on the bottom of the board.
@@ -76,18 +76,18 @@
 
 // GPIO definitions (not exported)
 typedef enum {
-  GPIO_LED_RED		,
-  GPIO_LED_GREEN	,
-  GPIO_PIN_CONFIG ,
-  GPIO_PIN_ENABLE ,
-  GPIO_PIN_CTS,
-  GPIO_PIN_RTS,
-  GPIO_LAST
+    GPIO_LED_RED		,
+    GPIO_LED_GREEN	,
+    GPIO_PIN_CONFIG,
+    GPIO_PIN_ENABLE,
+    GPIO_PIN_CTS,
+    GPIO_PIN_RTS,
+    GPIO_LAST
 } GPIO_SELECT_TypeDef;
 
-typedef struct{
-	GPIO_Port_TypeDef Port;
-	unsigned int Pin;
+typedef struct {
+    GPIO_Port_TypeDef Port;
+    unsigned int Pin;
 } GPIO_Port_Pin_TypeDef;
 
 #define LED_RED				{gpioPortF,11}

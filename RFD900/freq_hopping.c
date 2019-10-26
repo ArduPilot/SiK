@@ -69,101 +69,105 @@ static uint8_t num_channels;																										// altered number of chann
 // http://benpfaff.org/writings/clc/shuffle.html
 static inline void shuffle(uint8_t *array, uint8_t n)
 {
-	uint8_t i;
-	for (i = 0; i < n - 1; i++) {
-		uint8_t j = ((uint8_t)rand()) % n;
-		uint8_t t = array[j];
-		array[j] = array[i];
-		array[i] = t;
-	}
+    uint8_t i;
+    for (i = 0; i < n - 1; i++) {
+        uint8_t j = ((uint8_t)rand()) % n;
+        uint8_t t = array[j];
+        array[j] = array[i];
+        array[i] = t;
+    }
 }
 
 // initialise frequency hopping logic
-void 
+void
 fhop_init(uint16_t netid)
 {
-	uint8_t i;
-	num_channels = num_fh_channels;
-	// create a random mapping between virtual and physical channel
-	// numbers, seeded by the network ID
-	for (i = 0; i < num_channels; i++)
-	{
-		channel_map[i] = i;
-	}
-  if (0 != param_s_get(PARAM_ENCRYPTION))
-  { srand(crc16(32, param_get_encryption_key()));}
-  else
-  {	srand(netid);}
-	shuffle(channel_map, num_channels);
-	if(0 == (num_channels&0x01))																									// if even number of channels
-	{
-		channel_map[num_channels]=channel_map[num_channels>>1];											// add one extra channel so we don't loop back to same channel each time
-		num_channels++;
-	}
+    uint8_t i;
+    num_channels = num_fh_channels;
+    // create a random mapping between virtual and physical channel
+    // numbers, seeded by the network ID
+    for (i = 0; i < num_channels; i++)
+    {
+        channel_map[i] = i;
+    }
+    if (0 != param_s_get(PARAM_ENCRYPTION))
+    {
+        srand(crc16(32, param_get_encryption_key()));
+    }
+    else
+    {
+        srand(netid);
+    }
+    shuffle(channel_map, num_channels);
+    if(0 == (num_channels&0x01))																									// if even number of channels
+    {
+        channel_map[num_channels]=channel_map[num_channels>>1];											// add one extra channel so we don't loop back to same channel each time
+        num_channels++;
+    }
 }
 
 // tell the TDM code what channel to transmit on
-uint8_t 
+uint8_t
 fhop_transmit_channel(void)
 {
-	return channel_map[transmit_channel];
+    return channel_map[transmit_channel];
 }
 
 // tell the TDM code what channel to receive on
-uint8_t 
+uint8_t
 fhop_receive_channel(void)
 {
-	return channel_map[receive_channel];
+    return channel_map[receive_channel];
 }
 
 // called when the transmit windows changes owner
-void 
+void
 fhop_window_change(void)
 {
-	static uint8_t loop=0;
-	transmit_channel = (transmit_channel + 1) % num_channels;
-	if (have_radio_lock)
-	{
-		receive_channel = transmit_channel;																					// when we have lock, the receive channel follows the transmit channel
-		loop = 0;
-	}
-	else if (transmit_channel == 0)																								// if transmit channels looped around
-	{
-		if(++loop >= 4)																															// if have looped around transmit channel sequence 4 times
-		{
-			loop = 0;
-			receive_channel++; 																												// increment receive channel
-			if( ((num_channels-1)     == receive_channel)||														// if it is the duplicate channel
-					(((num_channels-1)>>1)== receive_channel) )
-			{
-				receive_channel++;																											// skip this channel, do not sync on a duplicate
-			}
-			receive_channel = (receive_channel % num_channels);												// reset if looped
-		debug("Trying RCV on channel %d\n", (int)receive_channel);
-	}
-}
+    static uint8_t loop=0;
+    transmit_channel = (transmit_channel + 1) % num_channels;
+    if (have_radio_lock)
+    {
+        receive_channel = transmit_channel;																					// when we have lock, the receive channel follows the transmit channel
+        loop = 0;
+    }
+    else if (transmit_channel == 0)																								// if transmit channels looped around
+    {
+        if(++loop >= 4)																															// if have looped around transmit channel sequence 4 times
+        {
+            loop = 0;
+            receive_channel++; 																												// increment receive channel
+            if( ((num_channels-1)     == receive_channel)||														// if it is the duplicate channel
+                    (((num_channels-1)>>1)== receive_channel) )
+            {
+                receive_channel++;																											// skip this channel, do not sync on a duplicate
+            }
+            receive_channel = (receive_channel % num_channels);												// reset if looped
+            debug("Trying RCV on channel %d\n", (int)receive_channel);
+        }
+    }
 }
 
 // called when we get or lose radio lock
-void 
+void
 fhop_set_locked(bool locked)
 {
 #if DEBUG
-	if (locked && !have_radio_lock) {
-		debug("FH lock\n");
-	}
+    if (locked && !have_radio_lock) {
+        debug("FH lock\n");
+    }
 #endif
-	if (locked) {
-		// we have just received a packet, so we know the
-		// other radios transmit channel must be our receive
-		// channel
-		transmit_channel = receive_channel;
-	} else {																																			// else lost lock
-		if(have_radio_lock)																													// if locked last time
-		{
-			receive_channel = 0;																											// reset back to first channel
-	}
-	}
-	have_radio_lock = locked;
+    if (locked) {
+        // we have just received a packet, so we know the
+        // other radios transmit channel must be our receive
+        // channel
+        transmit_channel = receive_channel;
+    } else {																																			// else lost lock
+        if(have_radio_lock)																													// if locked last time
+        {
+            receive_channel = 0;																											// reset back to first channel
+        }
+    }
+    have_radio_lock = locked;
 }
 

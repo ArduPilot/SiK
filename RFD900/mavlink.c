@@ -49,32 +49,32 @@
 #define RADIO_SOURCE_COMPONENT 'D'
 
 /*
- * Calculates the MAVLink checksum on a packet in pbuf[] 
+ * Calculates the MAVLink checksum on a packet in pbuf[]
  * and append it after the data
  */
 static void mavlink_crc(uint8_t crc_extra, uint8_t *pbuf)
 {
-	register uint8_t length = pbuf[1];
-	uint16_t sum = 0xFFFF;
-	uint8_t i, stoplen;
+    register uint8_t length = pbuf[1];
+    uint16_t sum = 0xFFFF;
+    uint8_t i, stoplen;
 
-	stoplen = length + 6;
+    stoplen = length + 6;
 
-	// MAVLink 1.0 has an extra CRC seed
-	pbuf[length+6] = crc_extra;
-	stoplen++;
+    // MAVLink 1.0 has an extra CRC seed
+    pbuf[length+6] = crc_extra;
+    stoplen++;
 
-	i = 1;
-	while (i<stoplen) {
-		static uint8_t tmp;
-		tmp = pbuf[i] ^ (uint8_t)(sum&0xff);
-		tmp ^= (tmp<<4);
-		sum = (sum>>8) ^ (tmp<<8) ^ (tmp<<3) ^ (tmp>>4);
-		i++;
-	}
+    i = 1;
+    while (i<stoplen) {
+        static uint8_t tmp;
+        tmp = pbuf[i] ^ (uint8_t)(sum&0xff);
+        tmp ^= (tmp<<4);
+        sum = (sum>>8) ^ (tmp<<8) ^ (tmp<<3) ^ (tmp>>4);
+        i++;
+    }
 
-	pbuf[length+6] = sum&0xFF;
-	pbuf[length+7] = sum>>8;
+    pbuf[length+6] = sum&0xFF;
+    pbuf[length+7] = sum>>8;
 }
 
 
@@ -100,43 +100,43 @@ ardupilotmega.xml RADIO message, but is message ID 109 with
 a different CRC seed
 */
 struct __attribute__ ((__packed__)) mavlink_RADIO_v10 {
-	uint16_t rxerrors;
-	uint16_t fixed;
-	uint8_t rssi;
-	uint8_t remrssi;
-	uint8_t txbuf;
-	uint8_t noise;
-	uint8_t remnoise;
+    uint16_t rxerrors;
+    uint16_t fixed;
+    uint8_t rssi;
+    uint8_t remrssi;
+    uint8_t txbuf;
+    uint8_t noise;
+    uint8_t remnoise;
 };
 /// send a MAVLink status report packet
 /// we always send as MAVLink1 and let the recipient sort it out.
 void MAVLink_report(void)
 {
-	static uint8_t pbuf[6 + sizeof(struct mavlink_RADIO_v10)+5];
-	static uint8_t seqnum=0;
-	struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
-	pbuf[0] = MAVLINK10_STX;
-	pbuf[1] = sizeof(struct mavlink_RADIO_v10);
-	pbuf[2] = seqnum++;
-	pbuf[3] = RADIO_SOURCE_SYSTEM;
-	pbuf[4] = RADIO_SOURCE_COMPONENT;
-        pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
-  
-	m->rxerrors = errors.rx_errors;
-	m->fixed    = errors.corrected_packets;
-	m->txbuf    = serial_read_space();
-	m->rssi     = statistics.average_rssi;
-	m->remrssi  = remote_statistics.average_rssi;
-	m->noise    = statistics.average_noise;
-	m->remnoise = remote_statistics.average_noise;
-	mavlink_crc(MAVLINK_RADIO_STATUS_CRC_EXTRA,pbuf);
+    static uint8_t pbuf[6 + sizeof(struct mavlink_RADIO_v10)+5];
+    static uint8_t seqnum=0;
+    struct mavlink_RADIO_v10 *m = (struct mavlink_RADIO_v10 *)&pbuf[6];
+    pbuf[0] = MAVLINK10_STX;
+    pbuf[1] = sizeof(struct mavlink_RADIO_v10);
+    pbuf[2] = seqnum++;
+    pbuf[3] = RADIO_SOURCE_SYSTEM;
+    pbuf[4] = RADIO_SOURCE_COMPONENT;
+    pbuf[5] = MAVLINK_MSG_ID_RADIO_STATUS;
 
-	if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
-		// don't cause an overflow
-		return;
-	}
+    m->rxerrors = errors.rx_errors;
+    m->fixed    = errors.corrected_packets;
+    m->txbuf    = serial_read_space();
+    m->rssi     = statistics.average_rssi;
+    m->remrssi  = remote_statistics.average_rssi;
+    m->noise    = statistics.average_noise;
+    m->remnoise = remote_statistics.average_noise;
+    mavlink_crc(MAVLINK_RADIO_STATUS_CRC_EXTRA,pbuf);
 
-	serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
+    if (serial_write_space() < sizeof(struct mavlink_RADIO_v10)+8) {
+        // don't cause an overflow
+        return;
+    }
+
+    serial_write_buf(pbuf, sizeof(struct mavlink_RADIO_v10)+8);
 }
 
 #define MAVLINK_MSG_ID_STATUSTEXT 253
@@ -149,31 +149,31 @@ struct __attribute__ ((__packed__)) mavlink_STATUSTEXT_v10 {
 
 void MAVLink_statustext(const char *fmt, ...)
 {
-        static uint8_t pbuf[6 + sizeof(struct mavlink_STATUSTEXT_v10)+5];
-        static uint8_t seqnum=0;
-        struct mavlink_STATUSTEXT_v10 *m = (struct mavlink_STATUSTEXT_v10 *)&pbuf[6];
-	va_list ap;
-        
-        pbuf[0] = MAVLINK10_STX;
-        pbuf[1] = sizeof(struct mavlink_STATUSTEXT_v10);
-        pbuf[2] = seqnum++;
-        pbuf[3] = RADIO_SOURCE_SYSTEM;
-	pbuf[4] = RADIO_SOURCE_COMPONENT;
-        pbuf[5] = MAVLINK_MSG_ID_STATUSTEXT;
+    static uint8_t pbuf[6 + sizeof(struct mavlink_STATUSTEXT_v10)+5];
+    static uint8_t seqnum=0;
+    struct mavlink_STATUSTEXT_v10 *m = (struct mavlink_STATUSTEXT_v10 *)&pbuf[6];
+    va_list ap;
 
-	m->severity = 0;
-        memset(m->text, 0, sizeof(m->text));
-        printf_start_capture((uint8_t*)m->text, sizeof(m->text));
-        va_start(ap, fmt);
-        vprintfl(fmt, ap);
-        va_end(ap);
-        printf_end_capture();
-	mavlink_crc(MAVLINK_STATUSTEXT_CRC_EXTRA,pbuf);
+    pbuf[0] = MAVLINK10_STX;
+    pbuf[1] = sizeof(struct mavlink_STATUSTEXT_v10);
+    pbuf[2] = seqnum++;
+    pbuf[3] = RADIO_SOURCE_SYSTEM;
+    pbuf[4] = RADIO_SOURCE_COMPONENT;
+    pbuf[5] = MAVLINK_MSG_ID_STATUSTEXT;
 
-	if (serial_write_space() < sizeof(struct mavlink_STATUSTEXT_v10)+8) {
-		// don't cause an overflow
-		return;
-	}
+    m->severity = 0;
+    memset(m->text, 0, sizeof(m->text));
+    printf_start_capture((uint8_t*)m->text, sizeof(m->text));
+    va_start(ap, fmt);
+    vprintfl(fmt, ap);
+    va_end(ap);
+    printf_end_capture();
+    mavlink_crc(MAVLINK_STATUSTEXT_CRC_EXTRA,pbuf);
 
-	serial_write_buf(pbuf, sizeof(struct mavlink_STATUSTEXT_v10)+8);
+    if (serial_write_space() < sizeof(struct mavlink_STATUSTEXT_v10)+8) {
+        // don't cause an overflow
+        return;
+    }
+
+    serial_write_buf(pbuf, sizeof(struct mavlink_STATUSTEXT_v10)+8);
 }

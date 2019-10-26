@@ -83,141 +83,141 @@ static char *ltoa(long num, char *str, int radix);
 
 static void output_char(char c)
 {
-	if (!capture) {
-		putChar(c);
-		return;
-	}
-	if (captured_size < capture_buffer_size) {
-		capture_buffer[captured_size++] = c;
-	}
+    if (!capture) {
+        putChar(c);
+        return;
+    }
+    if (captured_size < capture_buffer_size) {
+        capture_buffer[captured_size++] = c;
+    }
 }
 
 // start capturing bytes from printf()
 void printf_start_capture(uint8_t *buf, uint16_t size)
 {
-	capture_buffer = buf;
-	captured_size = 0;
-	capture_buffer_size = size;
-	capture = true;
+    capture_buffer = buf;
+    captured_size = 0;
+    capture_buffer_size = size;
+    capture = true;
 }
 
 // end capture, returning number of bytes that have been captured
 uint16_t
 printf_end_capture(void)
 {
-	capture = false;
-	return captured_size;
+    capture = false;
+    return captured_size;
 }
 
 void vprintfl(const char * fmt, va_list ap)
 {
-	for (; *fmt; fmt++) {
-		if (*fmt == '%') {
-			long_flag = string_flag = char_flag = unsigned_flag = pad_length = 0;
-			fmt++;
-			switch (*fmt) {
-			case 'l':
-				long_flag = 1;
-				fmt++;
-				break;
-			case 'h':
-				char_flag = 1;
-				fmt++;
-			}
+    for (; *fmt; fmt++) {
+        if (*fmt == '%') {
+            long_flag = string_flag = char_flag = unsigned_flag = pad_length = 0;
+            fmt++;
+            switch (*fmt) {
+            case 'l':
+                long_flag = 1;
+                fmt++;
+                break;
+            case 'h':
+                char_flag = 1;
+                fmt++;
+            }
 
-			switch (*fmt) {
-			case 's':
-				string_flag = 1;
-				break;
-			case 'd':
-				radix = 10;
-				break;
-			case 'u':
-				radix = 10;
-				unsigned_flag = 1;
-				break;
-			case 'x':
-				radix = 16;
-				unsigned_flag = 1;
-				break;
-			case 'X':
-				radix = 16;
-				unsigned_flag = 1;
-				pad_length = (long_flag)?(8):(4);
-				break;
-			case 'c':
-				radix = 0;
-				break;
-			case 'o':
-				radix = 8;
-				unsigned_flag = 1;
-				break;
-			}
+            switch (*fmt) {
+            case 's':
+                string_flag = 1;
+                break;
+            case 'd':
+                radix = 10;
+                break;
+            case 'u':
+                radix = 10;
+                unsigned_flag = 1;
+                break;
+            case 'x':
+                radix = 16;
+                unsigned_flag = 1;
+                break;
+            case 'X':
+                radix = 16;
+                unsigned_flag = 1;
+                pad_length = (long_flag)?(8):(4);
+                break;
+            case 'c':
+                radix = 0;
+                break;
+            case 'o':
+                radix = 8;
+                unsigned_flag = 1;
+                break;
+            }
 
-			if (string_flag) {
-				str = va_arg(ap, char *);
-				while (*str)
-					output_char(*str++);
-				continue;
-			}
+            if (string_flag) {
+                str = va_arg(ap, char *);
+                while (*str)
+                    output_char(*str++);
+                continue;
+            }
 
-			if (unsigned_flag) {
-				if (long_flag) {
-					val = va_arg(ap,unsigned long);
-				}
-				else if (char_flag) {
-					val = va_arg(ap,unsigned int);
-				} else {
-					val = va_arg(ap,unsigned int);
-				}
-			} else {
-				if (long_flag) {
-					val = va_arg(ap,long);
-				} else if (char_flag) {
-					val = va_arg(ap,int);
-				} else {
-					val = va_arg(ap,int);
-				}
-			}
+            if (unsigned_flag) {
+                if (long_flag) {
+                    val = va_arg(ap,unsigned long);
+                }
+                else if (char_flag) {
+                    val = va_arg(ap,unsigned int);
+                } else {
+                    val = va_arg(ap,unsigned int);
+                }
+            } else {
+                if (long_flag) {
+                    val = va_arg(ap,long);
+                } else if (char_flag) {
+                    val = va_arg(ap,int);
+                } else {
+                    val = va_arg(ap,int);
+                }
+            }
 
-			if (radix) {
-				static char buffer[12]; /* 37777777777(oct) */
-				char * stri;
+            if (radix) {
+                static char buffer[12]; /* 37777777777(oct) */
+                char * stri;
 
-				if (unsigned_flag) {
-					ultoapad(val, buffer, radix,pad_length);
-				} else {
-					ltoa(val, buffer, radix);
-				}
-				stri = buffer;
-				while (*stri) {
-					output_char(*stri);
-					stri++;
-				}
-			} else {
-				output_char((char) val);
-			}
+                if (unsigned_flag) {
+                    ultoapad(val, buffer, radix,pad_length);
+                } else {
+                    ltoa(val, buffer, radix);
+                }
+                stri = buffer;
+                while (*stri) {
+                    output_char(*stri);
+                    stri++;
+                }
+            } else {
+                output_char((char) val);
+            }
 
-		} else {
-			output_char(*fmt);
-		}
-	}
+        } else {
+            output_char(*fmt);
+        }
+    }
 }
 
 void printfl(const char *fmt, ...)
 {
-	va_list ap;
+    va_list ap;
 
-	va_start(ap,fmt);
-	vprintfl(fmt, ap);
-        va_end(ap);
+    va_start(ap,fmt);
+    vprintfl(fmt, ap);
+    va_end(ap);
 }
 
 static char *ultoapad(unsigned long num, char *str, int radix,int8_t displaydigits)
 {
     char temp[33];  //an int can only be 16 bits long
-                    //at radix 2 (binary) the string
-                    //is at most 16 + 1 null long.
+    //at radix 2 (binary) the string
+    //is at most 16 + 1 null long.
     int temp_loc = 0;
     int digit;
     int str_loc = 0;
@@ -234,18 +234,20 @@ static char *ultoapad(unsigned long num, char *str, int radix,int8_t displaydigi
 
     temp_loc--;
     displaydigits --;
-    if(displaydigits < temp_loc){displaydigits = temp_loc;}
+    if(displaydigits < temp_loc) {
+        displaydigits = temp_loc;
+    }
     while(displaydigits >= 0)
     {
-    	if(displaydigits > temp_loc)
-    	{
-    		str[str_loc++] = '0';
-    	}
-    	else
-    	{
-    		str[str_loc++] = temp[displaydigits];
-    	}
-    	displaydigits--;
+        if(displaydigits > temp_loc)
+        {
+            str[str_loc++] = '0';
+        }
+        else
+        {
+            str[str_loc++] = temp[displaydigits];
+        }
+        displaydigits--;
     }
     str[str_loc] = 0; // add null termination.
 
@@ -256,8 +258,8 @@ static char *ltoa(long num, char *str, int radix)
 {
     char sign = 0;
     char temp[33];  //an int can only be 32 bits long
-                    //at radix 2 (binary) the string
-                    //is at most 16 + 1 null long.
+    //at radix 2 (binary) the string
+    //is at most 16 + 1 null long.
     int temp_loc = 0;
     int digit;
     int str_loc = 0;

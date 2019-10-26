@@ -44,30 +44,31 @@
 #define PINS_USER_MAX 6
 
 typedef enum {
-  PINS_USER_P1_0				=0,
-  PINS_USER_P1_1				,
-  PINS_USER_P1_2				,
-  PINS_USER_P1_3				,
-  PINS_USER_P3_3				,
-  PINS_USER_P3_4				,
-  PINS_USER_LAST
+    PINS_USER_P1_0				=0,
+    PINS_USER_P1_1				,
+    PINS_USER_P1_2				,
+    PINS_USER_P1_3				,
+    PINS_USER_P3_3				,
+    PINS_USER_P3_4				,
+    PINS_USER_LAST
 } PINS_USER_TypeDef;
 
 #define PINS_ABS_MAX 10
 #define PIN_MAX (PINS_USER_MAX < PINS_ABS_MAX ? PINS_USER_MAX : PINS_ABS_MAX)
 
 enum pin_state { PIN_OUTPUT=true, PIN_INPUT=false,
-				 PIN_HIGH=true,   PIN_LOW=false,
-				 PIN_NULL=0xFF,   PIN_MIRROR=0x80,
-				 PIN_ERROR=0x7F };
+                 PIN_HIGH=true,   PIN_LOW=false,
+                 PIN_NULL=0xFF,   PIN_MIRROR=0x80,
+                 PIN_ERROR=0x7F
+               };
 
 /// In-ROM parameter info table. Changed by ATP commands
 /// When changing this structure, PINS_USER_INFO_DEFAULT and param_default() need updating
 ///
 typedef struct pins_user_info {
-	uint16_t   output:4;
-	uint16_t   pin_dir:4;
-	uint16_t   pin_mirror:8;
+    uint16_t   output:4;
+    uint16_t   pin_dir:4;
+    uint16_t   pin_mirror:8;
 } pins_user_info_t;
 
 #define PINS_USER_INFO_DEFAULT {PIN_OUTPUT, PIN_LOW, PIN_NULL}

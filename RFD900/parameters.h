@@ -51,47 +51,47 @@
 #include "board_rfd900e.h"
 
 enum Param_S_ID {
-	PARAM_FORMAT = 0,       // Must always be parameter 0
-	PARAM_SERIAL_SPEED,     // BAUD_RATE_* constant
-	PARAM_AIR_SPEED,        // over the air baud rate
-	PARAM_NETID,            // network ID
-	PARAM_TXPOWER,          // transmit power (dBm)
-	PARAM_ECC,              // ECC using golay encoding
-	PARAM_MAVLINK,          // MAVLink framing, 0=ignore, 1=use, 2=rc-override
-	PARAM_OPPRESEND,        // opportunistic resend
-	PARAM_MIN_FREQ,         // min frequency in MHz
-	PARAM_MAX_FREQ,         // max frequency in MHz
-	PARAM_NUM_CHANNELS,     // number of hopping channels
-	PARAM_DUTY_CYCLE,       // duty cycle (percentage)
-	PARAM_LBT_RSSI,         // listen before talk threshold
+    PARAM_FORMAT = 0,       // Must always be parameter 0
+    PARAM_SERIAL_SPEED,     // BAUD_RATE_* constant
+    PARAM_AIR_SPEED,        // over the air baud rate
+    PARAM_NETID,            // network ID
+    PARAM_TXPOWER,          // transmit power (dBm)
+    PARAM_ECC,              // ECC using golay encoding
+    PARAM_MAVLINK,          // MAVLink framing, 0=ignore, 1=use, 2=rc-override
+    PARAM_OPPRESEND,        // opportunistic resend
+    PARAM_MIN_FREQ,         // min frequency in MHz
+    PARAM_MAX_FREQ,         // max frequency in MHz
+    PARAM_NUM_CHANNELS,     // number of hopping channels
+    PARAM_DUTY_CYCLE,       // duty cycle (percentage)
+    PARAM_LBT_RSSI,         // listen before talk threshold
 //	PARAM_MANCHESTER,       // enable manchester encoding
-	PARAM_RTSCTS,           // enable hardware flow control
-	PARAM_MAX_WINDOW,       // The maximum window size allowed
-	PARAM_ENCRYPTION,     	// no Enycryption (0), 128 or 256 bit key
-	PARAM_RCIN,     				// enable RC PPM Input
-	PARAM_RCOUT,     				// enable RC PPM Output
-	PARAM_NODEID,
-	PARAM_S_MAX             // must be last
+    PARAM_RTSCTS,           // enable hardware flow control
+    PARAM_MAX_WINDOW,       // The maximum window size allowed
+    PARAM_ENCRYPTION,     	// no Enycryption (0), 128 or 256 bit key
+    PARAM_RCIN,     				// enable RC PPM Input
+    PARAM_RCOUT,     				// enable RC PPM Output
+    PARAM_NODEID,
+    PARAM_S_MAX             // must be last
 };
 
 enum Param_R_ID {
-	PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
-	PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
-	PARAM_R_MAX             // Must be last
+    PARAM_R_TARGET_RSSI =0, // Change power dynamically to matain target RSSI
+    PARAM_R_HYSTERESIS_RSSI,// Hysteresis on the dynamic RSSI
+    PARAM_R_MAX             // Must be last
 };
 
-typedef enum{
-	CalParam_BAND=BOARD_MAXTXPOWER+1,
-	CalParam_Country,
-	CalParam_LAST,
+typedef enum {
+    CalParam_BAND=BOARD_MAXTXPOWER+1,
+    CalParam_Country,
+    CalParam_LAST,
 }	CalParm_t;
 
-typedef enum{
-	PT_Int=0,
-	PT_Bool,
-	PT_List,
-	PT_Last,
-	PT_SIZEFIX = 0xff
+typedef enum {
+    PT_Int=0,
+    PT_Bool,
+    PT_List,
+    PT_Last,
+    PT_SIZEFIX = 0xff
 } ParamType_t;
 
 

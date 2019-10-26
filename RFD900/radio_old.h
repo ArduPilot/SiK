@@ -83,38 +83,38 @@
 //#define SYSCLK	48000000UL
 
 /// staticstics maintained by the radio code
-typedef struct{
-	uint8_t average_rssi;
-	uint8_t average_noise;
-	uint16_t receive_count;
+typedef struct {
+    uint8_t average_rssi;
+    uint8_t average_noise;
+    uint16_t receive_count;
 } statistics_t;
 
 
 typedef struct {
-	uint16_t rx_errors;		///< count of packet receive errors
-	uint16_t tx_errors;		///< count of packet transmit errors
-	uint16_t serial_tx_overflow;    ///< count of serial transmit overflows
-	uint16_t serial_rx_overflow;    ///< count of serial receive overflows
-	uint16_t corrected_errors;      ///< count of words corrected by golay code
-	uint16_t corrected_packets;     ///< count of packets corrected by golay code
+    uint16_t rx_errors;		///< count of packet receive errors
+    uint16_t tx_errors;		///< count of packet transmit errors
+    uint16_t serial_tx_overflow;    ///< count of serial transmit overflows
+    uint16_t serial_rx_overflow;    ///< count of serial receive overflows
+    uint16_t corrected_errors;      ///< count of words corrected by golay code
+    uint16_t corrected_packets;     ///< count of packets corrected by golay code
 } error_counts_t;
 
-typedef struct{
-	uint32_t frequency;
-	uint32_t channel_spacing;
-	uint16_t air_data_rate;
-	uint8_t current_channel;
-	uint8_t transmit_power;
-	uint8_t preamble_length; // in nibbles
-	uint16_t networkID;
+typedef struct {
+    uint32_t frequency;
+    uint32_t channel_spacing;
+    uint16_t air_data_rate;
+    uint8_t current_channel;
+    uint8_t transmit_power;
+    uint8_t preamble_length; // in nibbles
+    uint16_t networkID;
 } radio_settings_t;
 
 enum BoardFrequency {
-        //FREQ_433	= 0x43,
-        //FREQ_470	= 0x47,
-        FREQ_868	= 0x86,
-        FREQ_915	= 0x91,
-        FREQ_NONE	= 0xf0,
+    //FREQ_433	= 0x43,
+    //FREQ_470	= 0x47,
+    FREQ_868	= 0x86,
+    FREQ_915	= 0x91,
+    FREQ_NONE	= 0xf0,
 };
 
 #define BoardFrequencyValid(a) ((a==FREQ_868)||(a==FREQ_915))
@@ -231,7 +231,7 @@ extern uint16_t radio_air_rate(void);
 /// set the radio transmit power (in dBm)
 ///
 /// @param power		The desired transmit power in dBm
-///				
+///
 ///
 extern void radio_set_transmit_power(uint8_t power);
 
@@ -247,7 +247,7 @@ extern uint8_t radio_change_transmit_power(bool increment, uint8_t maxPower);
 /// get the currend transmit power (in dBm)
 ///
 /// @return			The actual transmit power in dBm
-///				
+///
 ///
 extern uint8_t radio_get_transmit_power(void);
 

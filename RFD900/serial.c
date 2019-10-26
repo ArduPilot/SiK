@@ -28,8 +28,8 @@
 /// rate is chosen then 57600 is used
 ///
 typedef struct {
-	uint8_t rate;
-	uint32_t BAUD;
+    uint8_t rate;
+    uint32_t BAUD;
 } serial_rates_t;
 
 #define RX_BUFF_MAX 2048
@@ -41,15 +41,15 @@ typedef struct {
 // ******************** local variables ******************************
 static UART_Config_t UART_Config = UART_SETUP;
 static const 	serial_rates_t serial_rates[] = {
-	{1,   1200  }, // 1200
-	{2,   2400  }, // 2400
-	{4,   4800  }, // 4800
-	{9,   9600  }, // 9600
-	{19,  19200 }, // 19200
-	{38,  38400 }, // 38400
-	{57,  57600 }, // 57600 - default
-	{115, 115200}, // 115200
-	{230, 230400}, // 230400
+    {1,   1200  }, // 1200
+    {2,   2400  }, // 2400
+    {4,   4800  }, // 4800
+    {9,   9600  }, // 9600
+    {19,  19200 }, // 19200
+    {38,  38400 }, // 38400
+    {57,  57600 }, // 57600 - default
+    {115, 115200}, // 115200
+    {230, 230400}, // 230400
 };
 // Serial rx/tx buffers.
 //
@@ -106,89 +106,93 @@ __STATIC_INLINE void XUARTX_RX_IRQHandler(uint8_t c);
 
 __STATIC_INLINE void XUARTX_RX_IRQHandler(uint8_t c)
 {
-	if (at_mode_active)											// if AT mode is active, the AT processor owns the byte
-	{
-		if (!at_cmd_ready)										// If an AT command is ready/being processed, we would ignore this byte
-		{
-			at_input(c);
-		}
-	}
-	else
-	{
-		at_plus_detector(c);									// run the byte past the +++ detector
-		if (BUF_NOT_FULL(rx))									// and queue it for general reception
-		{
-			BUF_INSERT(rx, c);
-		}
-		else
-		{
-			if (errors.serial_rx_overflow != 0xFFFF)
-			{
-				errors.serial_rx_overflow++;
-			}
-		}
+    if (at_mode_active)											// if AT mode is active, the AT processor owns the byte
+    {
+        if (!at_cmd_ready)										// If an AT command is ready/being processed, we would ignore this byte
+        {
+            at_input(c);
+        }
+    }
+    else
+    {
+        at_plus_detector(c);									// run the byte past the +++ detector
+        if (BUF_NOT_FULL(rx))									// and queue it for general reception
+        {
+            BUF_INSERT(rx, c);
+        }
+        else
+        {
+            if (errors.serial_rx_overflow != 0xFFFF)
+            {
+                errors.serial_rx_overflow++;
+            }
+        }
 #ifdef SERIAL_CTS
-		if (BUF_FREE(rx) < SERIAL_CTS_THRESHOLD_LOW)
-		{
-			GPIOSet(UART_Config.GPIOCTS,true);
-		}
+        if (BUF_FREE(rx) < SERIAL_CTS_THRESHOLD_LOW)
+        {
+            GPIOSet(UART_Config.GPIOCTS,true);
+        }
 #endif
-	}
+    }
 }
 
 __STATIC_INLINE void XUARTX_TX_IRQHandler(LEUART_TypeDef* LEUARTX,USART_TypeDef* USARTX)
 {
-	uint8_t c;
+    uint8_t c;
 
-	if (BUF_NOT_EMPTY(tx))								// look for another byte we can send
-	{
+    if (BUF_NOT_EMPTY(tx))								// look for another byte we can send
+    {
 #ifdef SERIAL_RTS
-		static uint8_t rts_count=0;						// count of number of bytes we are allowed to send due to a RTS low reading
-		if (feature_rtscts)
-		{
-			if (GPIOGet(UART_Config.GPIORTS) && !at_mode_active)
-			{
-				if (rts_count == 0)
-				{
-					tx_idle = true;									// the other end doesn't have room in its serial buffer
-					return;
-				}
-				rts_count--;
-			}
-			else
-			{
-				rts_count = 8;
-			}
-		}
+        static uint8_t rts_count=0;						// count of number of bytes we are allowed to send due to a RTS low reading
+        if (feature_rtscts)
+        {
+            if (GPIOGet(UART_Config.GPIORTS) && !at_mode_active)
+            {
+                if (rts_count == 0)
+                {
+                    tx_idle = true;									// the other end doesn't have room in its serial buffer
+                    return;
+                }
+                rts_count--;
+            }
+            else
+            {
+                rts_count = 8;
+            }
+        }
 #endif
-		// fetch and send a byte
-		BUF_REMOVE(tx, c);
-		{
-			USART_Tx(USARTX, c);
-		}
-	}
-	else
-	{
-		tx_idle = true;												// note that the transmitter requires a kick to restart it
-	}
+        // fetch and send a byte
+        BUF_REMOVE(tx, c);
+        {
+            USART_Tx(USARTX, c);
+        }
+    }
+    else
+    {
+        tx_idle = true;												// note that the transmitter requires a kick to restart it
+    }
 }
 
 
 __STATIC_INLINE void USARTX_RX_IRQHandler(USART_TypeDef* USARTX)
 {
-	uint8_t c = USARTX->RXDATA;
-	USARTX->IFC = USART_IF_RXDATAV;
-	XUARTX_RX_IRQHandler(c);
+    uint8_t c = USARTX->RXDATA;
+    USARTX->IFC = USART_IF_RXDATAV;
+    XUARTX_RX_IRQHandler(c);
 }
 __STATIC_INLINE void USARTX_TX_IRQHandler(USART_TypeDef* USARTX)
 {
-	USARTX->IFC = USART_IF_TXC;
-	XUARTX_TX_IRQHandler(NULL,USARTX);
+    USARTX->IFC = USART_IF_TXC;
+    XUARTX_TX_IRQHandler(NULL,USARTX);
 }
 
 // remove any not needed, or leave them
-void USART1_RX_IRQHandler(void){	USARTX_RX_IRQHandler(USART1);}
-void USART1_TX_IRQHandler(void){	USARTX_TX_IRQHandler(USART1);}
+void USART1_RX_IRQHandler(void) {
+    USARTX_RX_IRQHandler(USART1);
+}
+void USART1_TX_IRQHandler(void) {
+    USARTX_TX_IRQHandler(USART1);
+}
 
 
 /// check if RTS allows us to send more data
@@ -196,235 +200,235 @@ void USART1_TX_IRQHandler(void){	USARTX_TX_IRQHandler(USART1);}
 void Serial_Check(void)
 //void serial_check_rts(void)
 {
-	if (BUF_NOT_EMPTY(tx) && tx_idle) {
-		serial_restart();
-	}
+    if (BUF_NOT_EMPTY(tx) && tx_idle) {
+        serial_restart();
+    }
 }
 
 void serial_init(register uint8_t speed)
 {
-	uint8_t idx=0;
-	// reset buffer state, discard all data
-	rx_insert = 0;
-	tx_remove = 0;
-	tx_insert = 0;
-	tx_remove = 0;
-	tx_idle = true;
+    uint8_t idx=0;
+    // reset buffer state, discard all data
+    rx_insert = 0;
+    tx_remove = 0;
+    tx_insert = 0;
+    tx_remove = 0;
+    tx_idle = true;
 
 #ifdef SERIAL_CTS
-	// setting SERIAL_CTS low tells the other end that we have
-	// buffer space available
-	GPIOSet(UART_Config.GPIOCTS,false);
+    // setting SERIAL_CTS low tells the other end that we have
+    // buffer space available
+    GPIOSet(UART_Config.GPIOCTS,false);
 #endif
-	idx = serial_device_set_speed(speed);
+    idx = serial_device_set_speed(speed);
 
-	GPIO_PinModeSet(gpioPortD,7,gpioModePushPull, 1);
-	GPIO_PinModeSet(gpioPortD,6,gpioModeInput   , 0);
+    GPIO_PinModeSet(gpioPortD,7,gpioModePushPull, 1);
+    GPIO_PinModeSet(gpioPortD,6,gpioModeInput, 0);
 
-	UART_Config_t *Config = &UART_Config;
-  if(NULL != Config->USART)
-  {
-    USART_InitAsync_TypeDef Init = USART_INITASYNC_DEFAULT;
-    CMU_ClockEnable(Config->clock, true);
-    Init.baudrate = serial_rates[idx].BAUD;
-    Init.databits = (Databits8==Config->Databits)?(usartDatabits8):(usartDatabits9);
-    Init.parity = (NoParity==Config->Parity)?(usartNoParity):((EvenParity==Config->Parity)?(usartEvenParity):(usartOddParity));
-    Init.stopbits = (Stopbits1 == Config->Stopbits)?(usartStopbits1):(usartStopbits2);
-    Init.enable = false;  // enable later after everything set up
-    Init.oversampling = usartOVS4;
-    USART_InitAsync(Config->USART,&Init);
+    UART_Config_t *Config = &UART_Config;
+    if(NULL != Config->USART)
+    {
+        USART_InitAsync_TypeDef Init = USART_INITASYNC_DEFAULT;
+        CMU_ClockEnable(Config->clock, true);
+        Init.baudrate = serial_rates[idx].BAUD;
+        Init.databits = (Databits8==Config->Databits)?(usartDatabits8):(usartDatabits9);
+        Init.parity = (NoParity==Config->Parity)?(usartNoParity):((EvenParity==Config->Parity)?(usartEvenParity):(usartOddParity));
+        Init.stopbits = (Stopbits1 == Config->Stopbits)?(usartStopbits1):(usartStopbits2);
+        Init.enable = false;  // enable later after everything set up
+        Init.oversampling = usartOVS4;
+        USART_InitAsync(Config->USART,&Init);
 
-    USART_IntClear(Config->USART, _USART_IFC_MASK  );
-    USART_IntEnable(Config->USART,USART_IEN_RXDATAV);
-    USART_IntEnable(Config->USART,USART_IEN_TXC);
-    NVIC_ClearPendingIRQ(((USART1 == Config->USART)?(USART1_TX_IRQn):
-                                                   (USART2_TX_IRQn)));
-    NVIC_EnableIRQ(((USART1 == Config->USART)?(USART1_TX_IRQn):
-                                              (USART2_TX_IRQn)));
-    NVIC_ClearPendingIRQ(((USART1 == Config->USART)?(USART1_RX_IRQn):
-                                                   (USART2_RX_IRQn)));
-    /* Enable the correspondent vector to the processor */
-    NVIC_EnableIRQ(((USART1 == Config->USART)?(USART1_RX_IRQn):
-                                            (USART2_RX_IRQn)));
-    // configure location
-    Config->USART->ROUTE = USART_ROUTE_RXPEN | USART_ROUTE_TXPEN | Config->location;
-    USART_Enable(Config->USART,usartEnable); // enable rx and tx
-  }
+        USART_IntClear(Config->USART, _USART_IFC_MASK  );
+        USART_IntEnable(Config->USART,USART_IEN_RXDATAV);
+        USART_IntEnable(Config->USART,USART_IEN_TXC);
+        NVIC_ClearPendingIRQ(((USART1 == Config->USART)?(USART1_TX_IRQn):
+                              (USART2_TX_IRQn)));
+        NVIC_EnableIRQ(((USART1 == Config->USART)?(USART1_TX_IRQn):
+                        (USART2_TX_IRQn)));
+        NVIC_ClearPendingIRQ(((USART1 == Config->USART)?(USART1_RX_IRQn):
+                              (USART2_RX_IRQn)));
+        /* Enable the correspondent vector to the processor */
+        NVIC_EnableIRQ(((USART1 == Config->USART)?(USART1_RX_IRQn):
+                        (USART2_RX_IRQn)));
+        // configure location
+        Config->USART->ROUTE = USART_ROUTE_RXPEN | USART_ROUTE_TXPEN | Config->location;
+        USART_Enable(Config->USART,usartEnable); // enable rx and tx
+    }
 }
 
 bool serial_write(register uint8_t c)
 {
-	if (serial_write_space() < 1)
-		return false;
+    if (serial_write_space() < 1)
+        return false;
 
-	_serial_write(c);
-	return true;
+    _serial_write(c);
+    return true;
 }
 
 __STATIC_INLINE void EnableRXIRQ(bool On)
 {
-	if(NULL != UART_Config.USART)
-	{
-		(On)?(USART_IntEnable(UART_Config.USART,USART_IEN_RXDATAV)):
-				(USART_IntDisable(UART_Config.USART,USART_IEN_RXDATAV));
-	}
-	else
-	{
-		(On)?(LEUART_IntEnable(UART_Config.LEUART,LEUART_IEN_RXDATAV)):
-				(LEUART_IntDisable(UART_Config.LEUART,LEUART_IEN_RXDATAV));
-	}
+    if(NULL != UART_Config.USART)
+    {
+        (On)?(USART_IntEnable(UART_Config.USART,USART_IEN_RXDATAV)):
+        (USART_IntDisable(UART_Config.USART,USART_IEN_RXDATAV));
+    }
+    else
+    {
+        (On)?(LEUART_IntEnable(UART_Config.LEUART,LEUART_IEN_RXDATAV)):
+        (LEUART_IntDisable(UART_Config.LEUART,LEUART_IEN_RXDATAV));
+    }
 }
 
 __STATIC_INLINE void EnableTXIRQ(bool On)
 {
-	if(NULL != UART_Config.USART)
-	{
-		(On)?(USART_IntEnable(UART_Config.USART,USART_IEN_TXC)):
-				(USART_IntDisable(UART_Config.USART,USART_IEN_TXC));
-	}
-	else
-	{
-		(On)?(LEUART_IntEnable(UART_Config.LEUART,LEUART_IEN_TXC)):
-				(LEUART_IntDisable(UART_Config.LEUART,LEUART_IEN_TXC));
-	}
+    if(NULL != UART_Config.USART)
+    {
+        (On)?(USART_IntEnable(UART_Config.USART,USART_IEN_TXC)):
+        (USART_IntDisable(UART_Config.USART,USART_IEN_TXC));
+    }
+    else
+    {
+        (On)?(LEUART_IntEnable(UART_Config.LEUART,LEUART_IEN_TXC)):
+        (LEUART_IntDisable(UART_Config.LEUART,LEUART_IEN_TXC));
+    }
 }
 
 static void _serial_write(register uint8_t c)
 {
-	EnableTXIRQ(false);
-	// if we have space to store the character
-	if (BUF_NOT_FULL(tx)) {
+    EnableTXIRQ(false);
+    // if we have space to store the character
+    if (BUF_NOT_FULL(tx)) {
 
-		// queue the character
-		BUF_INSERT(tx, c);
+        // queue the character
+        BUF_INSERT(tx, c);
 
-		// if the transmitter is idle, restart it
-		if (tx_idle)
-			serial_restart();
-	} else if (errors.serial_tx_overflow != 0xFFFF) {
-		errors.serial_tx_overflow++;
-	}
-	EnableTXIRQ(true);
+        // if the transmitter is idle, restart it
+        if (tx_idle)
+            serial_restart();
+    } else if (errors.serial_tx_overflow != 0xFFFF) {
+        errors.serial_tx_overflow++;
+    }
+    EnableTXIRQ(true);
 }
 
 // write as many bytes as will fit into the serial transmit buffer
 void serial_write_buf(uint8_t * buf, uint8_t count)
 {
-	uint16_t space;
-	uint8_t n1;
+    uint16_t space;
+    uint8_t n1;
 
-	if (count == 0) {
-		return;
-	}
+    if (count == 0) {
+        return;
+    }
 
-	// discard any bytes that don't fit. We can't afford to
-	// wait for the buffer to drain as we could miss a frequency
-	// hopping transition
-	space = serial_write_space();	
-	if (count > space) {
-		count = space;
-		if (errors.serial_tx_overflow != 0xFFFF) {
-			errors.serial_tx_overflow++;
-		}
-	}
+    // discard any bytes that don't fit. We can't afford to
+    // wait for the buffer to drain as we could miss a frequency
+    // hopping transition
+    space = serial_write_space();
+    if (count > space) {
+        count = space;
+        if (errors.serial_tx_overflow != 0xFFFF) {
+            errors.serial_tx_overflow++;
+        }
+    }
 
-	// write to the end of the ring buffer
-	n1 = count;
-	if (n1 > sizeof(tx_buf) - tx_insert) {
-		n1 = sizeof(tx_buf) - tx_insert;
-	}
-	memcpy(&tx_buf[tx_insert], buf, n1);
-	buf += n1;
-	count -= n1;
-	{
-		tx_insert += n1;
-		if (tx_insert >= sizeof(tx_buf)) {
-			tx_insert -= sizeof(tx_buf);
-		}
-	}
+    // write to the end of the ring buffer
+    n1 = count;
+    if (n1 > sizeof(tx_buf) - tx_insert) {
+        n1 = sizeof(tx_buf) - tx_insert;
+    }
+    memcpy(&tx_buf[tx_insert], buf, n1);
+    buf += n1;
+    count -= n1;
+    {
+        tx_insert += n1;
+        if (tx_insert >= sizeof(tx_buf)) {
+            tx_insert -= sizeof(tx_buf);
+        }
+    }
 
-	// add any leftover bytes to the start of the ring buffer
-	if (count != 0) {
-		memcpy(&tx_buf[0], buf, count);
-		{
-			tx_insert = count;
-		}		
-	}
-	{
-		if (tx_idle) {
-			serial_restart();
-		}
-	}
+    // add any leftover bytes to the start of the ring buffer
+    if (count != 0) {
+        memcpy(&tx_buf[0], buf, count);
+        {
+            tx_insert = count;
+        }
+    }
+    {
+        if (tx_idle) {
+            serial_restart();
+        }
+    }
 }
 
 uint16_t serial_write_space(void)
 {
-	uint16_t ret;
-	EnableTXIRQ(false);
-	ret = BUF_FREE(tx);
-	EnableTXIRQ(true);
-	return ret;
+    uint16_t ret;
+    EnableTXIRQ(false);
+    ret = BUF_FREE(tx);
+    EnableTXIRQ(true);
+    return ret;
 }
 
 static void serial_restart(void)
 {
 #ifdef SERIAL_RTS
-	if (feature_rtscts && GPIOGet(UART_Config.GPIORTS) && !at_mode_active) {
-		// the line is blocked by hardware flow control
-		return;
-	}
+    if (feature_rtscts && GPIOGet(UART_Config.GPIORTS) && !at_mode_active) {
+        // the line is blocked by hardware flow control
+        return;
+    }
 #endif
-	// generate a transmit-done interrupt to force the handler to send another byte
-	tx_idle = false;
-  (NULL != UART_Config.USART)?(UART_Config.USART->IFS = USART_IFS_TXC):(UART_Config.LEUART->IFS = LEUART_IFS_TXC);
+    // generate a transmit-done interrupt to force the handler to send another byte
+    tx_idle = false;
+    (NULL != UART_Config.USART)?(UART_Config.USART->IFS = USART_IFS_TXC):(UART_Config.LEUART->IFS = LEUART_IFS_TXC);
 }
 
 uint8_t serial_read(void)
 {
-	register uint8_t	c;
+    register uint8_t	c;
 
-	EnableRXIRQ(false);
-	if (BUF_NOT_EMPTY(rx)) {
-		BUF_REMOVE(rx, c);
-	} else {
-		c = '\0';
-	}
+    EnableRXIRQ(false);
+    if (BUF_NOT_EMPTY(rx)) {
+        BUF_REMOVE(rx, c);
+    } else {
+        c = '\0';
+    }
 
 #ifdef SERIAL_CTS
-	if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
-	{
-		GPIOSet(UART_Config.GPIOCTS,false);
-	}
+    if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
+    {
+        GPIOSet(UART_Config.GPIOCTS,false);
+    }
 #endif
-	EnableRXIRQ(true);
-	return c;
+    EnableRXIRQ(true);
+    return c;
 }
 
 uint8_t serial_peek(void)
 {
-	register uint8_t c;
-	EnableRXIRQ(false);
-	c = BUF_PEEK(rx);
-	EnableRXIRQ(true);
-	return c;
+    register uint8_t c;
+    EnableRXIRQ(false);
+    c = BUF_PEEK(rx);
+    EnableRXIRQ(true);
+    return c;
 }
 
 uint8_t serial_peek2(void)
 {
-	register uint8_t c;
-	EnableRXIRQ(false);
-	c = BUF_PEEK2(rx);
-	EnableRXIRQ(true);
-	return c;
+    register uint8_t c;
+    EnableRXIRQ(false);
+    c = BUF_PEEK2(rx);
+    EnableRXIRQ(true);
+    return c;
 }
 
 uint8_t serial_peekx(uint16_t offset)
 {
-	register uint8_t c;
-	EnableRXIRQ(false);
-	c = BUF_PEEKX(rx, offset);
-	EnableRXIRQ(true);
-	return c;
+    register uint8_t c;
+    EnableRXIRQ(false);
+    c = BUF_PEEKX(rx, offset);
+    EnableRXIRQ(true);
+    return c;
 }
 
 // read count bytes from the serial buffer. This implementation
@@ -432,70 +436,70 @@ uint8_t serial_peekx(uint16_t offset)
 // for as short a time as possible
 bool serial_read_buf(uint8_t * buf, uint8_t count)
 {
-	uint16_t n1;
-	// the caller should have already checked this, 
-	// but lets be sure
-	if (count > serial_read_available()) {
-		return false;
-	}
-	// see how much we can copy from the tail of the buffer
-	n1 = count;
-	if (n1 > sizeof(rx_buf) - rx_remove) {
-		n1 = sizeof(rx_buf) - rx_remove;
-	}
-	memcpy(buf, &rx_buf[rx_remove], n1);
-	count -= n1;
-	buf += n1;
-	// update the remove marker with interrupts disabled
-	{
-		rx_remove += n1;
-		if (rx_remove >= sizeof(rx_buf)) {
-			rx_remove -= sizeof(rx_buf);
-		}
-	}
-	// any more bytes to do?
-	if (count > 0) {
-		memcpy(buf, &rx_buf[0], count);
-		{
-			rx_remove = count;
-		}		
-	}
+    uint16_t n1;
+    // the caller should have already checked this,
+    // but lets be sure
+    if (count > serial_read_available()) {
+        return false;
+    }
+    // see how much we can copy from the tail of the buffer
+    n1 = count;
+    if (n1 > sizeof(rx_buf) - rx_remove) {
+        n1 = sizeof(rx_buf) - rx_remove;
+    }
+    memcpy(buf, &rx_buf[rx_remove], n1);
+    count -= n1;
+    buf += n1;
+    // update the remove marker with interrupts disabled
+    {
+        rx_remove += n1;
+        if (rx_remove >= sizeof(rx_buf)) {
+            rx_remove -= sizeof(rx_buf);
+        }
+    }
+    // any more bytes to do?
+    if (count > 0) {
+        memcpy(buf, &rx_buf[0], count);
+        {
+            rx_remove = count;
+        }
+    }
 
 #ifdef SERIAL_CTS
-	{
-		if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
-		{
-			GPIOSet(UART_Config.GPIOCTS,false);
-		}
-	}
+    {
+        if (BUF_FREE(rx) > SERIAL_CTS_THRESHOLD_HIGH)
+        {
+            GPIOSet(UART_Config.GPIOCTS,false);
+        }
+    }
 #endif
-	return true;
+    return true;
 }
 
 uint16_t serial_read_available(void)
 {
-	register uint16_t ret;
-	EnableRXIRQ(false);
-	ret = BUF_USED(rx);
-	EnableRXIRQ(true);
-	return ret;
+    register uint16_t ret;
+    EnableRXIRQ(false);
+    ret = BUF_USED(rx);
+    EnableRXIRQ(true);
+    return ret;
 }
 
 // return available space in rx buffer as a percentage
 uint8_t serial_read_space(void)
 {
-	uint16_t space = sizeof(rx_buf) - serial_read_available();
-	space = (100 * (space/8)) / (sizeof(rx_buf)/8);
-	return space;
+    uint16_t space = sizeof(rx_buf) - serial_read_available();
+    space = (100 * (space/8)) / (sizeof(rx_buf)/8);
+    return space;
 }
 
 void putChar (char c)
 {
-	if (c == '\n')
-	{
-		_serial_write('\r');
-	}
-	_serial_write(c);
+    if (c == '\n')
+    {
+        _serial_write('\r');
+    }
+    _serial_write(c);
 }
 
 
@@ -505,35 +509,35 @@ void putChar (char c)
 //
 bool serial_device_valid_speed(register uint8_t speed)
 {
-	uint8_t i;
-	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
+    uint8_t i;
+    uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
-	for (i = 0; i < num_rates; i++) {
-		if (speed == serial_rates[i].rate) {
-			return true;
-		}
-	}
-	return false;
+    for (i = 0; i < num_rates; i++) {
+        if (speed == serial_rates[i].rate) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static uint8_t serial_device_set_speed(register uint8_t speed)
 {
-	uint8_t i;
-	uint8_t num_rates = ARRAY_LENGTH(serial_rates);
+    uint8_t i;
+    uint8_t num_rates = ARRAY_LENGTH(serial_rates);
 
-	for (i = 0; i < num_rates; i++) {
-		if (speed == serial_rates[i].rate) {
-			break;
-		}
-	}
-	if (i == num_rates) {
-		i = 6; // 57600 default
-	}
+    for (i = 0; i < num_rates; i++) {
+        if (speed == serial_rates[i].rate) {
+            break;
+        }
+    }
+    if (i == num_rates) {
+        i = 6; // 57600 default
+    }
 
-	// tell the packet layer how fast the serial link is. This is
-	// needed for packet framing timeouts
-	packet_set_serial_speed(speed*125UL);
-	return(i);
+    // tell the packet layer how fast the serial link is. This is
+    // needed for packet framing timeouts
+    packet_set_serial_speed(speed*125UL);
+    return(i);
 }
 
 

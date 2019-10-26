@@ -70,7 +70,7 @@ extern void packet_set_serial_speed(uint16_t speed);
 /// inject a packet to be sent when possible
 /// @param buf			buffer to send
 /// @param len			number of bytes
-///			
+///
 extern void packet_inject(uint8_t * buf, uint16_t len);
 
 // mavlink 1.0 and 2.0 markers

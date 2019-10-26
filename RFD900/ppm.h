@@ -12,11 +12,11 @@
 #define MAX_PPM_LEN 16																													// number of ppm channels
 #define DMA_BUFF_LEN (MAX_PPM_LEN+1)																						// one extra for start frame
 
-typedef enum{
-	PPMModeIn=0,
-	PPMModeOut,
-	PPMModeLast,
-	PPMModeSizeSet = 0xff
+typedef enum {
+    PPMModeIn=0,
+    PPMModeOut,
+    PPMModeLast,
+    PPMModeSizeSet = 0xff
 } PPMMode_t;
 
 bool PPMWrite(uint8_t *Data, uint16_t Len);																			// write one complete PPM stream to port
