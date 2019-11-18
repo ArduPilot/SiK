@@ -124,13 +124,11 @@ uint8_t mavlink_frame(uint8_t max_xmit, uint8_t * buf)
     while (slen >= 8) {
         register uint8_t c = serial_peekx(0);
         register uint8_t extra_len = 8;
-        register uint8_t msgid = serial_peekx(5);
         if (c != MAVLINK10_STX && c != MAVLINK20_STX) {
             // its not a MAVLink packet
             return last_sent_len;
         }
         if (c == MAVLINK20_STX) {
-            msgid = serial_peekx(7);
             extra_len += 4;
             if (serial_peekx(2) & 1) {
                 // signed packet

@@ -139,6 +139,7 @@ static const struct parameter_s_info {
     {"GPI1_1R/CIN",     PT_Bool,0,1,0,BoolList},
     {"GPO1_1R/COUT",    PT_Bool,0,1,0,BoolList},
     {"NODEID",          PT_Int,0,2,1,NULL    },
+    {"MAX_XMIT",        PT_Int,72,MAX_PACKET_LENGTH,MAX_PACKET_LENGTH,NULL},
 
 };
 

@@ -1480,9 +1480,10 @@ void tdm_init(void)
     {
         packet_latency = (5 + 8 + 2) * ticks_per_byte + ((100 + 8) / 16);
     }
+    uint8_t max_xmit_length = param_s_get(PARAM_MAX_XMIT);
     if (feature_golay)
     {
-        max_data_packet_length = ((MAX_PACKET_LENGTH-12)/2) - sizeof(trailer);
+        max_data_packet_length = ((max_xmit_length-12)/2) - sizeof(trailer);
 
         // and adds 6 bytes
         packet_latency += 6 * ticks_per_byte;
@@ -1492,7 +1493,7 @@ void tdm_init(void)
     }
     else
     {
-        max_data_packet_length = MAX_PACKET_LENGTH - sizeof(trailer);
+        max_data_packet_length = max_xmit_length - sizeof(trailer);
     }
 
     // set the silence period to two times the packet latency

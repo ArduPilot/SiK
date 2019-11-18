@@ -71,6 +71,7 @@ enum Param_S_ID {
     PARAM_RCIN,     				// enable RC PPM Input
     PARAM_RCOUT,     				// enable RC PPM Output
     PARAM_NODEID,
+    PARAM_MAX_XMIT,
     PARAM_S_MAX             // must be last
 };
 
