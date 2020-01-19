@@ -46,7 +46,7 @@
 #define CPU_SI1060
 
 #define BOARD_MINTXPOWER 0		// Minimum transmit power level
-#define BOARD_MAXTXPOWER 10		// Maximum transmit power level
+#define BOARD_MAXTXPOWER 0x7f	// Maximum transmit power level
 
 // GPIO definitions (not exported)
 SBIT(LED_RED,	   SFR_P1, 4);
@@ -84,7 +84,7 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 	} while(0)
 
 
-#define EZRADIOPRO_OSC_CAP_VALUE 0xb4
+#define EZRADIOPRO_OSC_CAP_VALUE 100
 
 SBIT(NSS1, SFR_SPI1CN, 2); // SI106x Internal Connection
 SBIT(SDN,  SFR_P0, 7);
