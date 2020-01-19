@@ -108,7 +108,7 @@ tx_hop;0x37;b inte, d3 frac, w vco_cnt, w pll_settle_time;;
 packet_info;0x16;b field_no, w len, w len_diff;w length;
 get_modem_status;0x22;b modem_clr_pend;b modem_pend, b modem_status, b curr_rssi, b latch_rssi, b ant1_rssi, b ant2_rssi, w afc_freq_offset;
 start_rx;0x32;b channel, b condition, w rx_len, b next_state1, b next_state2, b next_state3;;
-rx_hop;0x36;b inte, d3 frac,w vco_cnt,w pll_settle_time;;
+rx_hop;0x36;b inte, d3 frac,w vco_cnt;;
 get_property1;0x12;b group, bf 1, b start_prop;b data;
 set_property1;0x11;b group, bf 1, b start_prop, b data;;
 set_property2;0x11;b group, bf 2, b start_prop, b data1, b data2;;
@@ -137,33 +137,18 @@ def format_arg(arg):
 	argtype, argname = arg
 	return typemap[argtype] + " " + argname
 
-import itertools
-rets_zip = itertools.zip_longest(
-	*([rets for name, no, args, rets in cmds])
-)
-
-for no, rets in enumerate(rets_zip):
-	print("static union {")
-	for ret in list(set(rets)):
-		if ret is None:
-			continue
-		argtype, argname = ret
-		print("\t%s %s;" % (typemap[argtype], argname))
-	print("} ret%d;" % no)
-print()
-
 recvmap = { 'b': 'exchange_byte(0)', 'w': 'exchange_word(0)',
 			'd3': 'exchange_3bytes(0)', 'd': 'exchange_dword(0)' }
 for name, no, args, rets in cmds:
 	if len(rets) == 0:
 		continue
-	print("static void")
-	print(name + "_reply() __reentrant")
-	print("{")
-	print("  reply_open();")
-	for i, ret in enumerate(rets):
-		print("  ret%d.%s = %s;" % (i, ret[1], recvmap[ret[0]]))
-	print("  reply_close();")
+	print("#define %s_reply(" % name, end="")
+	print(*[name for typ, name in rets], sep=", ", end="")
+	print(") { \\")
+	print("\treply_open(); \\")
+	for typ, name in rets:
+		print("\t%s = %s; \\" % (name, recvmap[typ]))
+	print("\treply_close(); \\")
 	print("}")
 	print("")
 
@@ -188,24 +173,29 @@ for name, no, args, rets in cmds:
 
 print ('''
 
-static void
-frr_abc_read()
-{
-	NSS1 = 0;
-	exchange_byte(0x50);
-	ret0.frr_a = exchange_byte(0x0);
-	ret1.frr_b = exchange_byte(0x0);
-	ret2.frr_c = exchange_byte(0x0);
-	NSS1 = 1;
+#define frr_a_read(frr_a) \\
+{ \\
+	NSS1 = 0; \\
+	exchange_byte(0x50); \\
+	frr_a = exchange_byte(0x0); \\
+	NSS1 = 1; \\
 }
 
-static void
-frr_d_read()
-{
-	NSS1 = 0;
-	exchange_byte(0x57);
-	ret3.frr_d = exchange_byte(0x0);
-	NSS1 = 1;
+#define frr_bc_read(frr_b, frr_c) \\
+{ \\
+	NSS1 = 0; \\
+	exchange_byte(0x51); \\
+	frr_b = exchange_byte(0x0); \\
+	frr_c = exchange_byte(0x0); \\
+	NSS1 = 1; \\
+}
+
+#define frr_d_read(frr_d) \\
+{ \\
+	NSS1 = 0; \\
+	exchange_byte(0x57); \\
+	frr_d = exchange_byte(0x0); \\
+	NSS1 = 1; \\
 }
 
 ''')

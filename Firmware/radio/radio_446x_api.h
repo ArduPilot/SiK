@@ -88,212 +88,119 @@ write_tx_fifo(register uint8_t len, __xdata uint8_t * __pdata data)
 	NSS1 = 1;
 }
 
-static union {
-	uint8_t data;
-	uint8_t revext;
-	uint8_t ircal_amp_reply;
-	uint8_t int_pend;
-	uint8_t frr_a;
-	uint8_t rx_fifo_count;
-	uint8_t modem_pend;
-	uint16_t gpio_adc;
-	uint8_t ph_pend;
-	uint8_t curr_state;
-	uint8_t chiprev;
-	uint8_t gpio0;
-	uint16_t length;
-} ret0;
-static union {
-	uint8_t ph_status;
-	uint8_t rx_fifo_space;
-	uint16_t part;
-	uint8_t gpio1;
-	uint8_t revbranch;
-	uint8_t curr_channel;
-	uint8_t ircal_ph_reply;
-	uint16_t battery_adc;
-	uint8_t modem_status;
-	uint8_t int_status;
-	uint8_t frr_b;
-} ret1;
-static union {
-	uint8_t curr_rssi;
-	uint8_t revint;
-	uint8_t ph_pend;
-	uint16_t temp_adc;
-	uint8_t frr_c;
-	uint8_t pbuild;
-	uint8_t gpio2;
-} ret2;
-static union {
-	uint16_t id;
-	uint8_t ph_status;
-	uint8_t gpio3;
-	uint8_t frr_d;
-	uint16_t patch;
-	uint8_t latch_rssi;
-} ret3;
-static union {
-	uint8_t func;
-	uint8_t nirq;
-	uint8_t modem_pend;
-	uint8_t ant1_rssi;
-	uint8_t customer;
-} ret4;
-static union {
-	uint8_t sdo;
-	uint8_t ant2_rssi;
-	uint8_t romid;
-	uint8_t modem_status;
-} ret5;
-static union {
-	uint8_t chip_pend;
-	uint16_t afc_freq_offset;
-	uint8_t gen_config;
-} ret6;
-static union {
-	uint8_t chip_status;
-} ret7;
-
-static void
-part_info_reply() __reentrant
-{
-  reply_open();
-  ret0.chiprev = exchange_byte(0);
-  ret1.part = exchange_word(0);
-  ret2.pbuild = exchange_byte(0);
-  ret3.id = exchange_word(0);
-  ret4.customer = exchange_byte(0);
-  ret5.romid = exchange_byte(0);
-  reply_close();
+#define part_info_reply(chiprev, part, pbuild, id, customer, romid) { \
+	reply_open(); \
+	chiprev = exchange_byte(0); \
+	part = exchange_word(0); \
+	pbuild = exchange_byte(0); \
+	id = exchange_word(0); \
+	customer = exchange_byte(0); \
+	romid = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-func_info_reply() __reentrant
-{
-  reply_open();
-  ret0.revext = exchange_byte(0);
-  ret1.revbranch = exchange_byte(0);
-  ret2.revint = exchange_byte(0);
-  ret3.patch = exchange_word(0);
-  ret4.func = exchange_byte(0);
-  reply_close();
+#define func_info_reply(revext, revbranch, revint, patch, func) { \
+	reply_open(); \
+	revext = exchange_byte(0); \
+	revbranch = exchange_byte(0); \
+	revint = exchange_byte(0); \
+	patch = exchange_word(0); \
+	func = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-gpio_pin_cfg_reply() __reentrant
-{
-  reply_open();
-  ret0.gpio0 = exchange_byte(0);
-  ret1.gpio1 = exchange_byte(0);
-  ret2.gpio2 = exchange_byte(0);
-  ret3.gpio3 = exchange_byte(0);
-  ret4.nirq = exchange_byte(0);
-  ret5.sdo = exchange_byte(0);
-  ret6.gen_config = exchange_byte(0);
-  reply_close();
+#define gpio_pin_cfg_reply(gpio0, gpio1, gpio2, gpio3, nirq, sdo, gen_config) { \
+	reply_open(); \
+	gpio0 = exchange_byte(0); \
+	gpio1 = exchange_byte(0); \
+	gpio2 = exchange_byte(0); \
+	gpio3 = exchange_byte(0); \
+	nirq = exchange_byte(0); \
+	sdo = exchange_byte(0); \
+	gen_config = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-fifo_info_reply() __reentrant
-{
-  reply_open();
-  ret0.rx_fifo_count = exchange_byte(0);
-  ret1.rx_fifo_space = exchange_byte(0);
-  reply_close();
+#define fifo_info_reply(rx_fifo_count, rx_fifo_space) { \
+	reply_open(); \
+	rx_fifo_count = exchange_byte(0); \
+	rx_fifo_space = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-get_int_status_reply() __reentrant
-{
-  reply_open();
-  ret0.int_pend = exchange_byte(0);
-  ret1.int_status = exchange_byte(0);
-  ret2.ph_pend = exchange_byte(0);
-  ret3.ph_status = exchange_byte(0);
-  ret4.modem_pend = exchange_byte(0);
-  ret5.modem_status = exchange_byte(0);
-  ret6.chip_pend = exchange_byte(0);
-  ret7.chip_status = exchange_byte(0);
-  reply_close();
+#define get_int_status_reply(int_pend, int_status, ph_pend, ph_status, modem_pend, modem_status, chip_pend, chip_status) { \
+	reply_open(); \
+	int_pend = exchange_byte(0); \
+	int_status = exchange_byte(0); \
+	ph_pend = exchange_byte(0); \
+	ph_status = exchange_byte(0); \
+	modem_pend = exchange_byte(0); \
+	modem_status = exchange_byte(0); \
+	chip_pend = exchange_byte(0); \
+	chip_status = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-req_device_state_reply() __reentrant
-{
-  reply_open();
-  ret0.curr_state = exchange_byte(0);
-  ret1.curr_channel = exchange_byte(0);
-  reply_close();
+#define req_device_state_reply(curr_state, curr_channel) { \
+	reply_open(); \
+	curr_state = exchange_byte(0); \
+	curr_channel = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-__do_not_use_frr_decl_reply() __reentrant
-{
-  reply_open();
-  ret0.frr_a = exchange_byte(0);
-  ret1.frr_b = exchange_byte(0);
-  ret2.frr_c = exchange_byte(0);
-  ret3.frr_d = exchange_byte(0);
-  reply_close();
+#define __do_not_use_frr_decl_reply(frr_a, frr_b, frr_c, frr_d) { \
+	reply_open(); \
+	frr_a = exchange_byte(0); \
+	frr_b = exchange_byte(0); \
+	frr_c = exchange_byte(0); \
+	frr_d = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-ircal_manual_reply() __reentrant
-{
-  reply_open();
-  ret0.ircal_amp_reply = exchange_byte(0);
-  ret1.ircal_ph_reply = exchange_byte(0);
-  reply_close();
+#define ircal_manual_reply(ircal_amp_reply, ircal_ph_reply) { \
+	reply_open(); \
+	ircal_amp_reply = exchange_byte(0); \
+	ircal_ph_reply = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-packet_info_reply() __reentrant
-{
-  reply_open();
-  ret0.length = exchange_word(0);
-  reply_close();
+#define packet_info_reply(length) { \
+	reply_open(); \
+	length = exchange_word(0); \
+	reply_close(); \
 }
 
-static void
-get_modem_status_reply() __reentrant
-{
-  reply_open();
-  ret0.modem_pend = exchange_byte(0);
-  ret1.modem_status = exchange_byte(0);
-  ret2.curr_rssi = exchange_byte(0);
-  ret3.latch_rssi = exchange_byte(0);
-  ret4.ant1_rssi = exchange_byte(0);
-  ret5.ant2_rssi = exchange_byte(0);
-  ret6.afc_freq_offset = exchange_word(0);
-  reply_close();
+#define get_modem_status_reply(modem_pend, modem_status, curr_rssi, latch_rssi, ant1_rssi, ant2_rssi, afc_freq_offset) { \
+	reply_open(); \
+	modem_pend = exchange_byte(0); \
+	modem_status = exchange_byte(0); \
+	curr_rssi = exchange_byte(0); \
+	latch_rssi = exchange_byte(0); \
+	ant1_rssi = exchange_byte(0); \
+	ant2_rssi = exchange_byte(0); \
+	afc_freq_offset = exchange_word(0); \
+	reply_close(); \
 }
 
-static void
-get_property1_reply() __reentrant
-{
-  reply_open();
-  ret0.data = exchange_byte(0);
-  reply_close();
+#define get_property1_reply(data) { \
+	reply_open(); \
+	data = exchange_byte(0); \
+	reply_close(); \
 }
 
-static void
-get_adc_reading_reply() __reentrant
-{
-  reply_open();
-  ret0.gpio_adc = exchange_word(0);
-  ret1.battery_adc = exchange_word(0);
-  ret2.temp_adc = exchange_word(0);
-  reply_close();
+#define get_adc_reading_reply(gpio_adc, battery_adc, temp_adc) { \
+	reply_open(); \
+	gpio_adc = exchange_word(0); \
+	battery_adc = exchange_word(0); \
+	temp_adc = exchange_word(0); \
+	reply_close(); \
 }
 
-static void
-get_ph_status_reply() __reentrant
-{
-  reply_open();
-  ret0.ph_pend = exchange_byte(0);
-  ret1.ph_status = exchange_byte(0);
-  reply_close();
+#define get_ph_status_reply(ph_pend, ph_status) { \
+	reply_open(); \
+	ph_pend = exchange_byte(0); \
+	ph_status = exchange_byte(0); \
+	reply_close(); \
 }
 
 #define cmd_power_up(boot_opts, xtal_opts, xo_freq) { \
@@ -444,13 +351,12 @@ get_ph_status_reply() __reentrant
 	NSS1 = 1; \
 }
 
-#define cmd_rx_hop(inte, frac, vco_cnt, pll_settle_time) { \
+#define cmd_rx_hop(inte, frac, vco_cnt) { \
 	NSS1 = 0; \
 	exchange_byte(0x36); \
 	exchange_byte(inte); \
 	exchange_3bytes(frac); \
 	exchange_word(vco_cnt); \
-	exchange_word(pll_settle_time); \
 	NSS1 = 1; \
 }
 
@@ -555,24 +461,29 @@ get_ph_status_reply() __reentrant
 
 
 
-static void
-frr_abc_read()
-{
-	NSS1 = 0;
-	exchange_byte(0x50);
-	ret0.frr_a = exchange_byte(0x0);
-	ret1.frr_b = exchange_byte(0x0);
-	ret2.frr_c = exchange_byte(0x0);
-	NSS1 = 1;
+#define frr_a_read(frr_a) \
+{ \
+	NSS1 = 0; \
+	exchange_byte(0x50); \
+	frr_a = exchange_byte(0x0); \
+	NSS1 = 1; \
 }
 
-static void
-frr_d_read()
-{
-	NSS1 = 0;
-	exchange_byte(0x57);
-	ret3.frr_d = exchange_byte(0x0);
-	NSS1 = 1;
+#define frr_bc_read(frr_b, frr_c) \
+{ \
+	NSS1 = 0; \
+	exchange_byte(0x51); \
+	frr_b = exchange_byte(0x0); \
+	frr_c = exchange_byte(0x0); \
+	NSS1 = 1; \
+}
+
+#define frr_d_read(frr_d) \
+{ \
+	NSS1 = 0; \
+	exchange_byte(0x57); \
+	frr_d = exchange_byte(0x0); \
+	NSS1 = 1; \
 }
 
 

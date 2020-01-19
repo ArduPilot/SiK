@@ -28,10 +28,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+//#define DEBUG 1
+//#define INCLUDE_GOLAY
+
 #include "board.h"
 #ifdef CPU_SI1060
-
-#define DEBUG 1
 
 /* radio property groups */
 #define GROUP_GLOBAL 0x00
@@ -89,7 +90,14 @@ __pdata uint8_t partial_packet_length;
 __pdata uint8_t last_rssi;
 __pdata uint8_t netid[2];
 
-__pdata const uint32_t xo_freq = 30000000;
+__pdata uint8_t _skip;
+
+/* values saved for RX_HOP command */
+__xdata uint8_t outdiv;
+__xdata uint32_t freq_control_base;
+__xdata uint16_t freq_control_spacing;
+
+#define XO_FREQ 	30000000
 
 static volatile __bit packet_received;
 static volatile __bit sync_detected;
@@ -104,10 +112,9 @@ __pdata struct radio_settings settings;
 
 static bool	software_reset(void);
 static void	set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacing);
-static uint32_t scale_uint32(__pdata uint32_t value, __pdata uint32_t scale);
 
-#define TX_FIFO_THRESHOLD 0x20
-#define RX_FIFO_THRESHOLD 0x20
+#define TX_FIFO_THRESHOLD 0x30
+#define RX_FIFO_THRESHOLD 0x30
 
 #define RX_INT0_PH_MASK 	(PH_STATUS_FILTER_MISS \
 							| PH_STATUS_PACKET_RX \
@@ -118,61 +125,6 @@ static uint32_t scale_uint32(__pdata uint32_t value, __pdata uint32_t scale);
 
 static void
 _radio_receiver_on(void) __reentrant;
-
-static void
-clear_rx_fifo(void) __reentrant
-{
-	cmd_fifo_info(0x02);
-	wait_for_cts();
-}
-
-bool
-radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
-{
-	if (!packet_received)
-		return false;
-
-	*length = receive_packet_length-3;
-	/* copy the packet into the caller's buffer, skip header and length */
-	memcpy(buf, radio_buffer+3, receive_packet_length-3);
-
-	EX0=0;
-	_radio_receiver_on();
-	EX0=1;
-	return true;
-}
-
-bool
-radio_receive_in_progress(void)
-{
-	return sync_detected;
-}
-
-bool
-radio_preamble_detected(void)
-{
-	/* it's a lie, we return if sync is detected */
-	return sync_detected;
-}
-
-uint8_t
-radio_last_rssi(void)
-{
-	return 0;
-	//return last_rssi;
-}
-
-uint8_t
-radio_current_rssi(void)
-{
-	return 0;
-}
-
-uint8_t
-radio_air_rate(void)
-{
-	return settings.air_data_rate;
-}
 
 static void
 inc_tx_error(void) __reentrant
@@ -188,12 +140,177 @@ inc_rx_error(void) __reentrant
 		errors.rx_errors++;
 }
 
+static void
+clear_rx_fifo(void) __reentrant
+{
+	cmd_fifo_info(0x02);
+	wait_for_cts();
+}
+
+bool
+radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
+{
+#ifdef INCLUDE_GOLAY
+	__xdata uint8_t gout[3];
+	__data uint16_t crc1, crc2;
+	__data uint8_t errcount = 0;
+	__data uint8_t elen;
+#endif
+
+	if (!packet_received)
+		return false;
+
+	if (receive_packet_length > MAX_PACKET_LENGTH
+		|| receive_packet_length < 3) {
+		EX0=0;
+		_radio_receiver_on();
+		EX0=1;
+		goto failed;
+	}
+
+
+#ifdef INCLUDE_GOLAY
+	if (!feature_golay)
+#endif // INCLUDE_GOLAY
+  {
+	*length = receive_packet_length-3;
+	memcpy(buf, radio_buffer+3, receive_packet_length-3);
+
+		EX0=0;
+		_radio_receiver_on();
+		EX0=1;
+
+
+		//debug("packet received len=%d chan=%d", *length, settings.current_channel);
+
+		return true;
+	}
+
+#ifdef INCLUDE_GOLAY
+	// decode it in the callers buffer. This relies on the
+	// in-place decode properties of the golay code. Decoding in
+	// this way allows us to overlap decoding with the next receive
+	memcpy(buf, radio_buffer+1, receive_packet_length-1);
+
+	// enable the receiver for the next packet. This also
+	// enables the EX0 interrupt
+	elen = receive_packet_length-1;
+	EX0=0;
+	_radio_receiver_on();
+	EX0=1;
+
+	if (elen < 12 || (elen%6) != 0) {
+		// not a valid length
+		debug("rx len invalid %u\n", (unsigned)elen);
+		goto failed;
+	}
+
+	// decode the header
+	errcount = golay_decode(6, buf, gout);
+	if (gout[0] != netid[0] ||
+	    gout[1] != netid[1]) {
+		// its not for our network ID 
+		debug("netid %x %x\n",
+		       (unsigned)gout[0],
+		       (unsigned)gout[1]);
+		goto failed;
+	}
+
+	if (6*((gout[2]+2)/3+2) != elen) {
+		debug("rx len mismatch1 %u %u\n",
+		       (unsigned)gout[2],
+		       (unsigned)elen);		
+		goto failed;
+	}
+
+	// decode the CRC
+	errcount += golay_decode(6, &buf[6], gout);
+	crc1 = gout[0] | (((uint16_t)gout[1])<<8);
+
+	if (elen != 12) {
+		errcount += golay_decode(elen-12, &buf[12], buf);
+	}
+
+	*length = gout[2];
+
+	crc2 = crc16(*length, buf);
+
+	if (crc1 != crc2) {
+		debug("crc1=%x crc2=%x len=%u [%x %x]\n",
+		       (unsigned)crc1, 
+		       (unsigned)crc2, 
+		       (unsigned)*length,
+		       (unsigned)buf[0],
+		       (unsigned)buf[1]);
+		goto failed;
+	}
+
+	if (errcount != 0) {
+		if ((uint16_t)(0xFFFF - errcount) > errors.corrected_errors) {
+			errors.corrected_errors += errcount;
+		} else {
+			errors.corrected_errors = 0xFFFF;
+		}
+		if (errors.corrected_packets != 0xFFFF) {
+			errors.corrected_packets++;
+		}
+	}
+
+  return true;
+#endif // INCLUDE_GOLAY
+
+failed:
+	inc_rx_error();
+	return false;
+}
+
+bool
+radio_receive_in_progress(void)
+{
+	return sync_detected;
+}
+
+bool
+radio_preamble_detected(void)
+{
+	/* we return whether sync, not preamble, has been detected */
+	return sync_detected;
+}
+
+uint8_t
+radio_last_rssi(void)
+{
+	return last_rssi;
+}
+
+uint8_t
+radio_current_rssi(void)
+{
+	register uint8_t ret;
+
+	EX0_SAVE_DISABLE;
+	cmd_get_modem_status(0xff);
+	get_modem_status_reply(
+		_skip, _skip, ret, _skip, _skip, _skip, _skip
+	);
+	EX0_RESTORE;
+
+	return ret;
+}
+
+uint8_t
+radio_air_rate(void)
+{
+	return settings.air_data_rate;
+}
+
 static bool
 in_rx_mode(void) __reentrant
 {
+	uint8_t state;
 	EX0_SAVE_DISABLE;
-	frr_d_read();
-	if (ret3.frr_d == STATE_RX) {
+	frr_d_read(state);
+	if (state == STATE_RX) {
 		EX0_RESTORE;
 		return true;
 	}
@@ -201,20 +318,23 @@ in_rx_mode(void) __reentrant
 	return false;
 }
 
-bool
-radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
+static bool
+radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks, bool insert_netid)
 {
 	__pdata uint16_t tstart;
 	__data uint8_t n, len_remaining;
-	__xdata uint8_t scratch[3];
-
-	if (timeout_ticks < 100)
-		return false;
+	uint8_t frr_b, frr_c;
 
 	EX0_SAVE_DISABLE;
 
 	if (length > sizeof(radio_buffer))
 		panic("oversized packet");
+
+	tstart = timer2_tick();
+
+	/* exit from RX state */
+	cmd_change_state(STATE_READY);
+	wait_for_cts();
 
 	cmd_get_int_status_clear_all();
 	wait_for_cts();
@@ -222,10 +342,16 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	cmd_fifo_info(0x01); /* clear the TX FIFO */
 	wait_for_cts();
 
-	scratch[0] = netid[1];
-	scratch[1] = netid[0];
-	scratch[2] = length;
-	write_tx_fifo(3, scratch);
+	if (insert_netid) {
+		radio_buffer[0] = netid[1];
+		radio_buffer[1] = netid[0];
+		radio_buffer[2] = length;
+		write_tx_fifo(3, radio_buffer);
+	} else {
+		//__xdata uint8_t length_xdata;
+		//radio_buffer[0] = length;
+		write_tx_fifo(1, &length);
+	}
 
 	n = length;
 	if (n > 32)
@@ -234,15 +360,18 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 	len_remaining = length - n;
 	buf += n;
 
-	cmd_start_tx(settings.current_channel, 0x30, length+3, 0, 0);
+	if (insert_netid) {
+		cmd_start_tx(settings.current_channel, 0x30, length+3, 0, 0);
+	} else {
+		cmd_start_tx(settings.current_channel, 0x30, length+1, 0, 0);
+	}
 	wait_for_cts();
 
-	tstart = timer2_tick();
 	while ((uint16_t) (timer2_tick() - tstart) < timeout_ticks) {
-		/* Fast Read Registers contain MODEM_STATUS, CHIP_STATUS and PH_STATUS */
-		frr_abc_read();
+		/* Fast Read Registers contain CHIP_STATUS and PH_STATUS */
+		frr_bc_read(frr_b, frr_c);
 
-		if ((ret2.frr_c & PH_STATUS_TX_FIFO_ALMOST_EMPTY)
+		if ((frr_c & PH_STATUS_TX_FIFO_ALMOST_EMPTY)
 				&& len_remaining != 0) {
 			n = len_remaining;
 			if (n > TX_FIFO_THRESHOLD)
@@ -251,13 +380,13 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 			len_remaining -= n; buf += n;
 		}
 
-		if (ret1.frr_b & (CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR \
+		if (frr_b & (CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR \
 							  | CHIP_STATUS_CMD_ERROR)) {
-			debug("tx error: chip_pend=%x", ret1.frr_b);
+			debug("tx error: chip_pend=%x", frr_b);
 			goto error;
 		}
 
-		if (ret2.frr_c & PH_STATUS_PACKET_SENT) {
+		if (frr_c & PH_STATUS_PACKET_SENT) {
 			EX0_RESTORE;
 			return true;
 		}
@@ -284,6 +413,87 @@ error:
 	return false;
 }
 
+#ifdef INCLUDE_GOLAY
+// start transmitting a packet from the transmit FIFO
+//
+// @param length		number of data bytes to send
+// @param timeout_ticks		number of 16usec RTC ticks to allow
+//				for the send
+//
+// @return	    true if packet sent successfully
+//
+static bool
+radio_transmit_golay(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
+{
+	__pdata uint16_t crc;
+	__xdata uint8_t gin[3];
+	__pdata uint8_t elen, rlen;
+
+	if (length > (sizeof(radio_buffer)/2)-6) {
+		debug("golay packet size %u\n", (unsigned)length);
+		panic("oversized golay packet");		
+	}
+
+	// rounded length
+	rlen = ((length+2)/3)*3;
+
+	// encoded length
+	elen = (rlen+6)*2;
+
+	// start of packet is network ID and packet length
+	gin[0] = netid[0];
+	gin[1] = netid[1];
+	gin[2] = length;
+
+	// golay encode the header
+	golay_encode(3, gin, radio_buffer);
+
+	// next add a CRC, we round to 3 bytes for simplicity, adding 
+	// another copy of the length in the spare byte
+	crc = crc16(length, buf);
+	gin[0] = crc&0xFF;
+	gin[1] = crc>>8;
+	gin[2] = length;
+
+	// golay encode the CRC
+	golay_encode(3, gin, &radio_buffer[6]);
+
+	// encode the rest of the payload
+	golay_encode(rlen, buf, &radio_buffer[12]);
+
+	return radio_transmit_simple(elen, radio_buffer, timeout_ticks, false);
+}
+#endif // INCLUDE_GOLAY
+
+// start transmitting a packet from the transmit FIFO
+//
+// @param length		number of data bytes to send
+// @param timeout_ticks		number of 16usec RTC ticks to allow
+//				for the send
+//
+// @return	    true if packet sent successfully
+//
+bool
+radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t timeout_ticks)
+{
+	bool ret;
+
+	EX0_SAVE_DISABLE;
+
+#ifdef INCLUDE_GOLAY
+	if (!feature_golay) {
+		ret = radio_transmit_simple(length, buf, timeout_ticks, true);
+	} else {
+		ret = radio_transmit_golay(length, buf, timeout_ticks);
+	}
+#else
+  ret = radio_transmit_simple(length, buf, timeout_ticks, true);
+#endif // INCLUDE_GOLAY
+
+	EX0_RESTORE;
+	return ret;
+}
+
 static void
 _radio_receiver_on(void) __reentrant
 {
@@ -291,10 +501,6 @@ _radio_receiver_on(void) __reentrant
 	receive_packet_length = 0;
 	sync_detected = 0;
 	partial_packet_length = 0;
-
-	/* make sure we are not in RX state before the FIFO reset */
-	cmd_change_state(STATE_READY);
-	wait_for_cts();
 
 	cmd_get_int_status_clear_all();
 	wait_for_cts();
@@ -328,71 +534,25 @@ radio_receiver_on(void)
 }
 
 static bool
-check_part(void)
+check_part(void) __reentrant
 {
+	uint8_t chiprev, romid;
+	uint16_t part, id;
+
 	cmd_part_info();
-	part_info_reply();
+	part_info_reply(chiprev, part, _skip, id, _skip, romid);
 	
 	debug("radio part info: chiprev=%x part=%x id=%x romid=%x",
-				(unsigned) ret0.chiprev, (unsigned) ret1.part, (unsigned) ret3.id,
-				(unsigned) ret5.romid);
+		  (unsigned) chiprev, (unsigned) part, (unsigned) id, (unsigned) romid);
 	
-	return true; //ret1.part&0xf0f0 == 0x4060;
+	return part == 0x4463;
 }
-
-static void
-send_bulk_conf(__code uint8_t * __pdata data)
-{
-	register uint8_t len;
-	while ((len = *data++) > 0) {
-		NSS1 = 0;
-		while (len--)
-			exchange_byte(*data++);
-		NSS1 = 1;
-		wait_for_cts();
-	}
-}
-
-#define RF_GLOBAL_XO_TUNE_2 0x11, 0x00, 0x02, 0x00, 0x52, 0x00
-#define RF_GLOBAL_CONFIG_1 0x11, 0x00, 0x01, 0x03, 0x60
-#define RF_MODEM_MOD_TYPE_12 0x11, 0x20, 0x0C, 0x00, 0x02, 0x00, 0x07, 0x09, 0xC4, 0x00, 0x01, 0xC9, 0xC3, 0x80, 0x00, 0x11
-#define RF_MODEM_FREQ_DEV_0_1 0x11, 0x20, 0x01, 0x0C, 0x68
-#define RF_MODEM_TX_RAMP_DELAY_8 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0x80, 0x00, 0x10, 0x20
-#define RF_MODEM_BCR_OSR_1_9 0x11, 0x20, 0x09, 0x22, 0x00, 0x75, 0x04, 0x5E, 0x7B, 0x02, 0x32, 0x02, 0x00
-#define RF_MODEM_AFC_GEAR_7 0x11, 0x20, 0x07, 0x2C, 0x00, 0x12, 0x82, 0x2F, 0x02, 0xC5, 0xE0
-#define RF_MODEM_AGC_CONTROL_1 0x11, 0x20, 0x01, 0x35, 0xE2
-#define RF_MODEM_AGC_WINDOW_SIZE_9 0x11, 0x20, 0x09, 0x38, 0x11, 0x1A, 0x1A, 0x00, 0x02, 0x7F, 0x80, 0x00, 0x28
-#define RF_MODEM_OOK_CNT1_9 0x11, 0x20, 0x09, 0x42, 0xA4, 0x03, 0xD6, 0x03, 0x02, 0x1F, 0x01, 0x80, 0xFF
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12 0x11, 0x21, 0x0C, 0x00, 0xFF, 0xC4, 0x30, 0x7F, 0xF5, 0xB5, 0xB8, 0xDE, 0x05, 0x17, 0x16, 0x0C
-#define RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12 0x11, 0x21, 0x0C, 0x0C, 0x03, 0x00, 0x15, 0xFF, 0x00, 0x00, 0xFF, 0xC4, 0x30, 0x7F, 0xF5, 0xB5
-#define RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12 0x11, 0x21, 0x0C, 0x18, 0xB8, 0xDE, 0x05, 0x17, 0x16, 0x0C, 0x03, 0x00, 0x15, 0xFF, 0x00, 0x00
-#define RF_SYNTH_PFDCP_CPFF_7 0x11, 0x23, 0x07, 0x00, 0x2C, 0x0E, 0x0B, 0x04, 0x0C, 0x73, 0x03
-
-__code static const uint8_t conf_64kbps[] = {
-    0x06, RF_GLOBAL_XO_TUNE_2, \
-    0x05, RF_GLOBAL_CONFIG_1, \
-    0x10, RF_MODEM_MOD_TYPE_12, \
-    0x05, RF_MODEM_FREQ_DEV_0_1, \
-    0x0C, RF_MODEM_TX_RAMP_DELAY_8, \
-    0x0D, RF_MODEM_BCR_OSR_1_9, \
-    0x0B, RF_MODEM_AFC_GEAR_7, \
-    0x05, RF_MODEM_AGC_CONTROL_1, \
-    0x0D, RF_MODEM_AGC_WINDOW_SIZE_9, \
-    0x0D, RF_MODEM_OOK_CNT1_9, \
-    0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE13_7_0_12, \
-    0x10, RF_MODEM_CHFLT_RX1_CHFLT_COE1_7_0_12, \
-    0x10, RF_MODEM_CHFLT_RX2_CHFLT_COE7_7_0_12, \
-    0x0B, RF_SYNTH_PFDCP_CPFF_7, \
-    0x00 \
-};
 
 // initialise the radio hardware
 //
 bool
 radio_initialise(void)
 {
-	__pdata uint8_t	len;
-
 	/* TODO: check timing */
 	SDN = 1;
 	delay_msec(1);
@@ -407,22 +567,11 @@ radio_initialise(void)
 	if (!check_part())
 		return false;
 
-	cmd_gpio_pin_cfg(
-		17,
-		20,
-		9, // GPIO3: inverted CTS
-		33, // GPIO4: RX state
-		0, // nIRQ
-		0, // SDO
-		0
-	);
-	wait_for_cts();
-
 	cmd_set_property4(GROUP_FRR_CTL, 0x0,
-		0x05, /* FRR A = INT_MODEM_STATUS */
-		0x07, /* FRR B = INT_CHIP_STATUS */
-		0x03, /* FRR C = INT_PH_STATUs */
-		0x09 /* FRR D = CURRENT_STATE */
+		10, /* FRR A = latched RSSI */
+		7, /* FRR B = INT_CHIP_STATUS */
+		3, /* FRR C = INT_PH_STATUs */
+		9 /* FRR D = CURRENT_STATE */
 	);
 	wait_for_cts();
 
@@ -431,6 +580,28 @@ radio_initialise(void)
 		RX_INT0_PH_MASK,
 		RX_INT0_MODEM_MASK,
 		0x00
+	);
+	wait_for_cts();
+
+	/* GLOBAL_XO_TUNE */
+	cmd_set_property1(GROUP_GLOBAL, 0x00, EZRADIOPRO_OSC_CAP_VALUE);
+	wait_for_cts();
+
+	/* GLOBAL_CONFIG: fast switch to TX, shared FIFO mode */
+	cmd_set_property1(GROUP_GLOBAL, 0x03, 0x10);
+	wait_for_cts();
+
+	cmd_set_property1(GROUP_GLOBAL, 0x01, 0x48);
+	wait_for_cts();
+
+	cmd_gpio_pin_cfg(
+		32, // 0: TX_STATE
+		33, // 1: RX_STATE
+		26, // 2: SYNC_WORD_DETECT
+		33, // GPIO4: RX state
+		39, // nIRQ
+		0, // SDO
+		2
 	);
 	wait_for_cts();
 
@@ -449,6 +620,26 @@ radio_set_frequency(__pdata uint32_t base, __pdata uint32_t spacing)
 	return true;
 }
 
+static void
+rx_hop(uint8_t channel)
+{
+	uint16_t vco_cnt;
+
+	EX0_SAVE_DISABLE;
+	uint32_t fc = (freq_control_base + channel*((uint32_t) freq_control_spacing));
+	/* formula for VCO_CNT taken from Silabs' spreadsheet calculator */
+	vco_cnt = (uint16_t) (((fc<<5) - (((uint32_t) outdiv)<<17) \
+						  + (((uint32_t) 1)<<18)) >> 19);
+
+	cmd_rx_hop(
+		(fc>>19) - 1,
+		(fc & 0x7ffff) | 0x80000,
+		vco_cnt
+	);
+	wait_for_cts();
+	EX0_RESTORE;
+}
+
 // set the tx/rx frequency channel
 //
 void
@@ -457,10 +648,8 @@ radio_set_channel(uint8_t channel)
 	if (channel != settings.current_channel) {
 		settings.current_channel = channel;
 
-		EX0_SAVE_DISABLE;
 		if (in_rx_mode())
-			_radio_receiver_on();
-		EX0_RESTORE;
+			rx_hop(channel);
 	}
 }
 
@@ -472,16 +661,59 @@ radio_get_channel(void)
 	return settings.current_channel;
 }
 
+#define NUM_DATA_RATES 13
+// air data rates in kbps units
+__code static const uint8_t air_data_rates[NUM_DATA_RATES] = {
+	2,	4,	8,	16,	19,	24,	32,	48,	64,	96,	128,	192,	250
+};
+
+
+#include "radio_446x_conf.h"
+
+static void
+send_bulk_conf(__code uint8_t * __pdata ids, __code uint8_t * __pdata data)
+{
+	register uint8_t len;
+	while ((len = *ids++) > 0) {
+		NSS1 = 0;
+		exchange_byte(0x11);
+		exchange_byte(*ids++); /* group id */
+		exchange_byte(len);
+		exchange_byte(*ids++); /* property id start */
+		while (len--)
+			exchange_byte(*data++);
+		NSS1 = 1;
+		wait_for_cts();
+	}
+}
+
 // configure radio based on the air data rate
 //
 bool
 radio_configure(__pdata uint8_t air_rate)
 {
-	uint8_t field_flags;
+	__pdata uint8_t i, field_flags;
 
-	cmd_set_property2(GROUP_PREAMBLE, 0x00, 0x10, 5<<3);
+	for (i = 0; i < NUM_DATA_RATES - 1; i++) {
+		if (air_data_rates[i] >= air_rate) break;
+	}
+	send_bulk_conf(shared_prop_ids, shared_prop_vals);
+	if (g_board_frequency == FREQ_433) {
+		send_bulk_conf(variable_prop_ids, band_433_prop_vals[i]);
+	} else if (g_board_frequency == FREQ_868) {
+		send_bulk_conf(variable_prop_ids, band_868_prop_vals[i]);
+	} else {
+		return false; /* unsupported band */
+	}
+
+	settings.air_data_rate = air_data_rates[i];
+	settings.preamble_length = 16;
+
+	/* preamble is 16 nibbles, preamble rx treshold at 5<<3 bits*/
+	cmd_set_property2(GROUP_PREAMBLE, 0x00, 0x10, 5<<3); // 0x08, 5<<2);
 	wait_for_cts();
-	cmd_set_property1(GROUP_PREAMBLE, 0x04, 0x21);
+	/* preamble starts 0101, preamble length in nibbles */
+	cmd_set_property1(GROUP_PREAMBLE, 0x04, /* 0x21); */ 0x02);
 	wait_for_cts();
 
 	cmd_set_property2(GROUP_SYNC, 0x01, 0xb4, 0x2b);
@@ -499,53 +731,75 @@ radio_configure(__pdata uint8_t air_rate)
 	cmd_set_property1(GROUP_PKT, 0x06, 0x82);
 	wait_for_cts();
 
-	/* leave length byte in FIFO, field 3 will have variable length */
-	cmd_set_property1(GROUP_PKT, 0x08, 0x08 | 0x03);
-	wait_for_cts();
+	if (!feature_golay) {
+		/* leave length byte in FIFO, field 3 will have variable length */
+		cmd_set_property1(GROUP_PKT, 0x08, 0x08 | 0x03);
+		wait_for_cts();
 
-	/* field 2 contains packet length */
-	cmd_set_property1(GROUP_PKT, 0x09, 0x02);
-	wait_for_cts();
+		/* field 2 contains packet length */
+		cmd_set_property1(GROUP_PKT, 0x09, 0x02);
+		wait_for_cts();
 
-	/* commond flags shared by all fields */
-	field_flags = 0x02; /* enable whitening */
+		/* common flags shared by all fields */
+		field_flags = 0x02; /* enable whitening */
 
-	/* RX field 1 (header): two bytes long, seed PN generator, enable and seed CRC */
-	cmd_set_property4(GROUP_PKT, 0x21, 0x00, 0x02, field_flags | 0x04, 0x82);
-	wait_for_cts();
+		/* RX field 1 (header): two bytes long, seed PN generator, enable and seed CRC */
+		cmd_set_property4(GROUP_PKT, 0x21, 0x00, 0x02, field_flags | 0x04, 0x82);
+		wait_for_cts();
 
-	/* RX field 2 (length): one byte long, enable CRC */
-	cmd_set_property4(GROUP_PKT, 0x25, 0x00, 0x01, field_flags, 0x02);
-	wait_for_cts();
+		/* RX field 2 (length): one byte long, enable CRC */
+		cmd_set_property4(GROUP_PKT, 0x25, 0x00, 0x01, field_flags, 0x02);
+		wait_for_cts();
 
-	/* RX field 3 (payload): variable length, enable CRC, check CRC at end of field */
-	cmd_set_property4(GROUP_PKT, 0x29, 0x00, MAX_PACKET_LENGTH, field_flags, 0x0a);
-	wait_for_cts();
+		/* RX field 3 (payload): variable length, enable CRC, check CRC at end of field */
+		cmd_set_property4(GROUP_PKT, 0x29, 0x00, MAX_PACKET_LENGTH, field_flags, 0x0a);
+		wait_for_cts();
 
-	/* TX field 1 (whole packet): seed PN generator, enable and seed CRC, send CRC at end of field */
-	cmd_set_property4(GROUP_PKT, 0x0d, 0x00, 0x00, field_flags | 0x04, 0xa2);
-	wait_for_cts();
+		/* TX field 1 (whole packet): seed PN generator, enable and seed CRC, send CRC at end of field */
+		cmd_set_property4(GROUP_PKT, 0x0d, 0x00, 0x00, field_flags | 0x04, 0xa2);
+		wait_for_cts();
 
-	/* enable match bytes 1 and 2, point them toward the header */
-	cmd_set_property3(GROUP_MATCH, 0x00, 0x00, 0xff, 0x40);
-	wait_for_cts();
-	cmd_set_property3(GROUP_MATCH, 0x03, 0x00, 0xff, 0x01);
-	wait_for_cts();
-	/* comply with requirement of 'non-descending offsets' */
-	cmd_set_property1(GROUP_MATCH, 0x08, 0x01);
-	wait_for_cts();
-	cmd_set_property1(GROUP_MATCH, 0x0b, 0x01);
-	wait_for_cts();
+		/* enable match bytes 1 and 2, point them toward the header */
+		cmd_set_property3(GROUP_MATCH, 0x00, 0x00, 0xff, 0x40);
+		wait_for_cts();
+		cmd_set_property3(GROUP_MATCH, 0x03, 0x00, 0xff, 0x01);
+		wait_for_cts();
+		/* comply with requirement of 'non-descending offsets' */
+		cmd_set_property1(GROUP_MATCH, 0x08, 0x01);
+		wait_for_cts();
+		cmd_set_property1(GROUP_MATCH, 0x0b, 0x01);
+		wait_for_cts();
+	} else {
+		/* leave length byte in FIFO, field 2 will have variable length */
+		cmd_set_property1(GROUP_PKT, 0x08, 0x08 | 0x02);
+		wait_for_cts();
+
+		/* field 1 contains packet length */
+		cmd_set_property1(GROUP_PKT, 0x09, 0x01);
+		wait_for_cts();
+
+		/* common flags shared by all fields */
+		field_flags = 0x02; /* enable whitening */
+
+		/* RX field 1 (length): one byte long, no CRC */
+		cmd_set_property4(GROUP_PKT, 0x21, 0x00, 0x01, field_flags | 0x04, 0x00);
+		wait_for_cts();
+
+		/* RX field 2 (payload): variable length, no CRC */
+		cmd_set_property4(GROUP_PKT, 0x25, 0x00, MAX_PACKET_LENGTH, field_flags, 0x00);
+		wait_for_cts();
+
+		/* TX field 1 (whole packet): seed PN generator */
+		cmd_set_property4(GROUP_PKT, 0x0d, 0x00, 0x00, field_flags | 0x04, 0x00);
+		wait_for_cts();
+	}
 
 	cmd_set_property2(GROUP_PKT, 0x0b, TX_FIFO_THRESHOLD, RX_FIFO_THRESHOLD);
 	wait_for_cts();
 
-	/* PA_PWR_LVL = 0x01 */
-	cmd_set_property1(GROUP_PA, 0x01, 0x01);
+	/* latch RSSI at sync detect, no threshold, averaging AVERAGE4 */
+	cmd_set_property1(GROUP_MODEM, 0x4c, 0x02);
 	wait_for_cts();
-
-	/* only one airrate supported at the moment */
-	send_bulk_conf(conf_64kbps);
 
 	/* clear the FIFO to apply the mode change */
 	clear_rx_fifo();
@@ -555,14 +809,23 @@ radio_configure(__pdata uint8_t air_rate)
 
 // set the radio transmit power (in dBm)
 //
+
+/* TODO: not in dBm, measure? */
+
 void 
 radio_set_transmit_power(uint8_t power)
 {
+	EX0_SAVE_DISABLE;
+	cmd_set_property1(GROUP_PA, 0x01, power);
+	wait_for_cts();
+	EX0_RESTORE;
+
+	settings.transmit_power = power;
 }
 
 // get the current transmit power (in dBm)
 //
-uint8_t 
+uint8_t
 radio_get_transmit_power(void)
 {
 	return settings.transmit_power;
@@ -576,10 +839,12 @@ radio_set_network_id(uint16_t id)
 	netid[0] = id&0xFF;
 	netid[1] = id>>8;
 
-	cmd_set_property1(GROUP_MATCH, 0x00, netid[1]);
-	wait_for_cts();
-	cmd_set_property1(GROUP_MATCH, 0x03, netid[0]);
-	wait_for_cts();
+	if (!feature_golay) {
+		cmd_set_property1(GROUP_MATCH, 0x00, netid[1]);
+		wait_for_cts();
+		cmd_set_property1(GROUP_MATCH, 0x03, netid[0]);
+		wait_for_cts();
+	}
 }
 
 /// clear interrupts by reading the two status registers
@@ -591,19 +856,6 @@ clear_status_registers(void)
 	wait_for_cts();
 }
 
-/// scale a uint32_t, rounding to nearest multiple
-///
-/// @param value		The value to scale
-/// @param scale		The scale factor
-/// @return			value / scale, rounded to the nearest integer
-///
-static uint32_t
-scale_uint32(__pdata uint32_t value, __pdata uint32_t scale)
-{
-	return (value + (scale >> 1)) / scale;
-}
-
-
 /// reset the radio using a software reset
 ///
 /// @return			True if the radio reset correctly
@@ -614,7 +866,7 @@ software_reset(void)
 	return false;
 }
 
-static uint32_t convert_freq(__pdata uint8_t outdiv, __pdata uint32_t frequency)
+static uint32_t convert_freq(uint8_t outdiv, uint32_t frequency) __reentrant
 {
 	register uint8_t x, i;
 	uint32_t freq_control;
@@ -625,10 +877,10 @@ static uint32_t convert_freq(__pdata uint8_t outdiv, __pdata uint32_t frequency)
 	for (i = 0; i < 20; i++) {
 		freq_control <<= 1;
 		if (i == 19)
-			frequency += xo_freq / 2;
-		x = frequency / xo_freq;
+			frequency += XO_FREQ / 2;
+		x = frequency / XO_FREQ;
 		freq_control += x;
-		frequency -= x * xo_freq;
+		frequency -= x * XO_FREQ;
 		frequency <<= 1;
 	}
 
@@ -639,10 +891,8 @@ static void
 set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacing)
 {
 	uint8_t band;
-	uint32_t freq_control;
-	uint8_t outdiv;
 
-	outdiv = 2*xo_freq / (base_freq / 70);
+	outdiv = 2*XO_FREQ / (base_freq / 70);
 
 	band = 0;
 	if (outdiv >= 24) {
@@ -663,22 +913,30 @@ set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacin
 
 	/* MODEM_CLKGEN_BAND */
 	cmd_set_property1(GROUP_MODEM, 0x51, 0x08 | band);
+	wait_for_cts();
 
-	freq_control = convert_freq(outdiv, base_freq);
+	freq_control_base = convert_freq(outdiv, base_freq);
 	cmd_set_property4(
 		GROUP_FREQ_CONTROL, 0x00,
-		(freq_control >> 19) - 1,
-		((freq_control>>16) & 0x7) | 0x8,
-		(freq_control>>8) & 0xff,
-		freq_control & 0xff
+		(freq_control_base>>19) - 1,
+		((freq_control_base>>16) & 0x7) | 0x8,
+		(freq_control_base>>8) & 0xff,
+		freq_control_base & 0xff
 	);
+	wait_for_cts();
 
-	freq_control = convert_freq(outdiv, freq_spacing);
+	// for compatibility with si1000
+	freq_spacing += 10000/2;
+	freq_spacing /= 10000;
+	freq_spacing *= 10000;
+
+	freq_control_spacing = (uint16_t) convert_freq(outdiv, freq_spacing);
 	cmd_set_property2(
 		GROUP_FREQ_CONTROL, 0x04,
-		(freq_control>>8) & 0xff,
-		freq_control & 0xff
+		(freq_control_spacing>>8) & 0xff,
+		freq_control_spacing & 0xff
 	);
+	wait_for_cts();
 }
 
 /// return temperature in degrees C
@@ -688,6 +946,16 @@ set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacin
 int16_t
 radio_temperature(void)
 {
+	/*
+	uint16_t ret;
+	cmd_get_adc_reading(0x10, 0);
+	get_adc_reading_reply(_skip, _skip, ret);
+	ret *= 39;
+	ret >>= 5;
+	ret *= 29;
+	ret >>= 7;
+	return ((int16_t) ret) - 293;
+	*/
 	return 0;
 }
 
@@ -707,36 +975,43 @@ radio_set_diversity(enum DIVERSITY_Enum state)
 }
 
 /*
-	Interrupt handler, used for receiving and triggered by events selected
-	in RX_INT0_PH_MASK and RX_INT0_MODEM_MASK
+	Interrupt handler
 
-	My reading of the docs leads me to believe that SYNC word detection must 
+	Only used when radio is receiving. The events that trigger interrupt
+	are selected in RX_INT0_PH_MASK and RX_INT0_MODEM_MASK.
+
+	My reading of the docs leads me to believe that SYNC word detection must
 	be followed by one of:
 
 		- Header filter miss
 		- CRC error
 		- Valid packet receipt
 
-	All of these should be accompanied with change from RX to READY state, as
-	we requested when issuing START_RX. In the first two cases, we go back to RX state
-	from within the interrupt handler below. In the case of a valid packet, we wait
-	until the packet is picked up by call to radio_receive_packet, then we change
-	back to RX state there.
+	All of these should be accompanied by change from RX to READY state, as
+	we requested when issuing START_RX. In the first two cases, we go back
+	to RX state from within the interrupt handler below. In the case of valid
+	packet, we return to RX state when the packet contents is being picked up
+	with a call to radio_receive_packet.
 
-	We set sync_detected when SYNC word is detected, and clear it when reentering RX state.
+	We set sync_detected when SYNC word is detected, and clear it when
+	reentering RX state.
 */
 
 INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
+	uint8_t modem_pend, ph_status, ph_pend;
+	uint8_t rx_fifo_count;
+
 	/* only clear pending bits we handle here */
 	cmd_get_int_status(~RX_INT0_PH_MASK, ~RX_INT0_MODEM_MASK, 0xff);
-	get_int_status_reply();
+	get_int_status_reply(_skip, _skip, ph_pend, ph_status, modem_pend,
+						  _skip, _skip, _skip);
 
-	if (ret4.modem_pend & MODEM_STATUS_SYNC_DETECT) {
+	if (modem_pend & MODEM_STATUS_SYNC_DETECT) {
 		sync_detected = 1;
 	}
 
-	if (ret3.ph_status & PH_STATUS_RX_FIFO_ALMOST_FULL) {
+	if (ph_status & PH_STATUS_RX_FIFO_ALMOST_FULL) {
 		if (RX_FIFO_THRESHOLD + (uint16_t) partial_packet_length > MAX_PACKET_LENGTH) {
 			inc_rx_error();
 			goto rxfail;
@@ -746,45 +1021,49 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		partial_packet_length += RX_FIFO_THRESHOLD;
 	}
 
-	if (ret2.ph_pend & PH_STATUS_FILTER_MISS)
+	if (ph_pend & PH_STATUS_FILTER_MISS)
 		goto rxfail;
 
-	if (ret2.ph_pend & PH_STATUS_CRC_ERROR) {
+	if (ph_pend & PH_STATUS_CRC_ERROR) {
+		debug("CRC error");
 		inc_rx_error();
 		goto rxfail;
 	}
 
-	if (ret2.ph_pend & PH_STATUS_PACKET_RX) {
+	if (ph_pend & PH_STATUS_PACKET_RX) {
 		/* get packet length */
 		cmd_packet_info(0, 0, 0);
-		packet_info_reply();
+		packet_info_reply(receive_packet_length);
 
 		/* account for header and size byte */
-		ret0.length += 3;
+		if (feature_golay) {
+			receive_packet_length += 1;
+		} else {
+			receive_packet_length += 3;
+		}
 
-		if (ret0.length > MAX_PACKET_LENGTH) {
+		if (receive_packet_length > MAX_PACKET_LENGTH) {
 			debug("dropping too long a packet");
 			inc_rx_error();
 			goto rxfail;
 		}
-		receive_packet_length = ret0.length;
 
 		/* retrieve number of bytes in FIFO */
-		//cmd_fifo_info(0);
-		//fifo_info_reply();
-		/*
-		if (ret0.rx_fifo_count + partial_packet_length != receive_packet_length) {
+		cmd_fifo_info(0);
+		fifo_info_reply(rx_fifo_count, _skip);
+
+		if (rx_fifo_count + partial_packet_length != receive_packet_length) {
 			debug("length mismatch fifo=%x partial=%x packet=%x",
-				  ret0.rx_fifo_count, partial_packet_length, receive_packet_length);
+				  rx_fifo_count, partial_packet_length, receive_packet_length);
 			inc_rx_error();
 			goto rxfail;
 		}
-		*/
 
 		if (partial_packet_length < receive_packet_length)
 			read_rx_fifo(receive_packet_length - partial_packet_length,
 						 radio_buffer + partial_packet_length);
 
+		frr_a_read(last_rssi);
 		packet_received = true;
 	}
 
