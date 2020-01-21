@@ -25,6 +25,7 @@ Currently, it supports the following boards:
  - RFD900
  - RFD900u
  - RFD900p
+ - [MLAB ISM01A](https://www.mlab.cz/module/ISM01A)
 
 Adding support for additional boards should not be difficult.
 
