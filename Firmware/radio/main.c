@@ -154,10 +154,10 @@ panic(char *fmt, ...)
 {
 	va_list ap;
 
-	puts("\n**PANIC**");
+//	puts("\n**PANIC**");
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
-	puts("");
+//	puts("");
 
 	EA = 1;
 	ES0 = 1;
@@ -238,7 +238,11 @@ hardware_init(void)
 	/* ------------ Change to radio page ------------ */
 	RADIO_PAGE();
 	SPI1CFG  = 0x40;  // master mode
+#ifndef BOARD_ism01a
 	SPI1CN   = 0x00;  // 3 wire master mode
+#else
+	SPI1CN   = 0x0C;  // 4 wire master mode, NSS1=1
+#endif
 	SPI1CKR  = 0x00;  // Initialise SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
 	SPI1CN  |= 0x01;  // enable SPI
 	NSS1     = 1;     // set NSS high
@@ -409,10 +413,7 @@ radio_init(void)
 
 	// set the frequency and channel spacing
 	// change base freq based on netid
-	radio_set_frequency(freq_min);
-
-	// set channel spacing
-	radio_set_channel_spacing(channel_spacing);
+	radio_set_frequency(freq_min, channel_spacing);
 
 	// start on a channel chosen by network ID
 	radio_set_channel(param_get(PARAM_NETID) % num_fh_channels);
@@ -447,4 +448,3 @@ radio_init(void)
 	// initialise TDM system
 	tdm_init();
 }
-

@@ -2,6 +2,8 @@ SiK
 =====
 Firmware for SiLabs Si1000 - Si102x/3x ISM radios
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ArduPilot/SiK?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
 
 ## Branch Build Status
@@ -39,7 +41,7 @@ See the user documentation above for a list of current firmware features
  - At least two Si1000 - Si102x/3x - based radio devices (just one radio by itself is not very useful).
  - A [SiLabs USB debug adapter](http://www.silabs.com/products/mcu/Pages/USBDebug.aspx).
  - [SDCC](http://sdcc.sourceforge.net/), version 3.1.0 or later.
- - [EC2Tools](http://github.com/tridge/ec2)
+ - [EC2Tools](https://github.com/SamwelOpiyo/ec2)
  - [Mono](http://www.mono-project.com/) to build and run the GUI firmware updater.
  - Python to run the command-line firmware updater.
 

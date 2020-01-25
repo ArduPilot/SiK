@@ -27,9 +27,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "board.h"
+#ifndef CPU_SI1060
+
 //#define DEBUG 1
 
-#include "board.h"
 #include "radio.h"
 #include "timer.h"
 #include "golay.h"
@@ -593,30 +595,23 @@ radio_initialise(void)
 }
 
 
-// set the transmit frequency
+// set the base transmit frequency and channel spacing
 //
 bool
-radio_set_frequency(__pdata uint32_t value)
+radio_set_frequency(__pdata uint32_t base, __pdata uint32_t spacing)
 {
-	if (value < 240000000UL || value > 935000000UL) {
+	if (base < 240000000UL || base > 935000000UL)
 		return false;
-	}
-	settings.frequency = value;
-	set_frequency_registers(value);
-	return true;
-}
-
-
-// set the channel spacing
-//
-bool
-radio_set_channel_spacing(__pdata uint32_t value)
-{
-	if (value > 2550000L)
+	if (spacing > 2550000L)
 		return false;
-	value = scale_uint32(value, 10000);
-	settings.channel_spacing = value;
-	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, value);
+
+	settings.frequency = base;
+	set_frequency_registers(base);
+
+	spacing = scale_uint32(spacing, 10000);
+	settings.channel_spacing = spacing;
+	register_write(EZRADIOPRO_FREQUENCY_HOPPING_STEP_SIZE, spacing);
+
 	return true;
 }
 
@@ -1272,3 +1267,4 @@ rxfail:
 #endif // DEBUG_PINS_RADIO_TX_RX
 }
 
+#endif // ifndef CPU_SI1060
