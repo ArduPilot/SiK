@@ -74,6 +74,7 @@
 #define MODEM_STATUS_SYNC_DETECT		(1<<0)
 
 #define CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR	(1<<5)
+#define CHIP_STATUS_STATE_CHANGE					(1<<4)
 #define CHIP_STATUS_CMD_ERROR						(1<<3)
 
 #include "radio.h"
@@ -113,8 +114,8 @@ __pdata struct radio_settings settings;
 static bool	software_reset(void);
 static void	set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacing);
 
-#define TX_FIFO_THRESHOLD 0x30
-#define RX_FIFO_THRESHOLD 0x30
+#define TX_FIFO_THRESHOLD 0x40
+#define RX_FIFO_THRESHOLD 0x40
 
 #define RX_INT0_PH_MASK 	(PH_STATUS_FILTER_MISS \
 							| PH_STATUS_PACKET_RX \
@@ -323,23 +324,24 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 {
 	__pdata uint16_t tstart;
 	__data uint8_t n, len_remaining;
-	uint8_t frr_b, frr_c;
-
-	EX0_SAVE_DISABLE;
+	uint8_t chip_status, ph_status, tx_space;
 
 	if (length > sizeof(radio_buffer))
 		panic("oversized packet");
 
 	tstart = timer2_tick();
 
+	EX0_SAVE_DISABLE;
 	/* exit from RX state */
 	cmd_change_state(STATE_READY);
 	wait_for_cts();
 
+	EX0_RESTORE;
+
 	cmd_get_int_status_clear_all();
 	wait_for_cts();
 
-	cmd_fifo_info(0x01); /* clear the TX FIFO */
+	cmd_fifo_info(0x03); /* clear the TX FIFO */
 	wait_for_cts();
 
 	if (insert_netid) {
@@ -368,10 +370,14 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 	wait_for_cts();
 
 	while ((uint16_t) (timer2_tick() - tstart) < timeout_ticks) {
-		/* Fast Read Registers contain CHIP_STATUS and PH_STATUS */
-		frr_bc_read(frr_b, frr_c);
+		///* Fast Read Registers contain CHIP_STATUS and PH_STATUS */
+		cmd_fifo_info(0x00);
+		fifo_info_reply(_skip, tx_space);
+		frr_bc_read(chip_status, ph_status);
 
-		if ((frr_c & PH_STATUS_TX_FIFO_ALMOST_EMPTY)
+		// looking at PH_STATUS_TX_FIFO_ALMOST_EMPTY proved unreliable
+		if (//(ph_status & PH_STATUS_TX_FIFO_ALMOST_EMPTY)
+			(tx_space >= TX_FIFO_THRESHOLD)
 				&& len_remaining != 0) {
 			n = len_remaining;
 			if (n > TX_FIFO_THRESHOLD)
@@ -380,19 +386,18 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 			len_remaining -= n; buf += n;
 		}
 
-		if (frr_b & (CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR \
+		if (chip_status & (CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR \
 							  | CHIP_STATUS_CMD_ERROR)) {
-			debug("tx error: chip_pend=%x", frr_b);
+			debug("tx error: chip_status=%x len=%u len_remaining=%u", chip_status, length, len_remaining);
 			goto error;
 		}
 
-		if (frr_c & PH_STATUS_PACKET_SENT) {
-			EX0_RESTORE;
+		if (ph_status & PH_STATUS_PACKET_SENT) {
 			return true;
 		}
 	}
 
-	debug("TX timeout %u ts=%u tn=%u len=%u\n",
+	debug("TX timeout %u ts=%u tn=%u len=%u",
 		timeout_ticks,
 		tstart,
 		timer2_tick(),
@@ -408,8 +413,6 @@ error:
 	wait_for_cts();
 
 	inc_tx_error();
-
-	EX0_RESTORE;
 	return false;
 }
 
@@ -480,7 +483,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 
 	EX0_SAVE_DISABLE;
 
-#ifdef INCLUDE_GOLAY
+#ifdef INCLUDE_GOLAYq
 	if (!feature_golay) {
 		ret = radio_transmit_simple(length, buf, timeout_ticks, true);
 	} else {
@@ -570,7 +573,7 @@ radio_initialise(void)
 	cmd_set_property4(GROUP_FRR_CTL, 0x0,
 		10, /* FRR A = latched RSSI */
 		7, /* FRR B = INT_CHIP_STATUS */
-		3, /* FRR C = INT_PH_STATUs */
+		3, /* FRR C = INT_PH_STATUS */
 		9 /* FRR D = CURRENT_STATE */
 	);
 	wait_for_cts();
@@ -595,10 +598,11 @@ radio_initialise(void)
 	wait_for_cts();
 
 	cmd_gpio_pin_cfg(
-		32, // 0: TX_STATE
-		33, // 1: RX_STATE
-		26, // 2: SYNC_WORD_DETECT
-		33, // GPIO4: RX state
+		0x40 | 32, // 0: TX_STATE
+		0x40 | 35, // 1: TX_FIFO_EMPTY
+		//33, // 1: RX_STATE
+		0x40 | 8, // 2: CTS
+		0x40 | 33, // GPIO4: RX state
 		39, // nIRQ
 		0, // SDO
 		2
@@ -802,7 +806,8 @@ radio_configure(__pdata uint8_t air_rate)
 	wait_for_cts();
 
 	/* clear the FIFO to apply the mode change */
-	clear_rx_fifo();
+	cmd_fifo_info(0x03);
+	wait_for_cts();
 
 	return true;
 }
