@@ -1,10 +1,10 @@
 SiK
 =====
-Firmware for SiLabs Si1000 - Si102x/3x ISM radios
+Firmware for SiLabs Si1000 - Si102x/3x/6x ISM radios
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ArduPilot/SiK?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 SoC.
+SiK is a collection of firmware and tools for radios based on the cheap, versatile SiLabs Si1000 and Si1060 SoC.
 
 ## Branch Build Status
 [![Build Status](http://jenkins.hovo.id.au/buildStatus/icon?job=SiK)](http://jenkins.hovo.id.au/job/SiK/)
