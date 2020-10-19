@@ -206,6 +206,7 @@ at_timer(void)
 				break;
 			default:
 				// should never happen, but otherwise harmless
+				break;
 			}
 		}
 	}

@@ -447,4 +447,6 @@ radio_init(void)
 
 	// initialise TDM system
 	tdm_init();
+
+	at_mode_active = false;
 }
