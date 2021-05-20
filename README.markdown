@@ -28,7 +28,21 @@ Currently the firmware components include:
  - A bootloader with support for firmware upgrades over the serial interface.
  - Radio firmware with support for parsing AT commands, storing parameters and FHSS/TDM functionality
 
-See the user documentation above for a list of current firmware features
+### AT commands
+
+|Command| Variants| Function |
+|-------|--------|----------|
+|+++    | |Entering bootloader mode. Could be tested by sending AT, reply should be OK|
+|RT     | |remote AT command - send it to the tdm, system to send to the remote radio |
+|AT& | AT&F <br> AT&W <br> AT&U <br> AT&P <br> AT&T <br> AT&E |  Write parameters to the flash memory    |
+|AT+ | |    |
+|ATI | ATI1 <br> ATI2 <br> ATI3 <br> ATI4 <br> ATI6 <br> ATI6 <br> ATI7 | banner_string <br> version_string  <br> BOARD_ID <br> board frequency <br> board_bl_version <br> Parameters <br> TDM timing <br> RSSI  |
+|ATP |  ATPx=O <br> ATPx=I <br> ATPx=R <br> ATPx=Cx | Set pin to output, turn mirroring off pulling pin to ground    |
+|ATO | |    |
+|ATS | ATS? <br> ATS= | <br> Set a parameter  |
+|ATZ | | Generate a software reset    |
+
+Up to date AT command processig is located in [at.c](Firmware/radio/at.c) source code.
 
 ## What You Will Need
 
@@ -56,7 +70,7 @@ The SiLabs debug adapter can be used to flash both the bootloader and the firmwa
 
 The `Firmware/tools/ec2upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.  Further details on the connections required to flash a specific board should be found in the `Firmware/include/board_*.h` header for the board in question.
 
-To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.  You will need to get the board into the bootloader; how you do this varies from board to board, but it will normally involve either holding down a button or pulling a pin high or low when the board is reset or powered on. 
+To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.  You will need to get the board into the bootloader; how you do this varies from board to board, but it will normally involve either holding down a button or pulling a pin high or low when the board is reset or powered on.
 
 For the supported boards:
 
