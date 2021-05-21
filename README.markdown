@@ -34,9 +34,21 @@ Currently the firmware components include:
 |-------|--------|----------|
 |+++    | |Entering bootloader mode. Could be tested by sending AT, reply should be OK|
 |RT     | |remote AT command - send it to the tdm, system to send to the remote radio |
-|AT& | AT&F <br> AT&W <br> AT&U <br> AT&P <br> AT&T <br> AT&E |  Restore default parameters <br> Write parameters to the flash memory <br> Erase Flash signature forcing it into reprogram mode next reset <br> TDM change phase <br> enable test modes ("" disable all tests, =RSSI display RSSI stats, "=TDM" display TDM debug ) <br> ? print_encryption_key, = set_encryption_key |
-|AT+ | AT+P <br> AT+Cx=y <br> AT+Fx? <br> AT+L <br> AT+A |  set power level pwm to x immediately <br>  write calibration value <br> get calibration value <br> lock bootloader area if all calibrations written <br> RFD900 antenna diversity  |
-|ATI | ATI1 <br> ATI2 <br> ATI3 <br> ATI4 <br> ATI6 <br> ATI6 <br> ATI7 | banner_string <br> version_string  <br> BOARD_ID <br> board frequency <br> board_bl_version <br> Parameters <br> TDM timing <br> RSSI  |
+|AT&F   | |  Restore default parameters |
+|AT&W| | Write parameters to the flash memory | 
+|AT&U | | Erase Flash signature forcing it into reprogram mode next reset |
+|AT&P | | TDM change phase |
+|AT&T | AT&T <br> AT&T=RSSI <br> AT&T=TDM |  disable all test modes <br> display RSSI stats <br> display TDM debug ) |
+|AT&E | AT&E?  <br> AT&E= | Print_encryption_key <br> Set encryption key | 
+|AT+ | AT+P= <br> AT+Cx=y <br> AT+Fx? <br> AT+L <br> AT+A |  set power level pwm to x immediately <br>  write calibration value <br> get calibration value <br> lock bootloader area if all calibrations written <br> RFD900 antenna diversity  |
+|ATI0| | banner_string |
+|ATI1| | version_string  |
+|ATI2| | BOARD_ID |
+|ATI3| | Board design frequency|
+|ATI4| | Board boot loader version|
+|ATI5| | Parameters |
+|ATI6| | TDM timing |
+|ATI7| | Show RSSI |
 |ATP |  ATPx=O <br> ATPx=I <br> ATPx=R <br> ATPx=Cx | Set pin to output, turn mirroring off pulling pin to ground    |
 |ATO | |    |
 |ATS | ATS? <br> ATS= | <br> Set a parameter  |
