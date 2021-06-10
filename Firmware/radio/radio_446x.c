@@ -55,27 +55,27 @@
 #define STATE_RX		8
 
 /* radio interrupt flags */
-#define PH_STATUS_FILTER_MATCH			(1<<7)
-#define PH_STATUS_FILTER_MISS			(1<<6)
-#define PH_STATUS_PACKET_SENT			(1<<5)
-#define	PH_STATUS_PACKET_RX				(1<<4)
-#define PH_STATUS_CRC_ERROR				(1<<3)
-#define PH_STATUS_PREAMBLE_DETECTED		(1<<2)
-#define PH_STATUS_TX_FIFO_ALMOST_EMPTY  (1<<1)
-#define PH_STATUS_RX_FIFO_ALMOST_FULL 	(1<<0)
+#define PH_STATUS_FILTER_MATCH			(1U<<7U)
+#define PH_STATUS_FILTER_MISS			(1U<<6U)
+#define PH_STATUS_PACKET_SENT			(1U<<5U)
+#define	PH_STATUS_PACKET_RX			(1U<<4U)
+#define PH_STATUS_CRC_ERROR			(1U<<3U)
+#define PH_STATUS_PREAMBLE_DETECTED		(1U<<2U)
+#define PH_STATUS_TX_FIFO_ALMOST_EMPTY          (1U<<1U)
+#define PH_STATUS_RX_FIFO_ALMOST_FULL 	        (1U<<0U)
 
-#define MODEM_STATUS_RSSI_LATCH			(1<<7)
-#define MODEM_STATUS_POSTAMBLE_DETECT	(1<<6)
-#define MODEM_STATUS_INVALID_SYNC		(1<<5)
-#define MODEM_STATUS_RSSI_JUMP			(1<<4)
-#define MODEM_STATUS_RSSI				(1<<3)
-#define MODEM_STATUS_INVALID_PREAMBLE	(1<<2)
-#define MODEM_STATUS_PREAMBLE_DETECT	(1<<1)
-#define MODEM_STATUS_SYNC_DETECT		(1<<0)
+#define MODEM_STATUS_RSSI_LATCH			(1U<<7)
+#define MODEM_STATUS_POSTAMBLE_DETECT	        (1U<<6)
+#define MODEM_STATUS_INVALID_SYNC		(1U<<5)
+#define MODEM_STATUS_RSSI_JUMP			(1U<<4)
+#define MODEM_STATUS_RSSI			(1U<<3)
+#define MODEM_STATUS_INVALID_PREAMBLE	        (1U<<2)
+#define MODEM_STATUS_PREAMBLE_DETECT	        (1U<<1)
+#define MODEM_STATUS_SYNC_DETECT		(1U<<0U)
 
-#define CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR	(1<<5)
-#define CHIP_STATUS_STATE_CHANGE					(1<<4)
-#define CHIP_STATUS_CMD_ERROR						(1<<3)
+#define CHIP_STATUS_FIFO_UNDERFLOW_OVERFLOW_ERROR  (1U<<5)
+#define CHIP_STATUS_STATE_CHANGE		   (1U<<4)
+#define CHIP_STATUS_CMD_ERROR			   (1U<<3)
 
 #include "radio.h"
 #include "timer.h"
@@ -1007,8 +1007,10 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 	uint8_t modem_pend, ph_status, ph_pend;
 	uint8_t rx_fifo_count;
 
-	/* only clear pending bits we handle here */
-	cmd_get_int_status(~RX_INT0_PH_MASK, ~RX_INT0_MODEM_MASK, 0xff);
+        /* only clear pending bits we handle here */
+        const uint8_t m1 = RX_INT0_PH_MASK;
+        const uint8_t m2 = RX_INT0_MODEM_MASK;
+        cmd_get_int_status(~m1, ~m2, 0xffU);
 	get_int_status_reply(_skip, _skip, ph_pend, ph_status, modem_pend,
 						  _skip, _skip, _skip);
 

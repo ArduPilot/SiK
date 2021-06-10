@@ -98,8 +98,9 @@ bl_main(void)
 	
 	// Do some simple debouncing on the bootloader-entry
 	// strap/button.
-	debounce_count = 0;
-	for (i = 0; i < 255; i++) {
+        debounce_count = 0;
+        const uint8_t limit = 255U;
+        for (i = 0; i < limit; i++) {
 		if (BUTTON_BOOTLOAD == BUTTON_ACTIVE)
 			debounce_count++;
 	}
@@ -176,10 +177,13 @@ bootloader(void)
 			goto cmd_bad;
 	}
 
-	switch (c) {
+        switch (c) {
 
+#pragma save
+#pragma disable_warning 126
 	case PROTO_GET_SYNC:		// sync
-		break;
+                break;
+#pragma restore
 
 	case PROTO_GET_DEVICE:
 		cout(BOARD_ID);
