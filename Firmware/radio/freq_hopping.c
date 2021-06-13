@@ -58,6 +58,26 @@ __pdata static volatile uint8_t receive_channel;
 /// map between hopping channel numbers and physical channel numbers
 __xdata static uint8_t channel_map[MAX_FREQ_CHANNELS];
 
+/*
+  replacement for rand() and srand() from sdcc 3.0. This is needed to
+  keep compatibility with original frequency hopping order
+ */
+static unsigned long int r_next;
+
+int
+r_rand(void)
+{
+    r_next = r_next * 1103515245UL + 12345;
+    return (unsigned int)(r_next/65536) % (RAND_MAX + 1U);
+}
+
+void
+r_srand(unsigned int seed)
+{
+    r_next = seed;
+}
+
+
 // a very simple array shuffle
 // based on shuffle from
 // http://benpfaff.org/writings/clc/shuffle.html
@@ -65,7 +85,7 @@ static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 {
 	uint8_t i;
 	for (i = 0; i < n - 1; i++) {
-		uint8_t j = ((uint8_t)rand()) % n;
+                uint8_t j = ((uint8_t)r_rand()) % n;
 		uint8_t t = array[j];
 		array[j] = array[i];
 		array[i] = t;
@@ -75,10 +95,10 @@ static inline void shuffle(__xdata uint8_t *array, uint8_t n)
 void
 shuffleRand(void)
 {
-  srand(param_get(PARAM_NETID));
+  r_srand(param_get(PARAM_NETID));
 #ifdef INCLUDE_AES
   if (param_get(PARAM_ENCRYPTION)) {
-    srand(crc16(32, param_get_encryption_key()));
+    r_srand(crc16(32, param_get_encryption_key()));
   }
 #endif // INCLUDE_AES
 }

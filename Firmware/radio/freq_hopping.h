@@ -69,4 +69,8 @@ extern void fhop_set_locked(bool locked);
 /// how many channels are we hopping over
 extern __pdata uint8_t num_fh_channels;
 
+/// replacement for srand() and rand()
+extern int r_rand(void);
+extern void r_srand(unsigned int seed);
+
 #endif // _FREQ_HOPPING_H_

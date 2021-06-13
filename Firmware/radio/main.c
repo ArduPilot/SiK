@@ -403,9 +403,9 @@ radio_init(void)
 	// add another offset based on network ID. This means that
 	// with different network IDs we will have much lower
 	// interference
-	srand(param_get(PARAM_NETID));
+        r_srand(param_get(PARAM_NETID));
 	if (num_fh_channels > 5) {
-		freq_min += ((unsigned long)(rand()*625)) % channel_spacing;
+                freq_min += ((unsigned long)(r_rand()*625)) % channel_spacing;
 	}
 	debug("freq low=%lu high=%lu spacing=%lu\n", 
 	       freq_min, freq_min+(num_fh_channels*channel_spacing), 

@@ -650,7 +650,7 @@ tdm_serial_loop(void)
       } else {
         lbt_listen_time = 0;
         if (lbt_rand == 0) {
-          lbt_rand = ((uint16_t)rand()) % lbt_min_time;
+          lbt_rand = ((uint16_t)r_rand()) % lbt_min_time;
         }
       }
       if (lbt_listen_time < lbt_min_time + lbt_rand) {
