@@ -238,10 +238,10 @@ hardware_init(void)
 	/* ------------ Change to radio page ------------ */
 	RADIO_PAGE();
 	SPI1CFG  = 0x40;  // master mode
-#ifndef BOARD_ism01a
-	SPI1CN   = 0x00;  // 3 wire master mode
+#if defined(BOARD_ism01a) || defined(BOARD_hb1060)
+        SPI1CN   = 0x0C;  // 4 wire master mode, NSS1=1
 #else
-	SPI1CN   = 0x0C;  // 4 wire master mode, NSS1=1
+        SPI1CN   = 0x00;  // 3 wire master mode
 #endif
 	SPI1CKR  = 0x00;  // Initialise SPI prescaler to divide-by-2 (12.25MHz, technically out of spec)
 	SPI1CN  |= 0x01;  // enable SPI

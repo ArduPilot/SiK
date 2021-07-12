@@ -26,7 +26,7 @@
 #
 
 #
-# Configuration options for the ISM01A board.
+# Configuration options for the HB1060 board.
 #
 FREQUENCIES			 = 433 868 915
 XRAM_SIZE			 = 4096

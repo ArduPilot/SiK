@@ -706,7 +706,9 @@ radio_configure(__pdata uint8_t air_rate)
 		send_bulk_conf(variable_prop_ids, band_433_prop_vals[i]);
 	} else if (g_board_frequency == FREQ_868) {
 		send_bulk_conf(variable_prop_ids, band_868_prop_vals[i]);
-	} else {
+        } else if (g_board_frequency == FREQ_915) {
+                send_bulk_conf(variable_prop_ids, band_915_prop_vals[i]);
+        } else {
 		return false; /* unsupported band */
 	}
 
