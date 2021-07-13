@@ -20,13 +20,13 @@
 // INPUT DATA
 /*
 // Crys_freq(Hz): 30000000    Crys_tol(ppm): 20    IF_mode: 2    High_perf_Ch_Fil: 1    OSRtune: 0    Ch_Fil_Bw_AFC: 0    ANT_DIV: 0    PM_pattern: 0    
-// MOD_type: 3    Rsymb(sps): 64000    Fdev(Hz): 20000    RXBW(Hz): 150000    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
+// MOD_type: 3    Rsymb(sps): 64000    Fdev(Hz): 63750    RXBW(Hz): 150000    Manchester: 0    AFC_en: 0    Rsymb_error: 0.0    Chip-Version: 2    
 // RF Freq.(MHz): 915    API_TC: 29    fhst: 250000    inputBW: 0    BERT: 0    RAW_dout: 0    D_source: 0    Hi_pfm_div: 1    
 // 
 // # RX IF frequency is  -468750 Hz
-// # WB filter 2 (BW = 137.42 kHz);  NB-filter 2 (BW = 137.42 kHz)
+// # WB filter 2 (BW = 206.12 kHz);  NB-filter 2 (BW = 206.12 kHz)
 // 
-// Modulation index: 0.625
+// Modulation index: 1.992
 */
 
 
@@ -36,6 +36,7 @@
 #define RADIO_CONFIGURATION_DATA_RADIO_PACKET_LENGTH               0x07
 #define RADIO_CONFIGURATION_DATA_RADIO_STATE_AFTER_POWER_UP        0x03
 #define RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET       0xF000
+#define RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD					   {0xC5, 0xC5, 0xC5, 0xC5, 0xC5, 0xC5, 0xC5}
 
 
 // CONFIGURATION COMMANDS
@@ -76,15 +77,16 @@
 #define RF_GLOBAL_CONFIG_1 0x11, 0x00, 0x01, 0x03, 0x60
 
 /*
-// Set properties:           RF_INT_CTL_ENABLE_1
-// Number of properties:     1
+// Set properties:           RF_INT_CTL_ENABLE_2
+// Number of properties:     2
 // Group ID:                 0x01
 // Start ID:                 0x00
-// Default values:           0x04, 
+// Default values:           0x04, 0x00, 
 // Descriptions:
 //   INT_CTL_ENABLE - This property provides for global enabling of the three interrupt groups (Chip, Modem and Packet Handler) in order to generate HW interrupts at the NIRQ pin.
+//   INT_CTL_PH_ENABLE - Enable individual interrupt sources within the Packet Handler Interrupt Group to generate a HW interrupt on the NIRQ output pin.
 */
-#define RF_INT_CTL_ENABLE_1 0x11, 0x01, 0x01, 0x00, 0x00
+#define RF_INT_CTL_ENABLE_2 0x11, 0x01, 0x02, 0x00, 0x01, 0x38
 
 /*
 // Set properties:           RF_FRR_CTL_A_MODE_4
@@ -256,7 +258,7 @@
 //   MODEM_FREQ_DEV_2 - 17-bit unsigned TX frequency deviation word.
 //   MODEM_FREQ_DEV_1 - 17-bit unsigned TX frequency deviation word.
 */
-#define RF_MODEM_MOD_TYPE_12 0x11, 0x20, 0x0C, 0x00, 0x03, 0x00, 0x07, 0x13, 0x88, 0x00, 0x09, 0xC9, 0xC3, 0x80, 0x00, 0x02
+#define RF_MODEM_MOD_TYPE_12 0x11, 0x20, 0x0C, 0x00, 0x03, 0x00, 0x07, 0x13, 0x88, 0x00, 0x09, 0xC9, 0xC3, 0x80, 0x00, 0x08
 
 /*
 // Set properties:           RF_MODEM_FREQ_DEV_0_1
@@ -267,7 +269,7 @@
 // Descriptions:
 //   MODEM_FREQ_DEV_0 - 17-bit unsigned TX frequency deviation word.
 */
-#define RF_MODEM_FREQ_DEV_0_1 0x11, 0x20, 0x01, 0x0C, 0xBB
+#define RF_MODEM_FREQ_DEV_0_1 0x11, 0x20, 0x01, 0x0C, 0xB4
 
 /*
 // Set properties:           RF_MODEM_TX_RAMP_DELAY_8
@@ -285,7 +287,7 @@
 //   MODEM_DECIMATION_CFG1 - Specifies three decimator ratios for the Cascaded Integrator Comb (CIC) filter.
 //   MODEM_DECIMATION_CFG0 - Specifies miscellaneous parameters and decimator ratios for the Cascaded Integrator Comb (CIC) filter.
 */
-#define RF_MODEM_TX_RAMP_DELAY_8 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0x10, 0x10
+#define RF_MODEM_TX_RAMP_DELAY_8 0x11, 0x20, 0x08, 0x18, 0x01, 0x00, 0x08, 0x03, 0xC0, 0x00, 0x10, 0x20
 
 /*
 // Set properties:           RF_MODEM_BCR_OSR_1_9
@@ -304,7 +306,7 @@
 //   MODEM_BCR_GEAR - RX BCR loop gear control.
 //   MODEM_BCR_MISC1 - Miscellaneous control bits for the RX BCR loop.
 */
-#define RF_MODEM_BCR_OSR_1_9 0x11, 0x20, 0x09, 0x22, 0x00, 0x4E, 0x06, 0x8D, 0xB9, 0x07, 0xFF, 0x02, 0x00
+#define RF_MODEM_BCR_OSR_1_9 0x11, 0x20, 0x09, 0x22, 0x00, 0x75, 0x04, 0x5E, 0x7B, 0x02, 0x32, 0x02, 0x00
 
 /*
 // Set properties:           RF_MODEM_AFC_GEAR_7
@@ -321,7 +323,7 @@
 //   MODEM_AFC_LIMITER_0 - Set the AFC limiter value.
 //   MODEM_AFC_MISC - Specifies miscellaneous AFC control bits.
 */
-#define RF_MODEM_AFC_GEAR_7 0x11, 0x20, 0x07, 0x2C, 0x00, 0x12, 0x81, 0x18, 0x01, 0xDC, 0xA0
+#define RF_MODEM_AFC_GEAR_7 0x11, 0x20, 0x07, 0x2C, 0x00, 0x12, 0x81, 0x18, 0x02, 0xC4, 0xA0
 
 /*
 // Set properties:           RF_MODEM_AGC_CONTROL_1
@@ -351,7 +353,7 @@
 //   MODEM_FSK4_MAP - 4(G)FSK symbol mapping code.
 //   MODEM_OOK_PDTC - Configures the attack and decay times of the OOK Peak Detector.
 */
-#define RF_MODEM_AGC_WINDOW_SIZE_9 0x11, 0x20, 0x09, 0x38, 0x11, 0x11, 0x11, 0x00, 0x1A, 0x28, 0x00, 0x00, 0x28
+#define RF_MODEM_AGC_WINDOW_SIZE_9 0x11, 0x20, 0x09, 0x38, 0x11, 0x1A, 0x1A, 0x00, 0x1A, 0x7F, 0x80, 0x00, 0x28
 
 /*
 // Set properties:           RF_MODEM_OOK_CNT1_9
@@ -370,7 +372,7 @@
 //   MODEM_ANT_DIV_CONTROL - Specifies controls for the Antenna Diversity algorithm.
 //   MODEM_RSSI_THRESH - Configures the RSSI threshold.
 */
-#define RF_MODEM_OOK_CNT1_9 0x11, 0x20, 0x09, 0x42, 0xA4, 0x03, 0xD6, 0x03, 0x00, 0x99, 0x01, 0x80, 0xFF
+#define RF_MODEM_OOK_CNT1_9 0x11, 0x20, 0x09, 0x42, 0xA4, 0x03, 0xD6, 0x03, 0x01, 0x46, 0x01, 0x80, 0xFF
 
 /*
 // Set properties:           RF_MODEM_RSSI_CONTROL_1
@@ -553,7 +555,7 @@
         0x08, RF_GPIO_PIN_CFG, \
         0x06, RF_GLOBAL_XO_TUNE_2, \
         0x05, RF_GLOBAL_CONFIG_1, \
-        0x05, RF_INT_CTL_ENABLE_1, \
+        0x06, RF_INT_CTL_ENABLE_2, \
         0x08, RF_FRR_CTL_A_MODE_4, \
         0x0D, RF_PREAMBLE_TX_LENGTH_9, \
         0x09, RF_SYNC_CONFIG_5, \
@@ -592,6 +594,7 @@
 #define RADIO_CONFIGURATION_DATA_RADIO_PACKET_LENGTH_DEFAULT               0x10
 #define RADIO_CONFIGURATION_DATA_RADIO_STATE_AFTER_POWER_UP_DEFAULT        0x01
 #define RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET_DEFAULT       0x1000
+#define RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD_DEFAULT					   {0x42, 0x55, 0x54, 0x54, 0x4F, 0x4E, 0x31} // BUTTON1 
 
 #define RADIO_CONFIGURATION_DATA_RADIO_PATCH_INCLUDED                      0x00
 #define RADIO_CONFIGURATION_DATA_RADIO_PATCH_SIZE                          0x00
@@ -621,12 +624,17 @@
 #define RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET  RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET_DEFAULT 
 #endif
 
+#ifndef RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD
+#define RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD         RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD_DEFAULT 
+#endif
+
 #define RADIO_CONFIGURATION_DATA { \
                             Radio_Configuration_Data_Array,                            \
                             RADIO_CONFIGURATION_DATA_CHANNEL_NUMBER,                   \
                             RADIO_CONFIGURATION_DATA_RADIO_PACKET_LENGTH,              \
                             RADIO_CONFIGURATION_DATA_RADIO_STATE_AFTER_POWER_UP,       \
-                            RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET       \
+                            RADIO_CONFIGURATION_DATA_RADIO_DELAY_CNT_AFTER_RESET,       \
+                            RADIO_CONFIGURATION_DATA_CUSTOM_PAYLOAD                   \
                             }
 
 #endif /* RADIO_CONFIG_H_ */

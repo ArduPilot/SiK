@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # This script generates radio/radio_446x_conf.h
 #
 # Silabs' WDS software allows to export a header file containing register values
