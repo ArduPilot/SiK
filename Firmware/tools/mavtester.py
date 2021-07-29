@@ -19,6 +19,7 @@ parser.add_option("--show", action='store_true', default=False, help="show messa
 parser.add_option("--rtscts", action='store_true', default=False, help="enable RTSCTS hardware flow control")
 parser.add_option("--mav20", action='store_true', default=False, help="enable MAVLink2")
 parser.add_option("--key", default=None, help="MAVLink2 signing key")
+parser.add_option("--swap", action='store_true', help="swap port1/port2")
 
 (opts, args) = parser.parse_args()
 
@@ -32,9 +33,16 @@ if opts.port1 is None or opts.port2 is None:
     sys.exit(1)
 
 # create GCS connection
-gcs = mavutil.mavlink_connection(opts.port1, baud=opts.baudrate, input=True)
+if opts.swap:
+    port1 = opts.port2
+    port2 = opts.port1
+else:
+    port1 = opts.port1
+    port2 = opts.port2
+
+gcs = mavutil.mavlink_connection(port1, baud=opts.baudrate, input=True)
 gcs.setup_logfile('gcs.tlog')
-vehicle = mavutil.mavlink_connection(opts.port2, baud=opts.baudrate, input=False)
+vehicle = mavutil.mavlink_connection(port2, baud=opts.baudrate, input=False)
 vehicle.setup_logfile('vehicle.tlog')
 
 print("Draining ports")
@@ -210,6 +218,8 @@ def recv_vehicle():
         stats.vehicle_radio_received += 1
         stats.vehicle_txbuf = m.txbuf
         stats.vehicle_fixed = m.fixed
+        stats.vehicle_rssi = m.rssi
+        stats.vehicle_noise = m.noise
     if m.get_type() == 'RC_CHANNELS_OVERRIDE':
         process_override(m)
     return True
@@ -240,6 +250,8 @@ def recv_GCS():
         stats.gcs_radio_received += 1            
         stats.gcs_txbuf = m.txbuf
         stats.gcs_fixed = m.fixed
+        stats.gcs_rssi = m.rssi
+        stats.gcs_noise = m.noise
     return True
     
 
@@ -267,6 +279,10 @@ class PacketStats(object):
         self.last_vehicle_radio = None
         self.vehicle_txbuf = 100
         self.gcs_txbuf = 100
+        self.vehicle_rssi = 0
+        self.gcs_rssi = 0
+        self.vehicle_noise = 0
+        self.gcs_noise = 0
         self.vehicle_fixed = 0
         self.gcs_fixed = 0
 
@@ -280,7 +296,7 @@ class PacketStats(object):
         if stats.latency_count != 0:
             avg_latency = stats.latency_total / stats.latency_count
         
-        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u loss:%u:%u%%/%u:%u%% fixed:%u/%u" % (
+        return "Veh:%u/%u/%u  GCS:%u/%u/%u  pend:%u rates:%u/%u lat:%u/%u/%u bad:%u/%u txbuf:%u/%u rssi:%u/%u noise:%u/%u loss:%u:%u%%/%u:%u%% fixed:%u/%u" % (
             self.vehicle_sent,
             self.vehicle_received,
             self.vehicle_received - self.vehicle_radio_received,
@@ -297,6 +313,10 @@ class PacketStats(object):
             self.gcs_bad_data,
             self.vehicle_txbuf,
             self.gcs_txbuf,
+            self.vehicle_rssi,
+            self.gcs_rssi,
+            self.vehicle_noise,
+            self.gcs_noise,
             gcs.mav_loss,
             gcs.packet_loss(),
             vehicle.mav_loss,
