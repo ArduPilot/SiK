@@ -82,6 +82,8 @@ The SiLabs debug adapter can be used to flash both the bootloader and the firmwa
 
 The `Firmware/tools/ec2upload` script can be used to flash either a bootloader or firmware to an attached board with the SiLabs USB debug adapter.  Further details on the connections required to flash a specific board should be found in the `Firmware/include/board_*.h` header for the board in question.
 
+### Uploader application
+
 To use the updater application, open the `SiKUploader/SikUploader.sln` Mono solution file, build and run the application. Select the serial port connected to your radio and the appropriate firmware `.hex` file for the firmware you wish to uploader.  You will need to get the board into the bootloader; how you do this varies from board to board, but it will normally involve either holding down a button or pulling a pin high or low when the board is reset or powered on.
 
 For the supported boards:
@@ -92,7 +94,35 @@ For the supported boards:
 
 The uploader application contains a bidirectional serial console that can be used for interacting with the radio firmware.
 
+### Uploader.py
+
 As an alternative to the Mono uploader, there is a Python-based command-line upload tool in `Firmware/tools/uploader.py`.
+
+    kaklik@ntb$ ./uploader.py --port /dev/ttyUSB0 radio.ism01a.ihx 
+    uploading to port /dev/ttyUSB0
+    Connecting to /dev/ttyUSB0
+    Trying autosync
+    
+    +++
+    +++
+    ATI
+    
+    ATI
+    RFD SiK 2.0 on
+    AT&UPDATE
+    Sent update command
+    Got sync
+    board 4f  freq 43
+    erasing...
+    programing...
+    [##################################################] 44887/44887 (100%)
+    
+    verifying...
+    [##################################################] 44887/44887 (100%)
+    
+    done.
+    kaklik@ntb$'' 
+
 
 ## Supporting New Boards
 
