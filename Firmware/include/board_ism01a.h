@@ -89,4 +89,7 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 SBIT(NSS1, SFR_SPI1CN, 2); // SI106x Internal Connection
 SBIT(SDN,  SFR_P0, 7);
 
+#define GPIO_0_CONFIG 32 // TX_STATE
+#define GPIO_1_CONFIG 35 // TX_FIFO_EMPTY
+
 #endif // _BOARD_ISM01A_H

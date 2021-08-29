@@ -85,9 +85,12 @@
 
 #include "radio_446x_api.h"
 
-__xdata uint8_t radio_buffer[MAX_PACKET_LENGTH];
-__pdata uint8_t receive_packet_length;
-__pdata uint8_t partial_packet_length;
+// raw packet in receive handler can have an extra 3 bytes for netid
+#define MAX_RAW_PACKET_LENGTH (MAX_PACKET_LENGTH+3U)
+
+__xdata uint8_t radio_buffer[MAX_RAW_PACKET_LENGTH];
+__pdata uint16_t receive_packet_length;
+__pdata uint16_t partial_packet_length;
 __pdata uint8_t last_rssi;
 __pdata uint8_t netid[2];
 
@@ -161,7 +164,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	if (!packet_received)
 		return false;
 
-	if (receive_packet_length > MAX_PACKET_LENGTH
+        if (receive_packet_length > MAX_RAW_PACKET_LENGTH
 		|| receive_packet_length < 3) {
 		EX0=0;
 		_radio_receiver_on();
@@ -174,7 +177,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	if (!feature_golay)
 #endif // INCLUDE_GOLAY
   {
-	*length = receive_packet_length-3;
+        *length = receive_packet_length-3;
 	memcpy(buf, radio_buffer+3, receive_packet_length-3);
 
 		EX0=0;
@@ -191,7 +194,7 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	// decode it in the callers buffer. This relies on the
 	// in-place decode properties of the golay code. Decoding in
 	// this way allows us to overlap decoding with the next receive
-	memcpy(buf, radio_buffer+1, receive_packet_length-1);
+        memcpy(buf, radio_buffer+1, receive_packet_length-1);
 
 	// enable the receiver for the next packet. This also
 	// enables the EX0 interrupt
@@ -326,10 +329,7 @@ radio_transmit_simple(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uin
 	__data uint8_t n, len_remaining;
 	uint8_t chip_status, ph_status, tx_space;
 
-	if (length > sizeof(radio_buffer))
-		panic("oversized packet");
-
-	tstart = timer2_tick();
+        tstart = timer2_tick();
 
 	EX0_SAVE_DISABLE;
 	/* exit from RX state */
@@ -483,7 +483,7 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 
 	EX0_SAVE_DISABLE;
 
-#ifdef INCLUDE_GOLAYq
+#ifdef INCLUDE_GOLAY
 	if (!feature_golay) {
 		ret = radio_transmit_simple(length, buf, timeout_ticks, true);
 	} else {
@@ -500,10 +500,9 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 static void
 _radio_receiver_on(void) __reentrant
 {
-	packet_received = 0;
+        packet_received = 0;
 	receive_packet_length = 0;
-	sync_detected = 0;
-	partial_packet_length = 0;
+        partial_packet_length = 0;
 
 	cmd_get_int_status_clear_all();
 	wait_for_cts();
@@ -519,6 +518,7 @@ _radio_receiver_on(void) __reentrant
 		STATE_READY  /* ditto after invalid packet */
 	);
 	wait_for_cts();
+        sync_detected = 0;
 }
 
 // put the radio in receive mode
@@ -551,25 +551,8 @@ check_part(void) __reentrant
 	return part == 0x4463;
 }
 
-// initialise the radio hardware
-//
-bool
-radio_initialise(void)
+static void radio_gpio_init()
 {
-	/* TODO: check timing */
-	SDN = 1;
-	delay_msec(1);
-	SDN = 0;
-	delay_msec(6);
-
-	wait_for_cts();
-
-	cmd_power_up(0x1, 0x0, 30000000);
-	wait_for_cts();
-
-	if (!check_part())
-		return false;
-
 	cmd_set_property4(GROUP_FRR_CTL, 0x0,
 		10, /* FRR A = latched RSSI */
 		7, /* FRR B = INT_CHIP_STATUS */
@@ -598,16 +581,37 @@ radio_initialise(void)
 	wait_for_cts();
 
 	cmd_gpio_pin_cfg(
-		0x40 | 32, // 0: TX_STATE
-		0x40 | 35, // 1: TX_FIFO_EMPTY
-		//33, // 1: RX_STATE
-		0x40 | 8, // 2: CTS
+                0x40 | GPIO_0_CONFIG,
+                0x40 | GPIO_1_CONFIG,
+                0x40 | 8, // 2: CTS
 		0x40 | 33, // GPIO4: RX state
 		39, // nIRQ
 		0, // SDO
 		2
 	);
+        wait_for_cts();
+}
+
+// initialise the radio hardware
+//
+bool
+radio_initialise(void)
+{
+	/* TODO: check timing */
+	SDN = 1;
+	delay_msec(1);
+	SDN = 0;
+	delay_msec(6);
+
 	wait_for_cts();
+
+	cmd_power_up(0x1, 0x0, 30000000);
+	wait_for_cts();
+
+	if (!check_part())
+		return false;
+
+        radio_gpio_init();
 
 	return true;
 }
@@ -630,7 +634,8 @@ rx_hop(uint8_t channel)
 	uint16_t vco_cnt;
 
 	EX0_SAVE_DISABLE;
-	uint32_t fc = (freq_control_base + channel*((uint32_t) freq_control_spacing));
+        clear_rx_fifo();
+        uint32_t fc = (freq_control_base + channel*((uint32_t) freq_control_spacing));
 	/* formula for VCO_CNT taken from Silabs' spreadsheet calculator */
 	vco_cnt = (uint16_t) (((fc<<5) - (((uint32_t) outdiv)<<17) \
 						  + (((uint32_t) 1)<<18)) >> 19);
@@ -758,7 +763,7 @@ radio_configure(__pdata uint8_t air_rate)
 		wait_for_cts();
 
 		/* RX field 3 (payload): variable length, enable CRC, check CRC at end of field */
-		cmd_set_property4(GROUP_PKT, 0x29, 0x00, MAX_PACKET_LENGTH, field_flags, 0x0a);
+                cmd_set_property4(GROUP_PKT, 0x29, 0x00, MAX_PACKET_LENGTH, field_flags, 0x0a);
 		wait_for_cts();
 
 		/* TX field 1 (whole packet): seed PN generator, enable and seed CRC, send CRC at end of field */
@@ -792,7 +797,7 @@ radio_configure(__pdata uint8_t air_rate)
 		wait_for_cts();
 
 		/* RX field 2 (payload): variable length, no CRC */
-		cmd_set_property4(GROUP_PKT, 0x25, 0x00, MAX_PACKET_LENGTH, field_flags, 0x00);
+                cmd_set_property4(GROUP_PKT, 0x25, 0x00, MAX_PACKET_LENGTH, field_flags, 0x00);
 		wait_for_cts();
 
 		/* TX field 1 (whole packet): seed PN generator */
@@ -810,6 +815,8 @@ radio_configure(__pdata uint8_t air_rate)
 	/* clear the FIFO to apply the mode change */
 	cmd_fifo_info(0x03);
 	wait_for_cts();
+
+        radio_gpio_init();
 
 	return true;
 }
@@ -916,7 +923,7 @@ set_frequency_registers(__pdata uint32_t base_freq, __pdata uint32_t freq_spacin
 		outdiv = 4; band = 0;
 	} else {
 		panic("set_frequency_registers: outdiv out of range");
-	}
+        }
 
 	/* MODEM_CLKGEN_BAND */
 	cmd_set_property1(GROUP_MODEM, 0x51, 0x08 | band);
@@ -1007,7 +1014,7 @@ radio_set_diversity(enum DIVERSITY_Enum state)
 INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 {
 	uint8_t modem_pend, ph_status, ph_pend;
-	uint8_t rx_fifo_count;
+        uint8_t rx_fifo_count, rx_fifo_space;
 
         /* only clear pending bits we handle here */
         const uint8_t m1 = RX_INT0_PH_MASK;
@@ -1020,18 +1027,22 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		sync_detected = 1;
 	}
 
-	if (ph_status & PH_STATUS_RX_FIFO_ALMOST_FULL) {
+        if ((ph_status & PH_STATUS_RX_FIFO_ALMOST_FULL) &&
+            (ph_pend & PH_STATUS_PACKET_RX) == 0) {
 		if (RX_FIFO_THRESHOLD + (uint16_t) partial_packet_length > MAX_PACKET_LENGTH) {
-			inc_rx_error();
+                        debug("partial long packet %u %u", partial_packet_length, RX_FIFO_THRESHOLD);
+                        inc_rx_error();
 			goto rxfail;
 		}
 
-		read_rx_fifo(RX_FIFO_THRESHOLD, radio_buffer + partial_packet_length);
-		partial_packet_length += RX_FIFO_THRESHOLD;
+                read_rx_fifo(RX_FIFO_THRESHOLD, radio_buffer + partial_packet_length);
+                partial_packet_length += RX_FIFO_THRESHOLD;
 	}
 
-	if (ph_pend & PH_STATUS_FILTER_MISS)
-		goto rxfail;
+        if (ph_pend & PH_STATUS_FILTER_MISS) {
+                debug("miss");
+                goto rxfail;
+        }
 
 	if (ph_pend & PH_STATUS_CRC_ERROR) {
 		debug("CRC error");
@@ -1044,22 +1055,16 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 		cmd_packet_info(0, 0, 0);
 		packet_info_reply(receive_packet_length);
 
-		/* account for header and size byte */
+                /* account for header and size byte */
 		if (feature_golay) {
 			receive_packet_length += 1;
 		} else {
 			receive_packet_length += 3;
 		}
 
-		if (receive_packet_length > MAX_PACKET_LENGTH) {
-			debug("dropping too long a packet");
-			inc_rx_error();
-			goto rxfail;
-		}
-
-		/* retrieve number of bytes in FIFO */
+                /* retrieve number of bytes in FIFO */
 		cmd_fifo_info(0);
-		fifo_info_reply(rx_fifo_count, _skip);
+                fifo_info_reply(rx_fifo_count, rx_fifo_space);
 
 		if (rx_fifo_count + partial_packet_length != receive_packet_length) {
 			debug("length mismatch fifo=%x partial=%x packet=%x",
@@ -1068,15 +1073,23 @@ INTERRUPT(Receiver_ISR, INTERRUPT_INT0)
 			goto rxfail;
 		}
 
-		if (partial_packet_length < receive_packet_length)
+                if (receive_packet_length > MAX_RAW_PACKET_LENGTH) {
+                        debug("too long %u %u %u %u", receive_packet_length, partial_packet_length, rx_fifo_count, rx_fifo_space);
+                        inc_rx_error();
+                        goto rxfail;
+		}
+
+                if (partial_packet_length < receive_packet_length) {
 			read_rx_fifo(receive_packet_length - partial_packet_length,
-						 radio_buffer + partial_packet_length);
+                                     radio_buffer + partial_packet_length);
+                }
 
 		frr_a_read(last_rssi);
 		packet_received = true;
-	}
+                clear_rx_fifo();
+        }
 
-	return;
+        return;
 
 rxfail:
 	_radio_receiver_on();
