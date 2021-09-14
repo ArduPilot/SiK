@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 '''
 check the radio code for prototype consistency
 Andrew Tridgell, February 2012
