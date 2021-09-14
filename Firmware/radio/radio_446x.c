@@ -824,13 +824,42 @@ radio_configure(__pdata uint8_t air_rate)
 // set the radio transmit power (in dBm)
 //
 
-/* TODO: not in dBm, measure? */
+/*
+  mapping from dBm to power level based on graph in datasheet
+ */
+
+#define NUM_POWER_LEVELS 8
+__code static const struct {
+        uint8_t power_dBm;
+        uint8_t power_pa;
+} power_levels[NUM_POWER_LEVELS] = {
+        {1,  7},
+        {2,  8},
+        {5,  10},
+        {8,  16},
+        {11, 21},
+        {14, 32},
+        {17, 48},
+        {20, 127}};
 
 void 
 radio_set_transmit_power(uint8_t power)
 {
+        __pdata uint8_t power_pa = 127;
+        __pdata uint8_t i;
+        if (power > 20) {
+                power = 20;
+        }
+        for (i=0; i<NUM_POWER_LEVELS; i++) {
+                if (power_levels[i].power_dBm >= power) {
+                        power_pa = power_levels[i].power_pa;
+                        power = power_levels[i].power_dBm;
+                        break;
+                }
+        }
+
 	EX0_SAVE_DISABLE;
-	cmd_set_property1(GROUP_PA, 0x01, power);
+        cmd_set_property1(GROUP_PA, 0x01, power_pa);
 	wait_for_cts();
 	EX0_RESTORE;
 
