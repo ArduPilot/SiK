@@ -4,7 +4,12 @@
 test MAVLink performance between two radios
 '''
 
-import sys, time, os, threading, Queue
+import sys, time, os, threading
+
+try:
+    import queue as Queue
+except ImportError:
+    import Queue
 
 from optparse import OptionParser
 parser = OptionParser("mavtester.py [options]")
