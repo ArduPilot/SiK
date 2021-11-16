@@ -284,7 +284,7 @@ __critical {
 		return false;
 	}
 
-	for (i = 0; i < sizeof(parameter_values); i++) {
+	for (i = 0; i < PARAM_MAX; i++) {
 		if (!param_check(i, parameter_values[i])) {
 			parameter_values[i] = parameter_info[i].default_value;
 		}
