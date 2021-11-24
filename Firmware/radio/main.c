@@ -259,8 +259,10 @@ hardware_init(void)
 	// UART - set the configured speed
 	serial_init(param_get(PARAM_SERIAL_SPEED));
 
-	// set all interrupts to the same priority level
-	IP = 0;
+	// set interrupt priority level
+	IP = 0;  // default low priority
+	PS0 = 1; // UART0 high priority
+	PT2 = 1; // TIMER2 high priority
 
 	// global interrupt enable
 	EA = 1;
