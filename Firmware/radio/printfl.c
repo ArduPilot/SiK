@@ -163,9 +163,9 @@ vprintfl(const char * fmt, va_list ap) __reentrant
 				char __idata * stri;
 
 				if (unsigned_flag) {
-					_ultoa(val, buffer, radix);
+					__ultoa(val, buffer, radix);
 				} else {
-					_ltoa(val, buffer, radix);
+					__ltoa(val, buffer, radix);
 				}
 				stri = buffer;
 				while (*stri) {
