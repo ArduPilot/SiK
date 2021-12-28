@@ -193,6 +193,14 @@ typedef union UU32
 // NOP () macro support
 #define NOP() _asm NOP _endasm
 
+// In SDCC r11731 (version 4.0.3) the _*toa() functions were renamed to __*toa,
+// so we add the __ names to older compiler versions here.
+#if defined(__SDCC_REVISION) && (__SDCC_REVISION < 11731)
+#define __itoa  _itoa
+#define __uitoa _uitoa
+#define __ltoa  _ltoa
+#define __ultoa _ultoa
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -637,7 +645,7 @@ typedef union UU32
 
 //-----------------------------------------------------------------------------
 
-// Wickenhäuser
+// Wickenhï¿½user
 // http://www.wickenhaeuser.de
 
 #elif defined __UC__
