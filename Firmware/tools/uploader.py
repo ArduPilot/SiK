@@ -64,8 +64,9 @@ class firmware(object):
 
         # read the file
         # XXX should have some file metadata here too ...
-        f = open(path, "r")
-        for line in f:
+        with open(path, 'rb') as f:
+            lines = f.readlines()
+        for line in lines:
             self.__parseline(line)
 
     def code(self):
@@ -117,7 +118,7 @@ class uploader(object):
 
     def __send(self, c):
         #print("send " + binascii.hexlify(c))
-        self.port.write(str(c))
+        self.port.write(str(c).encode('ascii'))
 
     def __recv(self, raise_error=True):
         start_time = time.time()
@@ -306,7 +307,7 @@ class uploader(object):
         start = time.time()
         s = ''
         while time.time() < start + timeout:
-            b = self.port.read(1)
+            b = self.port.read(1).decode('unicode_escape')
             if len(b) > 0:
                 sys.stdout.write(b)
                 s += b
@@ -318,8 +319,8 @@ class uploader(object):
 
     def send(self, s):
         '''write a string to port and stdout'''
-        self.port.write(s)
-        sys.stdout.write(s)            
+        self.port.write(s.encode('ascii'))
+        sys.stdout.buffer.write(s.encode('ascii'))
 
     def setBaudrate(self, baudrate):
         try:
