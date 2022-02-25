@@ -551,7 +551,8 @@ check_part(void) __reentrant
 	return part == 0x4463;
 }
 
-static void radio_gpio_init()
+static
+void radio_general_config(void)
 {
 	cmd_set_property4(GROUP_FRR_CTL, 0x0,
 		10, /* FRR A = latched RSSI */
@@ -581,15 +582,15 @@ static void radio_gpio_init()
 	wait_for_cts();
 
 	cmd_gpio_pin_cfg(
-                0x40 | GPIO_0_CONFIG,
-                0x40 | GPIO_1_CONFIG,
-                0x40 | 8, // 2: CTS
+		0x40 | GPIO_0_CONFIG,
+		0x40 | GPIO_1_CONFIG,
+		0x40 | 8, // 2: CTS
 		0x40 | 33, // GPIO4: RX state
 		39, // nIRQ
 		0, // SDO
 		2
 	);
-        wait_for_cts();
+	wait_for_cts();
 }
 
 // initialise the radio hardware
@@ -611,8 +612,7 @@ radio_initialise(void)
 	if (!check_part())
 		return false;
 
-        radio_gpio_init();
-
+	radio_general_config();
 	return true;
 }
 
@@ -815,8 +815,6 @@ radio_configure(__pdata uint8_t air_rate)
 	/* clear the FIFO to apply the mode change */
 	cmd_fifo_info(0x03);
 	wait_for_cts();
-
-        radio_gpio_init();
 
 	return true;
 }
