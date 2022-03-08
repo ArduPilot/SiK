@@ -746,6 +746,7 @@ void tdm_serial_loop(void)
             }
 
             if (relay_node_active && trailer.nodeId != NODE_RELAY && nodeId != NODE_RELAY && !trailer.relayed) {
+#if 0
                 // we will send dup packets between GCS and retrieval, special for OBC-2018
                 LED_ACTIVITY(LED_OFF);
                 if (trailer.window != 0 && (Data_Data == trailer.command) &&
@@ -753,6 +754,7 @@ void tdm_serial_loop(void)
                         && !at_mode_active) {
                     serial_write_buf(buffptr, len);
                 }
+#endif
                 continue;
             }
             if (trailer.relayed && trailer.nodeId == nodeId) {
