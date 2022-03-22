@@ -10,6 +10,10 @@ import serial
 import sys
 import time
 
+if sys.version_info.major < 3:
+    print("This tool requires python3")
+    sys.exit(1)
+
 
 class Firmware(object):
     """Loads a firmware file"""
