@@ -66,6 +66,7 @@ static void	at_s(void);
 static void	at_ampersand(void);
 static void	at_p(void);
 static void	at_plus(void);
+static void at_m(void);
 
 #pragma save
 #pragma nooverlay
@@ -242,6 +243,9 @@ at_command(void)
 				break;
 			case 'I':
 				at_i();
+				break;
+			case 'M':
+				at_m();
 				break;
 			case 'P':
 				at_p();
@@ -604,4 +608,146 @@ at_plus(void)
 #endif // RFD900_DIVERSITY
   }
   at_error();
+}
+
+static void
+at_m(void)
+{
+#ifdef BOARD_mro900
+	//mRo Options
+	__pdata uint8_t mRo_num = 0;
+	__pdata uint8_t osc_val = 0;
+
+	printf(" mRo command received \n");
+	
+	if (at_cmd[4] == '=')
+	{
+		idx = 5;
+		at_parse_number();
+		mRo_num = at_num;
+		// printf("Received value: %u \n", mRo_num);
+	}
+
+	switch (at_cmd[3])
+	{
+	case 'H': //ATMH , HELP
+		printf("mRo AT commands help \n");
+		// printf("ATMO=X  ->Set oscillator capacitance. \n");
+		// printf("ATMO?   ->Get Cal stored. \n");
+		// printf("ATMOS   ->Store Cal in flash.\n");
+		// printf("ATMOF   ->Force get Cal \n");
+		// printf("ATMOL   ->Lock Bootloader with calibration \n");
+		printf("ATMD=X	-> sets antenna diversity behavior \n");
+		printf("     0	= diversity disabled, using antenna 1 \n");
+		printf("     1	= diversity enabled \n");
+		printf("     2	= diversity disabled, using antenna 2 \n");
+		// printf("ATML=X	-> sets LNA \n");
+		// printf("     0	= LNA disabled \n");
+		// printf("     1	= LNA enabled \n");
+		printf("ATMR     ->Reboot \n");
+		break;
+	case 'C': //ATMC
+		radio_set_output_clock_freq();
+		break;
+	case 'O': //ATMO
+		switch (at_cmd[4])
+		{
+			case '=': //ATMO=??
+				radio_set_oscillator_capacitance(mRo_num);
+				printf("OSC Value set to 0x%x | %d \n", mRo_num, mRo_num);
+				return;
+			case '?': //ATMO?
+				osc_val = calibration_get();
+				printf(" OSC value 0x%x | %d\n", osc_val, osc_val);
+				if ( osc_val == 0xFF || osc_val == 0) {
+					printf(" Default value 0x%x | %d\n", EZRADIOPRO_OSC_CAP_VALUE, EZRADIOPRO_OSC_CAP_VALUE);
+				}
+				return;
+			case 'S': //ATMOS??
+				// printf(" Capacitance value 0x%x | %d\n", radio_get_oscillator_capacitance(), radio_get_oscillator_capacitance());
+				if (calibration_set(radio_get_oscillator_capacitance()))
+				{
+					at_ok();
+				} else {
+					printf("Calibration seems to be locked! \n");
+					at_error();
+				}
+				return;
+			case 'F': //ATMOF get calibration value
+				osc_val = calibration_force_get();
+				printf("%d\n", osc_val);
+				return;
+			case 'L': // ATMOL lock bootloader area if calibration written
+				if (calibration_lock())
+				{
+					at_ok();
+				} else {
+					at_error();
+				}
+				return;
+			default:
+				at_error();
+				return;
+		}	
+		break;
+
+	case 'D': //ATMD=?
+		if (at_cmd[4] != '=' )
+		{
+			at_error();
+			return;
+		}
+		switch (mRo_num)
+		{
+		case 0:
+			radio_set_diversity(DIVERSITY_DISABLED); //Diversity Disabled
+			printf("mRo Diversity Disabled (Using Ant1) \n");
+			return;
+		case 1:
+			radio_set_diversity(DIVERSITY_ENABLED); //Diversity Enabled
+			printf("mRo Diversity Enabled \n");
+			return;
+		case 2:
+			radio_set_diversity(DIVERSITY_ANT2); //Diversity
+			printf("mRo Diversity Disabled (Using Ant2) \n");
+			return;
+		default:
+			at_error();
+			return;
+		}
+		break;
+
+	case 'L': //ATML=?
+		if (at_cmd[4] != '=')
+		{
+			at_error();
+			return;
+		}
+		switch (mRo_num)
+		{
+		case 0:
+			LNA_ENABLE = LNA_OFF;
+			printf("mRo LNA disabled \n");
+			return;
+		case 1:
+			LNA_ENABLE = LNA_ON;
+			printf("mRo LNA enabled \n");
+			return;
+		default:
+			at_error();
+			return;
+		}
+	case 'R': //Software reset.
+		printf("Rebooting \n");
+		RSTSRC |= 0x10;
+		while (1)
+		{}
+		break; 
+
+	default:
+		at_error();
+		return;
+
+	}
+#endif
 }

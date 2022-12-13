@@ -64,7 +64,7 @@ __at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
 /// combined this means that the bootloader code cannot be overwritten.
 /// RFD900A locks the bootloader as a separate step after calibration instead.
 ///
-#if !defined BOARD_rfd900a && !defined BOARD_rfd900p
+#if !defined BOARD_rfd900a && !defined BOARD_rfd900p && !defined BOARD_mro900
 volatile __at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
 #endif
 
@@ -313,3 +313,19 @@ flash_transfer_calibration()
 	flash_write_byte(FLASH_CALIBRATION_CRC, calibration_crc);
 }
 #endif //BOARD_rfd900a/p
+
+
+#if defined BOARD_mro900
+static __at(FLASH_CALIBRATION_OSC_HIGH) uint8_t __code calibration;
+
+void flash_transfer_calibration()
+{
+	if (flash_read_byte(FLASH_CALIBRATION_OSC) != 0xFF)
+	{
+		return;
+	}
+
+	flash_write_byte(FLASH_CALIBRATION_OSC, calibration);
+}
+
+#endif // BOARD_mro900

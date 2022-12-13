@@ -43,6 +43,8 @@
 #define PINS_USER_MAX 6
 #elif defined BOARD_rfd900u
 #define PINS_USER_MAX 2
+#elif defined BOARD_mro900
+#define PINS_USER_MAX 3
 #else
 #define PINS_USER_MAX 0
 #endif

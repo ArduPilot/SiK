@@ -121,7 +121,7 @@ bl_main(void)
 		// and boot the app.
 		//
 		if (debounce_count < 200) {
-#if defined BOARD_rfd900a || defined BOARD_rfd900p
+#if defined BOARD_rfd900a || defined BOARD_rfd900p || defined BOARD_mro900
 			// make sure the calibration is available to the application
 			flash_transfer_calibration();
 #endif

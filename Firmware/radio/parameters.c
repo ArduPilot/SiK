@@ -58,7 +58,7 @@ __code const struct parameter_info {
 	{"SERIAL_SPEED",   57}, // match APM default of 57600
 	{"AIR_SPEED",      64}, // relies on MAVLink flow control
 	{"NETID",          25},
-	{"TXPOWER",        20},
+	{"TXPOWER", 	   20},
 	{"ECC",             0},
 	{"MAVLINK",         1},
 	{"OPPRESEND",       0},
@@ -488,6 +488,77 @@ calibration_lock() __reentrant
 	return false;
 }
 #endif // BOARD_rfd900a/p
+
+// mRo Calibration stuff. 
+#if defined BOARD_mro900
+
+static __at(FLASH_CALIBRATION_OSC) uint8_t __code calibration;
+
+static void
+flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
+{
+	PSCTL = 0x01; // set PSWE, clear PSEE
+	FLKEY = 0xa5;
+	FLKEY = 0xf1;
+	*(uint8_t __xdata *)address = c; // write the byte
+	PSCTL = 0x00;					 // disable PSWE/PSEE
+}
+
+static uint8_t
+flash_read_byte(uint16_t address) __reentrant
+{
+	// will cause reset if the byte is in a locked page
+	return *(uint8_t __code *)address;
+}
+
+bool
+calibration_set(uint8_t value) __reentrant
+{
+	PSBANK = 0x33;
+	// if the target byte isn't yet written
+	if ((flash_read_byte(FLASH_CALIBRATION_OSC_HIGH) == 0xFF))
+		{
+			flash_write_byte(FLASH_CALIBRATION_OSC_HIGH, value);
+			return true;
+		}
+	
+	return false;
+}
+
+uint8_t
+calibration_get() __reentrant
+{
+	PSBANK = 0x33;
+	return calibration;
+}
+
+uint8_t
+calibration_force_get() __reentrant
+{
+	return flash_read_byte(FLASH_CALIBRATION_OSC_HIGH);
+}
+
+bool
+calibration_lock() __reentrant
+{
+
+	PSBANK = 0x33;
+
+	// check that all entries are written
+	if (flash_read_byte(FLASH_CALIBRATION_OSC_HIGH) == 0xFF)
+	{
+		printf("OSC value seems not defined 0xFF \n");
+		return false;
+	}
+
+	// lock the first and last pages
+	// can only be reverted by reflashing the bootloader
+	flash_write_byte(FLASH_LOCK_BYTE, 0xFE);
+	return true;
+
+}
+#endif // BOARD_mro900
+
 
 #ifdef INCLUDE_AES
 // Used to convert individial Hex digits into Integers
