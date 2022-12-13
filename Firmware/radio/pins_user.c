@@ -63,6 +63,11 @@ __code const struct pins_user_map {
 	{1, 1}, // 4 - P1.1
 	{1, 0}, // 5 - P1.0
 };
+#elif defined BOARD_mro900
+	{3, 5}, // 1 - P3.5
+	{3, 4}, // 2 - P3.4
+	{3, 3}, // 3 - P3.3
+};
 #else
 	{0xff, 0xff} // Default pin mapping (not supported)
 };

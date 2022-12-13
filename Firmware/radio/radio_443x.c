@@ -508,8 +508,14 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 
 	EX0_SAVE_DISABLE;
 
+#if defined BOARD_mro900
+	LNA_ENABLE = LNA_OFF;
+#endif
+
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 	PA_ENABLE = 1;		// Set PA_Enable to turn on PA prior to TX cycle
+#elif defined BOARD_mro900
+	PA_ENABLE = 0;		// Set PA_Enable to turn on PA prior to TX cycle
 #endif
 
 #ifdef INCLUDE_GOLAY
@@ -524,6 +530,8 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
   
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
 	PA_ENABLE = 0;		// Set PA_Enable to off the PA after TX cycle
+#elif defined BOARD_mro900
+	PA_ENABLE = 1;		// Set PA_Enable to off the PA after TX cycle
 #endif
 	EX0_RESTORE;
 	return ret;
@@ -535,6 +543,11 @@ radio_transmit(uint8_t length, __xdata uint8_t * __pdata buf, __pdata uint16_t t
 bool
 radio_receiver_on(void)
 {
+
+#if defined BOARD_mro900
+	LNA_ENABLE = LNA_ON;
+#endif
+
 	EX0 = 0;
 
 	packet_received = 0;
@@ -733,6 +746,10 @@ radio_configure(__pdata uint8_t air_rate)
 {
 	__pdata uint8_t i, rate_selection, control;
 
+#if defined BOARD_mro900
+	__pdata uint8_t osc;
+#endif
+
 	// disable interrupts
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_1, 0x00);
 	register_write(EZRADIOPRO_INTERRUPT_ENABLE_2, 0x00);
@@ -758,6 +775,13 @@ radio_configure(__pdata uint8_t air_rate)
 #else
 	radio_set_diversity(DIVERSITY_DISABLED);
 #endif
+#elif BOARD_mro900
+	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x12);	// TX state (output)
+#if MRO900_DIVERSITY
+	radio_set_diversity(DIVERSITY_ENABLED);
+#else
+	radio_set_diversity(DIVERSITY_DISABLED);
+#endif
 #else
 	//set GPIOx to GND
 	register_write(EZRADIOPRO_GPIO0_CONFIGURATION, 0x14);	// RX data (output)
@@ -766,7 +790,27 @@ radio_configure(__pdata uint8_t air_rate)
 #endif
 
 	// set capacitance
+#if defined BOARD_mro900
+	osc = calibration_get();
+	#ifdef MRODEBUG
+		printf(" OSC value found %d 0x%x\n", osc, osc);
+	#endif
+	if ((osc != 0) && (osc != 0xFF))
+	{
+		register_write(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, osc);
+		#ifdef MRODEBUG
+			osc = register_read(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE);
+			printf(" OSC value set to %d 0x%x\n", osc, osc);
+		#endif
+	}
+	else
+	{
+		printf("Error OSC calibration to defined yet, setting default %d  or 0x%x  \n", EZRADIOPRO_OSC_CAP_VALUE, EZRADIOPRO_OSC_CAP_VALUE);
+		register_write(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, EZRADIOPRO_OSC_CAP_VALUE);
+	}
+#else
 	register_write(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, EZRADIOPRO_OSC_CAP_VALUE);
+#endif
 
 	// see Si1000.pdf section 23.3.8
 	if (air_rate > 100) {
@@ -889,6 +933,9 @@ radio_configure(__pdata uint8_t air_rate)
 #elif defined BOARD_hm_trp || defined BOARD_rf50 || defined BOARD_rfd900u
 	#define NUM_POWER_LEVELS 8
 	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 1, 2, 5, 8, 11, 14, 17, 20 };
+#elif defined BOARD_mro900
+	#define NUM_POWER_LEVELS 8
+	__code static const uint8_t power_levels[NUM_POWER_LEVELS] = { 20, 24, 25, 27, 28, 30, 30, 30 };
 #endif
 
 // set the radio transmit power (in dBm)
@@ -1165,28 +1212,47 @@ radio_set_diversity(enum DIVERSITY_Enum state)
 {
   switch (state) {
     case DIVERSITY_ENABLED:
+#if defined BOARD_mro900
+	  register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x18); // Antenna 2 Switch used for antenna diversity (output)
+#else
       register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x18);
+#endif
       // see table 23.8, page 279
       register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x80);
       break;
       
     case DIVERSITY_ANT2:
+#if defined BOARD_mro900
+	  register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));	
+	  register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x0A);	// GPIO1 Direct Digital Output
+	  register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x02);	// GPIO1 output set high (fixed on ant 2)
+	  break;
+#else
       // see table 23.8, page 279
       register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK) | 0x20);
       
       register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
       register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x00);	// GPIO2 output set low (fixed on ant 2)
       break;
+#endif
       
     case DIVERSITY_DISABLED:
     case DIVERSITY_ANT1:
     default:
+#if defined BOARD_mro900
+	  register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
+		
+	  register_write(EZRADIOPRO_GPIO1_CONFIGURATION, 0x0A);	// GPIO1 Direct Digital Output
+	  register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x00);	// GPIO1 output set low (fixed on ant 1)
+		break;
+#else
       // see table 23.8, page 279
       register_write(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2, (register_read(EZRADIOPRO_OPERATING_AND_FUNCTION_CONTROL_2) & ~EZRADIOPRO_ANTDIV_MASK));
       
       register_write(EZRADIOPRO_GPIO2_CONFIGURATION, 0x0A);	// GPIO2 output set high fixed
       register_write(EZRADIOPRO_IO_PORT_CONFIGURATION, 0x04);	// GPIO2 output set high (fixed on ant 1)
       break;
+#endif
   }
 }
 
@@ -1266,5 +1332,36 @@ rxfail:
   P1 &= ~0x02;
 #endif // DEBUG_PINS_RADIO_TX_RX
 }
+
+#if defined BOARD_mro900
+/// set oscillator load capacitance
+///
+/// @param capacitance			The value to set
+///
+void
+radio_set_oscillator_capacitance(uint8_t capacitance)
+{
+	register_write(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE, capacitance);
+}
+
+/// set output clock frecuency on test point
+/// 
+///
+void
+radio_set_output_clock_freq()
+{
+	register_write(EZRADIOPRO_MICROCONTROLLER_OUTPUT_CLOCK, 0);
+}
+
+/// get oscillator load capacitance
+///
+/// @return oscillator load capacitance
+///
+uint8_t
+radio_get_oscillator_capacitance()
+{
+	return register_read(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE);
+}
+#endif // BOARD_mro900
 
 #endif // ifndef CPU_SI1060

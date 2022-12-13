@@ -118,6 +118,8 @@
 # include "board_ism01a.h"
 #elif defined(BOARD_hb1060)
 # include "board_hb1060.h"
+#elif defined(BOARD_mro900)
+# include "board_mro900.h"
 #else
 # error Must define a BOARD_ value before including this file.
 #endif

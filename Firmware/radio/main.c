@@ -195,7 +195,11 @@ hardware_init(void)
 #if defined CPU_SI1030
 	P0SKIP  =  0xCF;
 	P1SKIP  =  0xFF;
+#if defined BOARD_mro900
+	P2SKIP  =  0xF8;				// P2 nothing avail on XBAR, All GPIO
+#else
 	P2SKIP  =  0x28;
+#endif
 #elif defined BOARD_rfd900a		// Redefine port skips to override bootloader defs
 	P0SKIP  =  0xCF;				// P0 UART avail on XBAR
 	P1SKIP  =  0xF8;				// P1 SPI1 avail on XBAR

@@ -136,6 +136,15 @@ extern uint8_t calibration_force_get(uint8_t idx) __reentrant;
 extern bool calibration_lock() __reentrant;
 #endif // BOARD_rfd900a
 
+
+#if defined BOARD_mro900
+extern bool calibration_set(uint8_t value) __reentrant;
+extern uint8_t calibration_get() __reentrant;
+extern uint8_t calibration_force_get() __reentrant;
+extern bool calibration_lock() __reentrant;
+#endif // BOARD_mro900
+
+
 #ifdef INCLUDE_AES
 /// get the encryption key
 ///
