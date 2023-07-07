@@ -207,11 +207,19 @@ hardware_init(void)
 #endif
 
 	// Configure crossbar for UART
+#if defined BOARD_3dr1060
+	P0MDOUT   =  0x90;		// UART Tx push-pull and SDN
+	SFRPAGE   =  CONFIG_PAGE;
+	P0DRV     =  0x90;		// UART TX
+	SFRPAGE   =  LEGACY_PAGE;
+	XBR0      =  0x01;		// UART enable
+#else
 	P0MDOUT   =  0x10;		// UART Tx push-pull
 	SFRPAGE   =  CONFIG_PAGE;
 	P0DRV     =  0x10;		// UART TX
 	SFRPAGE   =  LEGACY_PAGE;
 	XBR0      =  0x01;		// UART enable
+#endif
 
 	// SPI1
 #if defined CPU_SI1030
@@ -221,6 +229,9 @@ hardware_init(void)
 	XBR1    |= 0x41;	// enable SPI in 3-wire mode + CEX0
 	P1MDOUT |= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
 	P2MDOUT |= 0xFF;	// SCK1, MOSI1, MISO1 push-pull
+#elif defined BOARD_3dr1060
+	XBR1    |= 0x40;	// enable SPI in 4-wire mode
+	P1MDOUT |= 0xFD;	// SCK1, MOSI1, MISO1 push-pull
 #else
 	XBR1    |= 0x40;	// enable SPI in 3-wire mode
 	P1MDOUT |= 0xF5;	// SCK1, MOSI1, MISO1 push-pull
@@ -228,7 +239,11 @@ hardware_init(void)
 	
 	/* ------------ Config Parameters ------------ */
 	SFRPAGE	 = CONFIG_PAGE;
+#if defined BOARD_3dr1060
+	P1DRV	|= 0xFD;	// SPI signals use high-current mode, LEDs and PAEN High current drive
+#else
 	P1DRV	|= 0xF5;	// SPI signals use high-current mode, LEDs and PAEN High current drive
+#endif	
 	
 #ifdef CPU_SI1030
 	P2DRV	 = 0xFD; // MOSI1, SCK1, NSS1, high-drive mode
@@ -242,7 +257,7 @@ hardware_init(void)
 	/* ------------ Change to radio page ------------ */
 	RADIO_PAGE();
 	SPI1CFG  = 0x40;  // master mode
-#if defined(BOARD_ism01a) || defined(BOARD_hb1060)
+#if defined(BOARD_ism01a) || defined(BOARD_hb1060) || defined(BOARD_3dr1060)
         SPI1CN   = 0x0C;  // 4 wire master mode, NSS1=1
 #else
         SPI1CN   = 0x00;  // 3 wire master mode
