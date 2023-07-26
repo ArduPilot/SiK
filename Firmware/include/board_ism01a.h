@@ -27,13 +27,10 @@
 //
 
 ///
-/// @file	board_rf50.h
+/// @file	board_ism01a.h
 ///
-/// Board-specific definitions for the RF50-DEMO board.
+/// Board-specific definitions for the ISM01A board.
 ///
-
-/// @file	board.h
-///		Board definitions for the ISM01A board
  
 #ifndef _BOARD_ISM01A_H
 #define _BOARD_ISM01A_H
