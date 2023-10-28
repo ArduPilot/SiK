@@ -62,9 +62,9 @@ $(PRODUCT_INSTALL):	$(PRODUCT_HEX)
 	@echo PATCH $@
 	$(v)mkdir -p $(dir $@)
 ifeq ($(CPU_CC1030), 1)
-	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfffe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+	$(SRCROOT)/tools/hexpatch.py --patch 0xfffe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) $@
 else
-	$(v)$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) > $@
+	$(SRCROOT)/tools/hexpatch.py --patch 0xfbfe:0x`expr $(frequency) / 10` $(PRODUCT_HEX) $@
 endif
 
 #
