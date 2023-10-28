@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 '''
 check the radio code for prototype consistency
 Andrew Tridgell, February 2012
@@ -14,12 +14,12 @@ cmatch = re.compile(r'^(\w+)\(.*\)');
 
 if len(sys.argv) < 2:
     print("ERROR: board not defined")
-    print sys.argv
+    print(sys.argv)
     sys.exit(1)
 
 if len(sys.argv) < 3:
     print("ERROR: xram size not defined")
-    print sys.argv
+    print(sys.argv)
     sys.exit(1)
 
 if int(sys.argv[-1]) < 4096:
@@ -69,7 +69,7 @@ def check_xiseg():
             if m:
                 ofs1 = int(m.group(1),16)
                 ofs2 = int(m.group(2),16)
-                print os.popen("tail -n5 %s.mem"%board).read()
+                print(os.popen("tail -n5 %s.mem"%board).read())
                 print('XISEG %s - %u bytes available' % (map, xram_size-(ofs1+ofs2)))
                 if ofs1 + ofs2 >= xram_size:
                     print('ERROR: XISEG overflow %u in %s' % (ofs1+ofs2, map))
