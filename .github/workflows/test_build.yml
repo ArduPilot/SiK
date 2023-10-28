@@ -1,0 +1,28 @@
+name: test regression
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      # git checkout the PR
+      - uses: actions/checkout@v3
+
+      - name: Install sdcc
+        run: |
+          sudo apt-get install -y sdcc
+          python3 -m pip install intelhex
+
+      - name: test build
+        shell: bash
+        run: |
+          tests/test_build.sh
+
+      - name: Archive build binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: SiK build
+          path: |
+           Firmware/dst
+          retention-days: 90
