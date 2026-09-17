@@ -27,3 +27,13 @@ done
 
 echo "Built $(echo $BOARDS | wc -w) boards:"
 ls -l dst
+
+# the ATI8 counters (TDM_COUNTERS=1) only fit on boards with 8 KB of XRAM;
+# install them elsewhere so the release firmware in dst stays as it is
+COUNTER_BOARDS="mro900 rfd900p rfd900pe rfd900u rfd900ue"
+echo "Building boards with TDM_COUNTERS=1: $COUNTER_BOARDS"
+for b in $COUNTER_BOARDS; do
+    make clean~radio~$b
+    make TDM_COUNTERS=1 DSTROOT=$PWD/dst-counters install~radio~$b
+    make clean~radio~$b
+done
