@@ -65,6 +65,11 @@ extern void tdm_change_phase(void);
 /// show RSSI information
 extern void tdm_show_rssi(void);
 
+#ifdef TDM_COUNTERS
+/// show TDM packet counters since the last call, then reset them
+extern void tdm_show_counters(void);
+#endif
+
 /// the long term duty cycle we are aiming for
 extern __pdata uint8_t duty_cycle;
 
