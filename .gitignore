@@ -6,6 +6,7 @@ Firmware/.project
 SiKUploader/uploader/bin
 *.hex
 Firmware/dst
+Firmware/dst-counters
 Firmware/obj
 SiK_Firmware.sublime-project
 SiK_Firmware.sublime-workspace
