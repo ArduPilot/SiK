@@ -122,10 +122,6 @@ typedef char endCheck[(PARAM_E_FLASH_END < 1023) ? 0 : -1];
 static bool
 param_check(__pdata enum ParamID id, __data uint32_t val)
 {
-	// parameter value out of range - fail
-	if (id >= PARAM_MAX)
-		return false;
-
 	switch (id) {
 	case PARAM_FORMAT:
 		return false;
@@ -168,6 +164,9 @@ param_check(__pdata enum ParamID id, __data uint32_t val)
 		break;
 
 	default:
+		// parameter ID out of range - fail
+		if (id >= PARAM_MAX)
+			return false;
 		// no sanity check for this value
 		break;
 	}
@@ -455,7 +454,7 @@ calibration_force_get(uint8_t idx) __reentrant
 }
 
 bool
-calibration_lock() __reentrant
+calibration_lock(void) __reentrant
 {
 	uint8_t idx;
 	uint8_t crc = 0;
@@ -526,20 +525,20 @@ calibration_set(uint8_t value) __reentrant
 }
 
 uint8_t
-calibration_get() __reentrant
+calibration_get(void) __reentrant
 {
 	PSBANK = 0x33;
 	return calibration;
 }
 
 uint8_t
-calibration_force_get() __reentrant
+calibration_force_get(void) __reentrant
 {
 	return flash_read_byte(FLASH_CALIBRATION_OSC_HIGH);
 }
 
 bool
-calibration_lock() __reentrant
+calibration_lock(void) __reentrant
 {
 
 	PSBANK = 0x33;

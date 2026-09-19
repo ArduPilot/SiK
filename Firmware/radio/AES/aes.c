@@ -79,7 +79,7 @@ INTERRUPT(DMA_ISR, INTERRUPT_DMA0)
 // Indicate if encryption subsystem initialised and ready.
 //
 // returns a bool
-uint8_t aes_get_encryption_level()
+uint8_t aes_get_encryption_level(void)
 {
         return encryption_level;
 }

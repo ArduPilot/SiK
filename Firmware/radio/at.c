@@ -293,7 +293,7 @@ __xdata uint32_t	at_num;
   parse a number at idx putting the result in at_num
  */
 static void
-at_parse_number() __reentrant
+at_parse_number(void) __reentrant
 {
 	register uint8_t c;
 
