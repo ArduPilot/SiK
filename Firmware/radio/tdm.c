@@ -208,6 +208,9 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 }
 
 
+/// how long we have held off a frequency change for a packet still arriving
+__pdata static uint16_t hop_delay;
+
 /// synchronise tx windows
 ///
 /// we receive a 16 bit value with each packet which indicates how many
@@ -223,6 +226,9 @@ sync_tx_windows(__pdata uint8_t packet_length)
   __data enum tdm_state old_state = tdm_state;
   __pdata uint16_t old_remaining = tdm_state_remaining;
   
+  // the other radio's timing replaces any frequency change we held off
+  hop_delay = 0;
+
   if (trailer.bonus) {
     // the other radio is using our transmit window
     // via yielded ticks
@@ -290,6 +296,22 @@ tdm_state_update(__pdata uint16_t tdelta)
   
   // have we passed the next transition point?
   while (tdelta >= tdm_state_remaining) {
+    // Leaving our transmit window or the silence before it changes
+    // frequency. Don't do that while a packet is still arriving on this
+    // one: it would be lost without a trace. The other radio is quiet
+    // until its own silence period has passed, so waiting for the end of
+    // the packet (at most one full packet) costs nothing.
+    if ((tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE2) &&
+        hop_delay < flight_time_estimate(max_data_packet_length) &&
+        radio_receive_in_progress()) {
+      hop_delay += tdelta - tdm_state_remaining;
+      tdm_state_remaining = 0;
+      return;
+    }
+    // the time we waited counts towards the states that follow
+    tdelta += hop_delay;
+    hop_delay = 0;
+
     // advance the tdm state machine
     tdm_state = (tdm_state+1) % 4;
     
