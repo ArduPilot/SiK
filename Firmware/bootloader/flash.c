@@ -278,7 +278,7 @@ __at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_A
 __at(FLASH_CALIBRATION_CRC_HIGH)	uint8_t __code calibration_crc;
 
 void
-flash_transfer_calibration()
+flash_transfer_calibration(void)
 {
 	uint8_t idx, crc = 0;
 
@@ -318,7 +318,7 @@ flash_transfer_calibration()
 #if defined BOARD_mro900
 static __at(FLASH_CALIBRATION_OSC_HIGH) uint8_t __code calibration;
 
-void flash_transfer_calibration()
+void flash_transfer_calibration(void)
 {
 	if (flash_read_byte(FLASH_CALIBRATION_OSC) != 0xFF)
 	{
