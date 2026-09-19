@@ -35,6 +35,11 @@ PRODUCT_DIR	:=	$(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 
 CFLAGS		+=	-DAPP_VERSION_HIGH=$(VERSION_MAJOR) -DAPP_VERSION_LOW=$(VERSION_MINOR)
 CFLAGS		+=	$(CFLAG_MODEL) --opt-code-speed --Werror --std-sdcc99 --fomit-frame-pointer
+
+# make TDM_COUNTERS=1 adds the ATI8 packet counters (does not fit in RAM on every board)
+ifeq ($(TDM_COUNTERS),1)
+CFLAGS		+=	-DTDM_COUNTERS
+endif
 #CFLAGS		+=	--fverbose-asm 
 PRODUCT_SUPPORT_BANKING = 1
 INC_DIR_AES	 = AES

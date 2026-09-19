@@ -186,6 +186,99 @@ tdm_show_rssi(void)
 	statistics.receive_count = 0;
 }
 
+#ifdef TDM_COUNTERS
+/// packet counters for ATI8, reset each time they are shown
+struct tdm_counters {
+	uint16_t tx_data;	///< data packets sent in our own window
+	uint16_t tx_bonus;	///< data packets sent in the other radio's window
+	uint16_t tx_yield;	///< zero length packets sent to give up our window
+	uint16_t tx_stats;	///< statistics packets sent
+	uint16_t rx_data;	///< data packets received from the other radio's own window
+	uint16_t rx_bonus;	///< data packets received in our window, sent on bonus ticks
+	uint16_t rx_yield;	///< zero length packets received
+	uint16_t rx_granted;	///< zero length packets that gave us bonus ticks
+	uint16_t rx_stats;	///< statistics packets received
+	uint16_t rx_bonus_late;	///< bonus packets that arrived after our window ended
+	uint16_t hop_abort;	///< our window ended (frequency change) while a packet was arriving
+};
+static __xdata struct tdm_counters counters;
+
+/// display and reset the packet counters, one number each in struct order
+///
+void
+tdm_show_counters(void)
+{
+	__pdata uint8_t i;
+	__xdata uint16_t *c = (__xdata uint16_t *)&counters;
+
+	for (i = 0; i < sizeof(counters)/sizeof(uint16_t); i++) {
+		printf("%u ", (unsigned)c[i]);
+	}
+	printf("\n");
+	memset(&counters, 0, sizeof(counters));
+}
+#endif // TDM_COUNTERS
+
+#ifndef INCLUDE_AES
+/// Where the MAVLink frames we write to the serial port end, so that a
+/// RADIO_STATUS report is never written into the middle of a frame. A frame
+/// can span two radio packets when the sender could not keep it whole.
+static __pdata uint16_t output_frame_remaining;	///< bytes of the current frame still to come
+static bool output_out_of_sync;			///< we lost track of where frames end
+
+/// follow the MAVLink frames in the len bytes of pbuf just written out
+static void
+track_output_frames(__pdata uint8_t len)
+{
+	__pdata uint8_t i;
+	__pdata uint16_t frame_len;
+
+	if (output_out_of_sync) {
+		// wait for a packet that starts with a frame
+		if (len == 0 || (pbuf[0] != MAVLINK10_STX && pbuf[0] != MAVLINK20_STX)) {
+			return;
+		}
+		output_out_of_sync = false;
+		output_frame_remaining = 0;
+	}
+
+	if (output_frame_remaining >= len) {
+		output_frame_remaining -= len;
+		return;
+	}
+
+	i = output_frame_remaining;
+	output_frame_remaining = 0;
+
+	while (i < len) {
+		if (pbuf[i] == MAVLINK10_STX && i + 1 < len) {
+			frame_len = pbuf[i+1] + 8;
+		} else if (pbuf[i] == MAVLINK20_STX && i + 2 < len) {
+			frame_len = pbuf[i+1] + 12;
+			if (pbuf[i+2] & 1) {
+				// signed
+				frame_len += 13;
+			}
+		} else {
+			// not a frame start, or its header is cut off: we no
+			// longer know where frames end
+			output_out_of_sync = true;
+			return;
+		}
+		frame_len += i;
+		if (frame_len > len) {
+			output_frame_remaining = frame_len - len;
+			return;
+		}
+		i = frame_len;
+	}
+}
+
+#define OUTPUT_AT_FRAME_BOUNDARY() (!output_out_of_sync && output_frame_remaining == 0)
+#else
+#define OUTPUT_AT_FRAME_BOUNDARY() true
+#endif // INCLUDE_AES
+
 /// display test output
 ///
 static void
@@ -208,6 +301,9 @@ static uint16_t flight_time_estimate(__pdata uint8_t packet_len)
 }
 
 
+/// how long we have held off a frequency change for a packet still arriving
+__pdata static uint16_t hop_delay;
+
 /// synchronise tx windows
 ///
 /// we receive a 16 bit value with each packet which indicates how many
@@ -223,10 +319,16 @@ sync_tx_windows(__pdata uint8_t packet_length)
   __data enum tdm_state old_state = tdm_state;
   __pdata uint16_t old_remaining = tdm_state_remaining;
   
+  // the other radio's timing replaces any frequency change we held off
+  hop_delay = 0;
+
   if (trailer.bonus) {
     // the other radio is using our transmit window
     // via yielded ticks
     if (old_state == TDM_SILENCE1) {
+#ifdef TDM_COUNTERS
+      counters.rx_bonus_late++;
+#endif
       // This can be caused by a packet
       // taking longer than expected to arrive.
       // don't change back to transmit state or we
@@ -290,6 +392,22 @@ tdm_state_update(__pdata uint16_t tdelta)
   
   // have we passed the next transition point?
   while (tdelta >= tdm_state_remaining) {
+    // Leaving our transmit window or the silence before it changes
+    // frequency. Don't do that while a packet is still arriving on this
+    // one: it would be lost without a trace. The other radio is quiet
+    // until its own silence period has passed, so waiting for the end of
+    // the packet (at most one full packet) costs nothing.
+    if ((tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE2) &&
+        hop_delay < flight_time_estimate(max_data_packet_length) &&
+        radio_receive_in_progress()) {
+      hop_delay += tdelta - tdm_state_remaining;
+      tdm_state_remaining = 0;
+      return;
+    }
+    // the time we waited counts towards the states that follow
+    tdelta += hop_delay;
+    hop_delay = 0;
+
     // advance the tdm state machine
     tdm_state = (tdm_state+1) % 4;
     
@@ -305,6 +423,11 @@ tdm_state_update(__pdata uint16_t tdelta)
     // change frequency at the start and end of our transmit window
     // this maximises the chance we will be on the right frequency
     // to match the other radio
+#ifdef TDM_COUNTERS
+    if (tdm_state == TDM_SILENCE1 && radio_receive_in_progress()) {
+      counters.hop_abort++;
+    }
+#endif
     if (tdm_state == TDM_TRANSMIT || tdm_state == TDM_SILENCE1) {
       fhop_window_change();
       radio_receiver_on();
@@ -537,7 +660,8 @@ tdm_serial_loop(void)
       test_display = 0;
     }
     
-    if (seen_mavlink && feature_mavlink_framing && !at_mode_active) {
+    if (seen_mavlink && feature_mavlink_framing && !at_mode_active &&
+        OUTPUT_AT_FRAME_BOUNDARY()) {
       if (MAVLink_report()) {
         seen_mavlink = 0;
       }
@@ -576,6 +700,9 @@ tdm_serial_loop(void)
       
       if (trailer.window == 0 && len != 0) {
         // its a control packet
+#ifdef TDM_COUNTERS
+        counters.rx_stats++;
+#endif
         if (len == sizeof(struct statistics)) {
           memcpy(&remote_statistics, pbuf, len);
         }
@@ -584,9 +711,38 @@ tdm_serial_loop(void)
         statistics.receive_count--;
       } else if (trailer.window != 0) {
         // sync our transmit windows based on
-        // received header
+        // received header. First work out how much of our own
+        // window is left, in case this is a packet sent on
+        // ticks we yielded to the other radio.
+        tdelta = tnow - last_t;
+        tdelta = (tdm_state_remaining > tdelta) ? tdm_state_remaining - tdelta : 0;
         sync_tx_windows(len);
         last_t = tnow;
+
+        // The other radio's flight time estimate is larger than
+        // the real flight time, so trailer.window places the end
+        // of our window too early. Never let a packet sent on our
+        // yielded ticks shorten our own window, or we change
+        // frequency while the other radio is still sending.
+        if (trailer.bonus && tdm_state == TDM_TRANSMIT &&
+            tdelta > tdm_state_remaining) {
+          tdm_state_remaining = tdelta;
+        }
+
+#ifdef TDM_COUNTERS
+        if (len == 0) {
+          counters.rx_yield++;
+          if (bonus_transmit) {
+            counters.rx_granted++;
+          }
+        } else if (trailer.command == 0) {
+          if (trailer.bonus) {
+            counters.rx_bonus++;
+          } else {
+            counters.rx_data++;
+          }
+        }
+#endif
         
 
 	// Send data to console (serial buffers) if following conditions met
@@ -619,7 +775,14 @@ tdm_serial_loop(void)
              }
 #else // INCLUDE_AES
              LED_ACTIVITY = LED_ON;
-             serial_write_buf(pbuf, len);
+             if (len > serial_write_space()) {
+               // bytes will be dropped, so we lose track of frames
+               serial_write_buf(pbuf, len);
+               output_out_of_sync = true;
+             } else {
+               serial_write_buf(pbuf, len);
+               track_output_frames(len);
+             }
              LED_ACTIVITY = LED_OFF;
 #endif // INCLUDE_AES
           
@@ -709,7 +872,14 @@ tdm_serial_loop(void)
       // none ....
       continue;
     }
-    max_xmit = (tdm_state_remaining - packet_latency) / ticks_per_byte;
+    // work this out in 16 bits: a whole window holds more than 255 bytes,
+    // and storing that straight into max_xmit would wrap it around. It is
+    // capped to max_data_packet_length below.
+    tdelta = (tdm_state_remaining - packet_latency) / ticks_per_byte;
+    if (tdelta > 255) {
+      tdelta = 255;
+    }
+    max_xmit = tdelta;
     if (max_xmit < PACKET_OVERHEAD) {
       // can't fit the trailer in with a byte to spare
       continue;
@@ -796,6 +966,20 @@ tdm_serial_loop(void)
 #endif // INCLUDE_AES
     }
     
+#ifdef TDM_COUNTERS
+    if (trailer.window == 0) {
+      counters.tx_stats++;
+    } else if (len == 0) {
+      counters.tx_yield++;
+    } else if (trailer.command == 0) {
+      if (trailer.bonus) {
+        counters.tx_bonus++;
+      } else {
+        counters.tx_data++;
+      }
+    }
+#endif
+
     // set right transmit channel
     radio_set_channel(fhop_transmit_channel());
     
