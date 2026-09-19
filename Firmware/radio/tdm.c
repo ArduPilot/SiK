@@ -584,9 +584,23 @@ tdm_serial_loop(void)
         statistics.receive_count--;
       } else if (trailer.window != 0) {
         // sync our transmit windows based on
-        // received header
+        // received header. First work out how much of our own
+        // window is left, in case this is a packet sent on
+        // ticks we yielded to the other radio.
+        tdelta = tnow - last_t;
+        tdelta = (tdm_state_remaining > tdelta) ? tdm_state_remaining - tdelta : 0;
         sync_tx_windows(len);
         last_t = tnow;
+
+        // The other radio's flight time estimate is larger than
+        // the real flight time, so trailer.window places the end
+        // of our window too early. Never let a packet sent on our
+        // yielded ticks shorten our own window, or we change
+        // frequency while the other radio is still sending.
+        if (trailer.bonus && tdm_state == TDM_TRANSMIT &&
+            tdelta > tdm_state_remaining) {
+          tdm_state_remaining = tdelta;
+        }
         
 
 	// Send data to console (serial buffers) if following conditions met
