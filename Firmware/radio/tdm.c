@@ -723,7 +723,14 @@ tdm_serial_loop(void)
       // none ....
       continue;
     }
-    max_xmit = (tdm_state_remaining - packet_latency) / ticks_per_byte;
+    // work this out in 16 bits: a whole window holds more than 255 bytes,
+    // and storing that straight into max_xmit would wrap it around. It is
+    // capped to max_data_packet_length below.
+    tdelta = (tdm_state_remaining - packet_latency) / ticks_per_byte;
+    if (tdelta > 255) {
+      tdelta = 255;
+    }
+    max_xmit = tdelta;
     if (max_xmit < PACKET_OVERHEAD) {
       // can't fit the trailer in with a byte to spare
       continue;
