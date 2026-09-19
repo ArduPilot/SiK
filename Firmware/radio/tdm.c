@@ -186,6 +186,66 @@ tdm_show_rssi(void)
 	statistics.receive_count = 0;
 }
 
+#ifndef INCLUDE_AES
+/// Where the MAVLink frames we write to the serial port end, so that a
+/// RADIO_STATUS report is never written into the middle of a frame. A frame
+/// can span two radio packets when the sender could not keep it whole.
+static __pdata uint16_t output_frame_remaining;	///< bytes of the current frame still to come
+static bool output_out_of_sync;			///< we lost track of where frames end
+
+/// follow the MAVLink frames in the len bytes of pbuf just written out
+static void
+track_output_frames(__pdata uint8_t len)
+{
+	__pdata uint8_t i;
+	__pdata uint16_t frame_len;
+
+	if (output_out_of_sync) {
+		// wait for a packet that starts with a frame
+		if (len == 0 || (pbuf[0] != MAVLINK10_STX && pbuf[0] != MAVLINK20_STX)) {
+			return;
+		}
+		output_out_of_sync = false;
+		output_frame_remaining = 0;
+	}
+
+	if (output_frame_remaining >= len) {
+		output_frame_remaining -= len;
+		return;
+	}
+
+	i = output_frame_remaining;
+	output_frame_remaining = 0;
+
+	while (i < len) {
+		if (pbuf[i] == MAVLINK10_STX && i + 1 < len) {
+			frame_len = pbuf[i+1] + 8;
+		} else if (pbuf[i] == MAVLINK20_STX && i + 2 < len) {
+			frame_len = pbuf[i+1] + 12;
+			if (pbuf[i+2] & 1) {
+				// signed
+				frame_len += 13;
+			}
+		} else {
+			// not a frame start, or its header is cut off: we no
+			// longer know where frames end
+			output_out_of_sync = true;
+			return;
+		}
+		frame_len += i;
+		if (frame_len > len) {
+			output_frame_remaining = frame_len - len;
+			return;
+		}
+		i = frame_len;
+	}
+}
+
+#define OUTPUT_AT_FRAME_BOUNDARY() (!output_out_of_sync && output_frame_remaining == 0)
+#else
+#define OUTPUT_AT_FRAME_BOUNDARY() true
+#endif // INCLUDE_AES
+
 /// display test output
 ///
 static void
@@ -559,7 +619,8 @@ tdm_serial_loop(void)
       test_display = 0;
     }
     
-    if (seen_mavlink && feature_mavlink_framing && !at_mode_active) {
+    if (seen_mavlink && feature_mavlink_framing && !at_mode_active &&
+        OUTPUT_AT_FRAME_BOUNDARY()) {
       if (MAVLink_report()) {
         seen_mavlink = 0;
       }
@@ -655,7 +716,14 @@ tdm_serial_loop(void)
              }
 #else // INCLUDE_AES
              LED_ACTIVITY = LED_ON;
-             serial_write_buf(pbuf, len);
+             if (len > serial_write_space()) {
+               // bytes will be dropped, so we lose track of frames
+               serial_write_buf(pbuf, len);
+               output_out_of_sync = true;
+             } else {
+               serial_write_buf(pbuf, len);
+               track_output_frames(len);
+             }
              LED_ACTIVITY = LED_OFF;
 #endif // INCLUDE_AES
           
