@@ -614,7 +614,7 @@ void serial_device_set_speed(register uint8_t speed)
 /// Indicate if encrypt buffer is starting to get too full
 //
 bool
-encrypt_buffer_getting_full()
+encrypt_buffer_getting_full(void)
 {
 	if (BUF_FREE(encrypt) < encrypt_buff_start) {
            return true;
@@ -627,7 +627,7 @@ encrypt_buffer_getting_full()
 /// Indicate if encrypt before is getting back to a more comfortable lower state
 //
 bool
-encrypt_buffer_getting_empty()
+encrypt_buffer_getting_empty(void)
 {
 	if (BUF_FREE(encrypt) > encrypt_buff_end) {
            return true;
@@ -639,7 +639,7 @@ encrypt_buffer_getting_empty()
 /// Return amount of space left in buffer
 //
 uint16_t
-encrypt_buffer_write_space()
+encrypt_buffer_write_space(void)
 {
 	register uint16_t ret;
         ret = BUF_FREE(encrypt);

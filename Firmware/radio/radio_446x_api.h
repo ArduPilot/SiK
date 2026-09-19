@@ -37,7 +37,7 @@ exchange_dword(uint32_t in) __reentrant
 }
 
 static void
-reply_open() __reentrant
+reply_open(void) __reentrant
 {
 	while (1) {
 		NSS1 = 0;
@@ -49,13 +49,13 @@ reply_open() __reentrant
 }
 
 static void
-reply_close() __reentrant
+reply_close(void) __reentrant
 {
 	NSS1 = 1;
 }
 
 static void
-wait_for_cts() __reentrant
+wait_for_cts(void) __reentrant
 {
 	reply_open();
 	reply_close();

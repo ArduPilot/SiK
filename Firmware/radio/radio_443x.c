@@ -1348,7 +1348,7 @@ radio_set_oscillator_capacitance(uint8_t capacitance)
 /// 
 ///
 void
-radio_set_output_clock_freq()
+radio_set_output_clock_freq(void)
 {
 	register_write(EZRADIOPRO_MICROCONTROLLER_OUTPUT_CLOCK, 0);
 }
@@ -1358,7 +1358,7 @@ radio_set_output_clock_freq()
 /// @return oscillator load capacitance
 ///
 uint8_t
-radio_get_oscillator_capacitance()
+radio_get_oscillator_capacitance(void)
 {
 	return register_read(EZRADIOPRO_CRYSTAL_OSCILLATOR_LOAD_CAPACITANCE);
 }

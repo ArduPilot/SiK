@@ -258,7 +258,7 @@ pins_user_get_adc(__pdata uint8_t pin)
 }
 
 void
-pins_user_check()
+pins_user_check(void)
 {
 //	static uint8_t p, p_count;
 //	if (pins_user_get_adc(5) != p || p_count != 0) {

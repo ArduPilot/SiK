@@ -312,8 +312,8 @@ extern void radio_set_diversity(enum DIVERSITY_Enum state);
 #if defined BOARD_mro900
 
 extern void radio_set_oscillator_capacitance(uint8_t capacitance);
-extern void radio_set_output_clock_freq();
-extern uint8_t radio_get_oscillator_capacitance();
+extern void radio_set_output_clock_freq(void);
+extern uint8_t radio_get_oscillator_capacitance(void);
 
 #endif // BOARD_mro900
 

@@ -73,15 +73,15 @@ extern void serial_decrypt_buf(__xdata uint8_t * buf, __pdata uint8_t count);
 
 /// Encryption ring buffer checks. Is it getting too full?
 //
-extern bool encrypt_buffer_getting_full();
+extern bool encrypt_buffer_getting_full(void);
 
 /// Encryption ring buffer checks. Is it getting empty now?
 //
-extern bool encrypt_buffer_getting_empty();
+extern bool encrypt_buffer_getting_empty(void);
 
 /// Get space left in encrypt buffer
 //
-extern uint16_t encrypt_buffer_write_space();
+extern uint16_t encrypt_buffer_write_space(void);
 #endif // INCLUDE_AES
 
 /// Decrypt any packets in the buffer and push to the serial layer

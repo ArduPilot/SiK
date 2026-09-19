@@ -551,7 +551,7 @@ check_part(void) __reentrant
 	return part == 0x4463;
 }
 
-static void radio_gpio_init()
+static void radio_gpio_init(void)
 {
 	cmd_set_property4(GROUP_FRR_CTL, 0x0,
 		10, /* FRR A = latched RSSI */
