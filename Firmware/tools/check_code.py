@@ -59,21 +59,31 @@ def extract_C_functions(c, d):
 error_count = 0
 
 def check_xiseg():
-    '''check that XISEG has not overflowed'''
+    '''check that external RAM has not overflowed'''
     global error_count
-    xmatch = re.compile(r'^XISEG\s*(\w+)\s*(\w+)');
+    # XSEG holds the uninitialised xdata and XISEG the initialised part, and a
+    # firmware can end up with either of them empty, so look at both and take
+    # whichever ends higher
+    xmatch = re.compile(r'^(XISEG|XSEG)\s*(\w+)\s*(\w+)');
     for map in glob.glob("%s.map"%board):
         f = open(map)
+        end = 0
+        name = None
         for line in f:
             m = xmatch.match(line)
             if m:
-                ofs1 = int(m.group(1),16)
-                ofs2 = int(m.group(2),16)
-                print(os.popen("tail -n5 %s.mem"%board).read())
-                print('XISEG %s - %u bytes available' % (map, xram_size-(ofs1+ofs2)))
-                if ofs1 + ofs2 >= xram_size:
-                    print('ERROR: XISEG overflow %u in %s' % (ofs1+ofs2, map))
-                    error_count += 1
+                ofs1 = int(m.group(2),16)
+                ofs2 = int(m.group(3),16)
+                if ofs1 + ofs2 > end:
+                    end = ofs1 + ofs2
+                    name = m.group(1)
+        if name is None:
+            continue
+        print(os.popen("tail -n5 %s.mem"%board).read())
+        print('%s %s - %u bytes available' % (name, map, xram_size-end))
+        if end >= xram_size:
+            print('ERROR: %s overflow %u in %s' % (name, end, map))
+            error_count += 1
 
 
 # go through all the headers looking for extern declarations of functions
