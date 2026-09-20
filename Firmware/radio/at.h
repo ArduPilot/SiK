@@ -75,7 +75,7 @@ extern __pdata uint8_t  at_testmode;    ///< AT_TEST_* bits
 #define AT_TEST_TDM  2
 
 // max size of an AT command
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 #define AT_CMD_MAXLEN	69
 #else
 #define AT_CMD_MAXLEN	16

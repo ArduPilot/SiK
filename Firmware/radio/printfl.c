@@ -162,12 +162,26 @@ vprintfl(const char * fmt, va_list ap) __reentrant
 				static char __idata buffer[12]; /* 37777777777(oct) */
 				char __idata * stri;
 
-				if (unsigned_flag) {
-					__ultoa(val, buffer, radix);
+				unsigned long uval;
+				uint8_t negative = 0;
+
+				if (!unsigned_flag && val < 0) {
+					negative = 1;
+					// not -val: that overflows for LONG_MIN
+					uval = 0UL - (unsigned long)val;
 				} else {
-					__ltoa(val, buffer, radix);
+					uval = (unsigned long)val;
 				}
-				stri = buffer;
+				stri = buffer + (sizeof(buffer) - 1);
+				*stri = 0;
+				do {
+					uint8_t d = (uint8_t)(uval % radix);
+					uval /= radix;
+					*--stri = (d < 10) ? ('0' + d) : ('A' + (d - 10));
+				} while (uval != 0);
+				if (negative) {
+					*--stri = '-';
+				}
 				while (*stri) {
 					output_char(*stri);
 					stri++;

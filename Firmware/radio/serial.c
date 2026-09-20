@@ -52,23 +52,25 @@
 #ifdef CPU_SI1030
 #define RX_BUFF_MAX 1024 //2048
 #define TX_BUFF_MAX 1024
+#ifdef INCLUDE_AES
 #define ENCRYPT_BUFF_MAX 17*60 // 16 bit encrypted packets plus one for size
 static __pdata uint16_t encrypt_buff_start = 400; // Start decrypting more to clear buffer
 static __pdata uint16_t encrypt_buff_end = 500; // End our quick buffer clear
+#endif // INCLUDE_AES
 #else
 #define RX_BUFF_MAX 1850
 #define TX_BUFF_MAX 645
 #endif // CPU_SI1030
 
-__xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
-__xdata uint8_t tx_buf[TX_BUFF_MAX] = {0};
+__xdata uint8_t rx_buf[RX_BUFF_MAX];
+__xdata uint8_t tx_buf[TX_BUFF_MAX];
 #ifdef INCLUDE_AES
 __xdata uint8_t encrypt_buf[ENCRYPT_BUFF_MAX] = {0};
 #endif // INCLUDE_AES
 // FIFO insert/remove pointers
 static volatile __pdata uint16_t				rx_insert, rx_remove;
 static volatile __pdata uint16_t				tx_insert, tx_remove;
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
 static volatile __pdata uint16_t				encrypt_insert, encrypt_remove;
 #endif
 
@@ -208,7 +210,7 @@ serial_init(register uint8_t speed)
 	rx_remove = 0;
 	tx_insert = 0;
   tx_remove = 0;
-#ifdef CPU_SI1030
+#ifdef INCLUDE_AES
   encrypt_insert = 0;
   encrypt_remove = 0;
 #endif
