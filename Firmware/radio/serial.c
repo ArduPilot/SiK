@@ -62,8 +62,8 @@ static __pdata uint16_t encrypt_buff_end = 500; // End our quick buffer clear
 #define TX_BUFF_MAX 645
 #endif // CPU_SI1030
 
-__xdata uint8_t rx_buf[RX_BUFF_MAX] = {0};
-__xdata uint8_t tx_buf[TX_BUFF_MAX] = {0};
+__xdata uint8_t rx_buf[RX_BUFF_MAX];
+__xdata uint8_t tx_buf[TX_BUFF_MAX];
 #ifdef INCLUDE_AES
 __xdata uint8_t encrypt_buf[ENCRYPT_BUFF_MAX] = {0};
 #endif // INCLUDE_AES
