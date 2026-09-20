@@ -167,7 +167,8 @@ vprintfl(const char * fmt, va_list ap) __reentrant
 
 				if (!unsigned_flag && val < 0) {
 					negative = 1;
-					uval = (unsigned long)(-val);
+					// not -val: that overflows for LONG_MIN
+					uval = 0UL - (unsigned long)val;
 				} else {
 					uval = (unsigned long)val;
 				}
