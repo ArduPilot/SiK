@@ -41,6 +41,7 @@
 #include "tdm.h"
 #include "timer.h"
 #include "freq_hopping.h"
+#include "ham.h"
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
@@ -128,6 +129,9 @@ main(void)
 
 	// do radio initialisation
 	radio_init();
+
+	// ham radio callsign initialization
+	initialize_ham_callsign_tx_params();
 
 	// turn on the receiver
 	if (!radio_receiver_on()) {

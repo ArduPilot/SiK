@@ -37,6 +37,7 @@
 #include "flash_layout.h"
 #include "at.h"
 #include "board.h"
+#include "ham.h"
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
@@ -70,6 +71,7 @@ static void at_m(void);
 
 #pragma save
 #pragma nooverlay
+
 void
 at_input(register uint8_t c)
 {
@@ -458,7 +460,58 @@ at_ampersand(void)
         break;
     }
 #endif // INCLUDE_AES
-	default:
+    case 'C':
+        switch (at_cmd[4]) {
+			case 'E':
+				// enables transmission of callsign (default every 10 minutes)
+				enable_callsign = true;
+				printf("Transmission of callsign enabled: %s\n",callsign);
+				break;
+			case 'D':
+				// disables transmission of callsign
+				enable_callsign = false;
+				printf("Transmission of callsign disabled: %s\n",callsign);
+				break;
+			case 'S':
+				// user is entering their callsign
+				// interval (in seconds) between transmission of callsign
+				// get the register number first
+				if(at_cmd[5] == '=')
+				{
+					register uint8_t c;
+					idx = 6;
+					uint8_t cs_idx = 0;
+					for (;;) {
+						c = at_cmd[idx];
+						// if (!isalnum(c))
+						if (!(isalpha(c) || isdigit(c)))
+							break;
+						callsign[cs_idx++] = c;
+						idx++;
+					}
+					printf("Callsign set to %s\n",callsign);
+				}
+				else
+					at_error();
+				break;
+			case 'I':
+				// interval (in seconds) between transmission of callsign
+				// get the register number first
+				if(at_cmd[5] == '=')
+				{
+					idx = 6;
+					at_parse_number();
+					// Max allowed interval is 10 minutes
+					callsign_tx_interval_secs = at_num < MAX_CALLSIGN_INTERVAL_SEC ? at_num : MAX_CALLSIGN_INTERVAL_SEC;
+					printf("Callsign transmission interval %d s\n",callsign_tx_interval_secs);
+				}
+				else
+					at_error();
+				break;
+        }
+        break;
+
+    default:
 		at_error();
 		break;
 	}

@@ -42,6 +42,7 @@
 #include "freq_hopping.h"
 #include "crc.h"
 #include "serial.h"
+#include "ham.h"
 
 #ifdef INCLUDE_AES
 #include "AES/aes.h"
@@ -139,6 +140,7 @@ static __bit send_statistics;
 /// set when we should send a MAVLink report pkt
 extern uint8_t seen_mavlink;
 
+
 struct tdm_trailer {
 	uint16_t window:13;
 	uint16_t command:1;
@@ -155,6 +157,7 @@ static bool send_at_command;
 static __pdata char remote_at_cmd[AT_CMD_MAXLEN + 1];
 
 #define PACKET_OVERHEAD (sizeof(trailer)+16)
+
 
 /// display RSSI output
 ///
@@ -495,6 +498,7 @@ handle_at_command(__pdata uint8_t len)
 // a stack carary to detect a stack overflow
 __at(0xFF) uint8_t __idata _canary;
 
+
 /// main loop for time division multiplexing transparent serial
 ///
 void
@@ -516,9 +520,13 @@ tdm_serial_loop(void)
   __pdata uint16_t last_t = timer2_tick();
   __pdata uint16_t last_link_update = last_t;
   
+  __pdata uint16_t half_seconds = 0;
+  __pdata bool tx_callsign = false;
 
   _canary = 42;
   
+  uint8_t counter = 0;
+
   for (;;) {
     if (_canary != 42) {
       panic("stack blown\n");
@@ -627,7 +635,7 @@ tdm_serial_loop(void)
       }
       continue;
     }
-    
+
     // see how many 16usec ticks have passed and update
     // the tdm state machine. We re-fetch tnow as a bad
     // packet could have cost us a lot of time.
@@ -640,8 +648,15 @@ tdm_serial_loop(void)
     if (tnow - last_link_update > 32768) {
       link_update();
       last_link_update = tnow;
+      half_seconds++;
     }
     
+    // enable transmission of callsign
+    if(enable_callsign && half_seconds/2 > callsign_tx_interval_secs)
+    {
+		tx_callsign = true;
+		half_seconds = 0;
+    }
 
     if (lbt_rssi != 0) {
       // implement listen before talk
@@ -738,26 +753,37 @@ tdm_serial_loop(void)
     pins_user_check();
 #endif
     
-    // ask the packet system for the next packet to send
-    if (send_at_command && 
-            max_xmit >= strlen(remote_at_cmd)) {
-      // send a remote AT command
-      len = strlen(remote_at_cmd);
-      memcpy(pbuf, remote_at_cmd, len);
-      trailer.command = 1;
-      send_at_command = false;
-    } else {
-      // get a packet from the serial port
-      len = packet_get_next(max_xmit, pbuf);
+    if(tx_callsign)
+    {
+        len = 7;
+    	// printf("time to send: %s\n",callsign);
+        memcpy(pbuf,callsign, 7);
+        trailer.command = 1;
+        tx_callsign = false;
+    }
+    else
+    {
+        // ask the packet system for the next packet to send
+        if (send_at_command &&
+                max_xmit >= strlen(remote_at_cmd)) {
+          // send a remote AT command
+          len = strlen(remote_at_cmd);
+          memcpy(pbuf, remote_at_cmd, len);
+          trailer.command = 1;
+          send_at_command = false;
+        } else {
+          // get a packet from the serial port
+    	  len = packet_get_next(max_xmit, pbuf);
 
-      if (len > 0) {
-         trailer.command = packet_is_injected();
-      } else {
-         trailer.command = 0;
-      }
+    	  if (len > 0) {
+    		 trailer.command = packet_is_injected();
+    	  } else {
+    		 trailer.command = 0;
+    	  }
 #ifdef INCLUDE_AES
-      trailer.crc = crc16(len, pbuf);
+          trailer.crc = crc16(len, pbuf);
 #endif
+        }
     }
     
     if (len > max_data_packet_length) {
