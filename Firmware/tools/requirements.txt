@@ -1,0 +1,11 @@
+future==0.17.1
+iso8601==0.1.12
+lxml==4.3.1
+pexpect==4.6.0
+ptyprocess==0.6.0
+pycairo==1.18.0
+PyGObject==3.30.4
+pymavlink==2.3.4
+pyserial==3.4
+PyYAML==3.13
+serial==0.0.97

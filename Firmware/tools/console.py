@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # a trivial serial console
 
-import serial, sys, optparse, fdpexpect
+import serial, sys, optparse, pexpect
+from pexpect import fdpexpect
 
 parser = optparse.OptionParser("console")
 parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
