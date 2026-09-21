@@ -35,6 +35,10 @@
 #ifndef _RADIO_H_
 #define _RADIO_H_
 
+#ifndef INCLUDE_AES
+#define INCLUDE_GOLAY
+#endif
+
 /// @page hardware Notes on Hardware Allocation
 ///
 /// @section timers Timer Allocation
