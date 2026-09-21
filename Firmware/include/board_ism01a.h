@@ -54,6 +54,10 @@ SBIT(LED_GREEN,	   SFR_P1, 5);
 SBIT(PIN_CONFIG,   SFR_P0, 2);
 SBIT(PIN_ENABLE,   SFR_P0, 3);
 
+// Serial flow control
+#define SERIAL_RTS	PIN_ENABLE	// always an input
+#define SERIAL_CTS	PIN_CONFIG	// input in bootloader, output in app
+
 // Signal polarity definitions
 #define LED_ON		1
 #define LED_OFF		0
@@ -70,6 +74,9 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 	do {							\
 		/* GPIO config */			\
 		P0SKIP	|= 0x0E; /* input pins & nIRQ */ \
+		P0MDOUT |= 0x04; /* CTS pushpull */     \
+		P0MDOUT &= ~0x08; /* RTS open drain */  \
+		P0DRV   &= ~0x04; /* CTS low drive */   \
 		P1SKIP  |= 0x30; /* LEDs */ 			\
 		P0MDOUT |= 0x80; /* radio SDN */		\
 		P1MDOUT |= 0x3D; /* LEDs & radio SPI */ \
@@ -83,6 +90,13 @@ SBIT(PIN_ENABLE,   SFR_P0, 3);
 		IT0	= 0;	/* INT0 level triggered */	\
 	} while(0)
 
+// application/board-specific hardware config
+#define HW_INIT_APPLICATION					\
+	do {							\
+		SFRPAGE	 =  CONFIG_PAGE;			\
+		P0DRV	|=  0x04;		/* CTS */	\
+		SFRPAGE	 =  LEGACY_PAGE;			\
+	} while(0)
 
 #define EZRADIOPRO_OSC_CAP_VALUE 100
 
