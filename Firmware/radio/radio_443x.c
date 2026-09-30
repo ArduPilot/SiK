@@ -55,7 +55,7 @@ __pdata struct radio_settings settings;
 static void	register_write(uint8_t reg, uint8_t value) __reentrant;
 static uint8_t	register_read(uint8_t reg);
 static bool	software_reset(void);
-static void	set_frequency_registers(__pdata uint32_t frequency);
+static void	set_frequency_registers(uint32_t frequency);
 static uint32_t scale_uint32(__pdata uint32_t value, __pdata uint32_t scale);
 static void	clear_status_registers(void);
 
@@ -1144,7 +1144,7 @@ software_reset(void)
 ///
 /// @param frequency		The frequency to set, in Hz
 static void
-set_frequency_registers(__pdata uint32_t frequency)
+set_frequency_registers(uint32_t frequency)
 {
 	uint8_t band;
 	__xdata uint16_t carrier;
