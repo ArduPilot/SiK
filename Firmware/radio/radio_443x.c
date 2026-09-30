@@ -108,10 +108,11 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 #endif // INCLUDE_GOLAY
   {
 	*length = receive_packet_length;
-	memcpy(buf, radio_buffer, receive_packet_length);
 
-		// simple unencoded packets
+		// simple unencoded packets: listen again before copying, a packet sent
+		// straight after this one is otherwise missed
 		radio_receiver_on();
+		memcpy(buf, radio_buffer, *length);
 		return true;
 	}
 
@@ -119,12 +120,12 @@ radio_receive_packet(uint8_t *length, __xdata uint8_t * __pdata buf)
 	// decode it in the callers buffer. This relies on the
 	// in-place decode properties of the golay code. Decoding in
 	// this way allows us to overlap decoding with the next receive
-	memcpy(buf, radio_buffer, receive_packet_length);
-
-	// enable the receiver for the next packet. This also
+	// enable the receiver for the next packet before copying, a packet
+	// sent straight after this one is otherwise missed. This also
 	// enables the EX0 interrupt
 	elen = receive_packet_length;
-	radio_receiver_on();	
+	radio_receiver_on();
+	memcpy(buf, radio_buffer, elen);
 
 	if (elen < 12 || (elen%6) != 0) {
 		// not a valid length
