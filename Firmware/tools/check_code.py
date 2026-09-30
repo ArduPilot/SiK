@@ -71,7 +71,7 @@ def check_xiseg():
                 ofs2 = int(m.group(2),16)
                 print(os.popen("tail -n5 %s.mem"%board).read())
                 print('XISEG %s - %u bytes available' % (map, xram_size-(ofs1+ofs2)))
-                if ofs1 + ofs2 >= xram_size:
+                if ofs1 + ofs2 > xram_size:
                     print('ERROR: XISEG overflow %u in %s' % (ofs1+ofs2, map))
                     error_count += 1
 
