@@ -103,7 +103,7 @@ void aes_initkey()
 
 
 // Perform Copying of data, to help prepare for encryption
-void aesCopyInit2(__xdata unsigned char *dest, __code unsigned char *source)
+void aesCopyInit2(__xdata unsigned char *dest, __code const unsigned char *source)
 {
 	uint8_t i;
 

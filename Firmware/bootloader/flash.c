@@ -49,12 +49,12 @@
 /// These must be supplied by the application as part of the uploaded image,
 /// they should be programmed last.
 ///
-__at(FLASH_SIGNATURE_BYTES) __code uint8_t flash_signature[2];
+__at(FLASH_SIGNATURE_BYTES) __code uint8_t const flash_signature[2];
 
 /// Patchbay for the board frequency byte.
 /// This is patched in the hex file(s) after building.
 ///
-__at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
+__at(FLASH_FREQUENCY_BYTE) __code uint8_t const board_frequency = FREQ_NONE;
 
 /// Lock byte
 ///
@@ -65,7 +65,7 @@ __at(FLASH_FREQUENCY_BYTE) __code uint8_t board_frequency = FREQ_NONE;
 /// RFD900A locks the bootloader as a separate step after calibration instead.
 ///
 #if !defined BOARD_rfd900a && !defined BOARD_rfd900p && !defined BOARD_mro900
-volatile __at(FLASH_LOCK_BYTE) __code uint8_t flash_lock_byte = 0xfe;
+volatile __at(FLASH_LOCK_BYTE) __code uint8_t const flash_lock_byte = 0xfe;
 #endif
 
 char
@@ -257,7 +257,7 @@ flash_read_byte(uint32_t address)
 		else
 			// We need to place the new address into the second byte, thus moving it down 16 then up 4 and masking
 			PSBANK = ((bank_state & 0x03) | ((address>>12) & 0xF0));
-		c = *(uint8_t __code *)((uint16_t)address);
+		c = *(const uint8_t __code *)((uint16_t)address);
 		
 		// Restore Prev State
 		PSBANK = bank_state;
@@ -268,14 +268,14 @@ flash_read_byte(uint32_t address)
 #else // FLASH_BANKS
 flash_read_byte(uint16_t address)
 {
-	return *(uint8_t __code *)address;
+	return *(const uint8_t __code *)address;
 }
 #endif // FLASH_BANKS
 
 
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-__at(FLASH_CALIBRATION_AREA_HIGH) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
-__at(FLASH_CALIBRATION_CRC_HIGH)	uint8_t __code calibration_crc;
+__at(FLASH_CALIBRATION_AREA_HIGH) const uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
+__at(FLASH_CALIBRATION_CRC_HIGH)	const uint8_t __code calibration_crc;
 
 void
 flash_transfer_calibration(void)
@@ -316,7 +316,7 @@ flash_transfer_calibration(void)
 
 
 #if defined BOARD_mro900
-static __at(FLASH_CALIBRATION_OSC_HIGH) uint8_t __code calibration;
+static __at(FLASH_CALIBRATION_OSC_HIGH) const uint8_t __code calibration;
 
 void flash_transfer_calibration(void)
 {

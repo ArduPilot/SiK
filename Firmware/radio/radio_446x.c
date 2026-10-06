@@ -681,7 +681,7 @@ __code static const uint8_t air_data_rates[NUM_DATA_RATES] = {
 #include "radio_446x_conf.h"
 
 static void
-send_bulk_conf(__code uint8_t * __pdata ids, __code uint8_t * __pdata data)
+send_bulk_conf(__code const uint8_t * __pdata ids, __code const uint8_t * __pdata data)
 {
 	register uint8_t len;
 	while ((len = *ids++) > 0) {
