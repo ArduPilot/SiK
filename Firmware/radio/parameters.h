@@ -108,7 +108,7 @@ extern enum ParamID param_id(__data char * __pdata name);
 /// @return			A pointer to the name of the parameter,
 ///				or NULL if the parameter is not known.
 ///
-extern const char *__code param_name(__data enum ParamID param);
+extern const char __code *param_name(__data enum ParamID param);
 
 /// Load parameters from the flash scratchpad.
 ///

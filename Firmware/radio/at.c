@@ -308,7 +308,7 @@ at_parse_number(void) __reentrant
 }
 
 static void print_ID_vals(char param, uint8_t end,
-                          const char *__code (*name_param)(__data enum ParamID param),
+                          const char __code *(*name_param)(__data enum ParamID param),
                           param_t (*get_param)(__data enum ParamID param)
                          )
 {

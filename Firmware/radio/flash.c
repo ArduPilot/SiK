@@ -44,7 +44,7 @@
 // last thing to be programmed during an update, tells the bootloader that
 // a valid application is installed.
 //
-__at(FLASH_SIGNATURE_BYTES) uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
+__at(FLASH_SIGNATURE_BYTES) const uint8_t __code app_signature[2] = { FLASH_SIG0, FLASH_SIG1 };
 
 /// Load the write-enable keys into the hardware in order to enable
 /// one write or erase operation.
@@ -86,7 +86,7 @@ __critical {
 #endif // CPU_SI1030
 	
 	PSCTL = FLASH_READ_SCRATCH;
-	d = *(uint8_t __code *)(FLASH_SCRATCH | address);
+	d = *(const uint8_t __code *)(FLASH_SCRATCH | address);
 	PSCTL = FLASH_DISABLE;
 	
 #ifdef CPU_SI1030

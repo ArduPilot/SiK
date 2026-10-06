@@ -51,7 +51,7 @@
 /// In-ROM parameter info table.
 ///
 __code const struct parameter_info {
-	const char	*name;
+	const char __code	*name;
 	param_t		default_value;
 } parameter_info[PARAM_MAX] = {
 	{"FORMAT",         PARAM_FORMAT_CURRENT},
@@ -364,7 +364,7 @@ param_id(__data char * __pdata name)
 	return i;
 }
 
-const char *__code
+const char __code *
 param_name(__data enum ParamID param)
 {
 	if (param < PARAM_MAX) {
@@ -384,8 +384,8 @@ uint32_t constrain(__pdata uint32_t v, __pdata uint32_t min, __pdata uint32_t ma
 // rfd900a calibration stuff
 // Change for next rfd900 revision
 #if defined BOARD_rfd900a || defined BOARD_rfd900p
-static __at(FLASH_CALIBRATION_AREA) uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
-static __at(FLASH_CALIBRATION_CRC) uint8_t __code calibration_crc;
+static __at(FLASH_CALIBRATION_AREA) const uint8_t __code calibration[FLASH_CALIBRATION_AREA_SIZE];
+static __at(FLASH_CALIBRATION_CRC) const uint8_t __code calibration_crc;
 
 static void
 flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
@@ -401,7 +401,7 @@ static uint8_t
 flash_read_byte(uint16_t address) __reentrant
 {
 	// will cause reset if the byte is in a locked page
-	return *(uint8_t __code *)address;
+	return *(const uint8_t __code *)address;
 }
 
 bool
@@ -491,7 +491,7 @@ calibration_lock(void) __reentrant
 // mRo Calibration stuff. 
 #if defined BOARD_mro900
 
-static __at(FLASH_CALIBRATION_OSC) uint8_t __code calibration;
+static __at(FLASH_CALIBRATION_OSC) const uint8_t __code calibration;
 
 static void
 flash_write_byte(uint16_t address, uint8_t c) __reentrant __critical
@@ -507,7 +507,7 @@ static uint8_t
 flash_read_byte(uint16_t address) __reentrant
 {
 	// will cause reset if the byte is in a locked page
-	return *(uint8_t __code *)address;
+	return *(const uint8_t __code *)address;
 }
 
 bool
