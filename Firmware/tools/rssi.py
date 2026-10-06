@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # RSSI production test
 
-import serial, sys, optparse, time, fdpexpect
+import serial, sys, optparse, time, pexpect
+from pexpect import fdpexpect
 
 parser = optparse.OptionParser("update_mode")
 parser.add_option("--baudrate", type='int', default=57600, help='baud rate')
